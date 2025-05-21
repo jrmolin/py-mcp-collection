@@ -1,0 +1,39 @@
+[project]
+name = "template"
+version = "0.1.0"
+description = "Template project"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "asyncclick>=8.1.8",
+    "fastmcp>=2.3.5",
+    "mcp>=1.9.0",
+]
+
+[tool.poetry]
+packages = [
+    { include = "template", from = "src" }
+]
+[tool.hatch.metadata]
+allow-direct-references=true
+
+[tool.poetry.scripts]
+template = "template.main:run_mcp"
+
+
+[dependency-groups]
+dev = [
+  "pytest",
+  "pytest-mock",
+  "ruff"
+]
+lint = [
+  "ruff"
+]
+
+[build-system]
+requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+extend="../pyproject.toml"

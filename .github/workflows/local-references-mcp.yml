@@ -1,0 +1,33 @@
+name: Build and Test MCP Servers
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.12]
+        project: [fetch-mcp, local-references-mcp]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: "Set up Python for ${matrix.project}"
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "${{ matrix.project }}/pyproject.toml"
+        
+      - name: "Install ${matrix.project}"
+        run: uv sync --locked --group dev
+        working-directory: "${{ matrix.project }}"
+
+      - name: "Run tests for ${matrix.project}"
+        run: uv run pytest tests
+        working-directory: "${{ matrix.project }}"
