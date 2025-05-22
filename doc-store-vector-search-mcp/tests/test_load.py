@@ -1,10 +1,6 @@
-import os
-from pathlib import Path
-import tempfile
-from unittest.mock import patch
-
+import asyncio
+import aiohttp
 import pytest
-from langchain_core.documents import Document
 
 from doc_store_vector_search_mcp.etl.load import (
     DirectoryLoader,
@@ -42,90 +38,94 @@ MOCK_JSONL_CONTENT = """
 {"id": 2, "text": "item 2 content", "category": "B"}
 """
 
-@pytest.fixture
-def temp_dir() -> Path:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        yield Path(tmpdir)
 
-@pytest.mark.asyncio
-@patch("doc_store_vector_search_mcp.etl.load.WebBaseLoader.alazy_load")
-async def test_webpageloader_loads_content(mock_alazy_load):
-    mock_document = Document(page_content="This is a mock webpage.", metadata={"source": "http://mockurl.com"})
-    mock_alazy_load.return_value = [mock_document].__aiter__()
+# Utility for network check
+def is_url_reachable(url):
+    async def _check():
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=5) as resp:
+                    return resp.status == 200
+        except Exception:
+            return False
+    return asyncio.get_event_loop().run_until_complete(_check())
 
-    url = "http://mockurl.com"
-    loader = WebPageLoader()
-    documents = [doc async for doc in loader.load(url)]
+
+async def test_directoryloader_loads_specific_file_types(tmp_path):
+    md_file = tmp_path / "file.md"
+    md_file.write_text("Markdown content.")
+
+    txt_file = tmp_path / "file.txt"
+    txt_file.write_text("Text content.")
+
+    directory_path = str(tmp_path)
+    
+    glob_pattern = "*.md"
+    
+    loader = DirectoryLoader()
+    documents = [value async for value in loader.load(directory_path, glob=glob_pattern)]
 
     assert len(documents) == 1
-    assert documents[0].page_content == "This is a mock webpage."
-    assert documents[0].metadata["source"] == url
+    assert documents[0].page_content == "Markdown content."
 
-
-@pytest.mark.asyncio
-@patch("doc_store_vector_search_mcp.etl.load.SitemapLoader.alazy_load")
-async def test_sitemaploader_loads_filtered_urls(mock_alazy_load):
-    mock_document1 = Document(page_content="Page 1 content.", metadata={"source": "http://mockurl.com/page1"})
-    mock_document2 = Document(page_content="Page 2 content.", metadata={"source": "http://mockurl.com/page2"})
-    mock_alazy_load.return_value = [mock_document1, mock_document2].__aiter__()
-
-    url = "http://mockurl.com/sitemap.xml"
-    filter_urls = ["http://mockurl.com/page"]
-    loader = SiteMapLoader()
-    documents = [doc async for doc in loader.load(url, filter_urls=filter_urls)]
-
-    assert len(documents) == 2
     sources = [doc.metadata["source"] for doc in documents]
-    assert "http://mockurl.com/page1" in sources
-    assert "http://mockurl.com/page2" in sources
-    assert "http://mockurl.com/other" not in sources
+    assert any("file.md" in s for s in sources)
 
 
-@pytest.mark.asyncio
-@patch("doc_store_vector_search_mcp.etl.load.RecursiveUrlLoader.alazy_load")
-async def test_recursivewebloader_loads_linked_pages(mock_alazy_load):
-    mock_document1 = Document(page_content="Main page.", metadata={"source": "http://mockurl.com/main"})
-    mock_document2 = Document(page_content="Linked page.", metadata={"source": "http://mockurl.com/linked"})
-    mock_alazy_load.return_value = [mock_document1, mock_document2].__aiter__()
-
-    url = "http://mockurl.com/main"
-    loader = RecursiveWebLoader()
-    documents = [doc async for doc in loader.load(url)]
-
-    assert len(documents) == 2
-    sources = [doc.metadata["source"] for doc in documents]
-    assert "http://mockurl.com/main" in sources
-    assert "http://mockurl.com/linked" in sources
-
-
-@pytest.mark.asyncio
-@patch("doc_store_vector_search_mcp.etl.load.DirectoryLoader.alazy_load")
-async def test_directoryloader_loads_specific_file_types(mock_alazy_load):
-    mock_document1 = Document(page_content="Markdown content.", metadata={"source": "mock_dir/file.md"})
-    mock_document2 = Document(page_content="Text content.", metadata={"source": "mock_dir/file.txt"})
-    mock_alazy_load.return_value = [mock_document1, mock_document2].__aiter__()
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        directory_path = tmpdir
-        glob_pattern = "**/*.{md,txt}"
-        loader = DirectoryLoader()
-        documents = [doc async for doc in loader.load(directory_path, glob_pattern=glob_pattern)]
-
-        assert len(documents) == 2
-        sources = [doc.metadata["source"] for doc in documents]
-        assert "mock_dir/file.md" in sources
-        assert "mock_dir/file.txt" in sources
-        # Add assertions for content and encoding handling if needed
-
-
-@pytest.mark.asyncio
-async def test_json_jq(temp_dir):
-    json_path = temp_dir / "test.json"
+def test_load_json_jq(tmp_path):
+    json_path = tmp_path / "test.json"
     json_path.write_text(MOCK_JSON_CONTENT)
+ 
     loader = JSONJQLoader()
-    documents = [doc async for doc in loader.load_json(str(json_path), content_key="text")]
-
+ 
+    documents = list(loader.load(str(json_path), content_key="text"))
+ 
     assert len(documents) == 2
     assert documents[0].page_content == "item 1 content"
     assert documents[1].page_content == "item 2 content"
 
+
+async def test_load_webpage():
+    url = "https://www.example.com"
+
+    loader = WebPageLoader()
+
+    documents = [value async for value in loader.load(url)]
+
+    assert any("example" in doc.page_content.lower() for doc in documents)
+    assert all("source" in doc.metadata for doc in documents)
+
+
+async def test_load_sitemap():
+    url = "https://www.sitemaps.org/sitemap.xml"
+
+    filter_urls = ["https://www.sitemaps.org/"]
+    loader = SiteMapLoader()
+    documents = [value async for value in loader.load(url, filter_urls=filter_urls)]
+
+    assert len(documents) > 0
+    sources = [doc.metadata["source"] for doc in documents]
+    assert any("sitemaps.org" in s for s in sources)
+
+
+
+def test_recursivewebloader_loads_linked_pages():
+    url = "https://www.sitemaps.org"
+    if not is_url_reachable(url):
+        pytest.skip(f"{url} is not reachable.")
+    loader = RecursiveWebLoader()
+    documents = []
+
+    async def gather_docs():
+        async for doc in loader.load(url):
+            documents.append(doc)
+    asyncio.get_event_loop().run_until_complete(gather_docs())
+    flat_docs = []
+    for d in documents:
+        if isinstance(d, list):
+            flat_docs.extend(d)
+        else:
+            flat_docs.append(d)
+    assert len(flat_docs) > 1
+    sources = [doc.metadata["source"] for doc in flat_docs]
+    assert any("sitemaps.org" in s for s in sources)

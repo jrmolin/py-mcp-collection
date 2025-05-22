@@ -24,7 +24,7 @@ Useful to allow a coding assistant to preview local documentation, best practice
             "Local References": {
                 "command": "uvx",
                 "args": [
-                    "https://github.com/strawgate/py-mcp-collection.git#subdirectory=local-references-mcp",
+                    "git+https://github.com/strawgate/py-mcp-collection.git#subdirectory=local-references-mcp",
                     "--reference",
                     "Best Practices:/docs/best_practices.md",
                     "--reference",
@@ -43,7 +43,7 @@ Simply add the following to your McpServer configuration. Edit the AlwaysAllow l
     "Local References": {
       "command": "uvx",
       "args": [
-        "https://github.com/strawgate/local-references-mcp.git"
+        "git+https://github.com/strawgate/py-mcp-collection.git#subdirectory=local-references-mcp"
       ]
     }
 ```

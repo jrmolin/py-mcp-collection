@@ -22,7 +22,7 @@ dependencies = [
     "langchain-community",
     "langchain",
     "sqlite-vss", # Or other chosen vector store
-    "unstructured", # For various document types
+    "unstructured[md]", # For various document types
     "jq", # For JSON processing
     "tiktoken", # For token counting/splitting
     "pytest-asyncio>=0.26.0",
@@ -47,6 +47,7 @@ addopts = "-vvv"
 [dependency-groups]
 dev = [
   "pytest",
+  "pytest-asyncio>=0.26.0",
   "pytest-mock",
   "ruff",
   "syrupy>=4.9.1",
@@ -58,6 +59,10 @@ lint = [
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
 build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
 
 [tool.ruff]
 extend="../pyproject.toml"

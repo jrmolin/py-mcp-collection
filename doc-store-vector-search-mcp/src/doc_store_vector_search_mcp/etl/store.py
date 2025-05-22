@@ -8,8 +8,9 @@ import torch
 from langchain_community.vectorstores import DuckDB, ElasticsearchStore
 from pydantic import BaseModel
 from transformers import AutoModel, AutoTokenizer
+from sentence_transformers import SentenceTransformer
 
-VectorStoreTypes = DuckDB | ElasticsearchStore
+type VectorStoreTypes = DuckDB | ElasticsearchStore
 
 
 class ElasticsearchStoreSettings(BaseModel):
@@ -35,7 +36,6 @@ S = TypeVar("S", bound=VectorStoreSettings)
 
 class TextEmbedding(Embeddings):
     def __init__(self, model: str = "all-MiniLM-L6-v2"):
-        from sentence_transformers import SentenceTransformer
 
         self.model = SentenceTransformer(model)
 
