@@ -1,0 +1,27 @@
+# serializer version: 1
+# name: test_reference_structure_snapshot
+  '''
+  # Local References
+  Below is a list of available reference types. We will show each type, and a preview of its entries.Note: previews are truncated to 1000 characters.
+  
+  ## References for: `Best Practices`
+  This is the best practice reference type.
+  
+  ### Type: `Best Practices`, Name: `Making a Sandwich`
+  This is the best practice reference.
+  
+  
+  ## References for: `How To`
+  This is the how-to reference type.
+  
+  ### Type: `How To`, Name: `How To Make a Sandwich`
+  Preview: Of resolve to gravity thought my prepare chamber so. Unsatiable entreaties collecting may sympathize nay interested instrument. If continue building numerous of at relation in margaret. Lasted engage roused mother an am at. Other early while if by do to. Missed living excuse as be. Cause heard fat above first shall for. My smiling to he removal weather on anxious. Of resolve to gravity thought my prepare chamber so. Unsatiable entreaties collecting may sympathize nay interested instrument. If continue building numerous of at relation in margaret. Lasted engage roused mother an am at. Other early while if by do to. Missed living excuse as be. Cause heard fat above first shall for. My smiling to he removal weather on anxious. Of resolve to gravity thought my prepare chamber so. Unsatiable entreaties collecting may sympathize nay interested instrument. If continue building numerous of at relation in margaret. Lasted engage roused mother an am at. Other early while if by do to. Missed livi...
+  '''
+# ---
+# name: test_reference_structure_snapshot.1
+  '''
+  This is the best practice reference.
+  
+  Entry1 content.
+  '''
+# ---

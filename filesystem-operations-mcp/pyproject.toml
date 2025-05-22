@@ -20,7 +20,8 @@ packages = [
 [tool.hatch.metadata]
 allow-direct-references=true
 
-[tool.poetry.scripts]
+[project.scripts]
+filesystem-operations-mcp = "filesystem_operations_mcp.main:run_mcp"
 filesystem_operations_mcp = "filesystem_operations_mcp.main:run_mcp"
 
 
