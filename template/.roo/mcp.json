@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "template": {
+      "command": "uv",
+      "args": [
+        "run",
+        "./src/template/main.py"
+      ]
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "doc_store_vector_search_mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "./src/doc_store_vector_search_mcp/main.py"
+      ]
+    }
+  }
+}

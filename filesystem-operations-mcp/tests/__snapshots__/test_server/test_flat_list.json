@@ -1,0 +1,29 @@
+{
+  ".": {
+    ".": {
+      "children": 6
+    },
+    "a.txt": {
+      "size": 11
+    },
+    "b.md": {
+      "size": 16
+    },
+    "file_with_many_lines.txt": {
+      "size": 49
+    },
+    "large.txt": {
+      "size": 10000
+    }
+  },
+  "./empty_dir": {
+    ".": {
+      "children": 0
+    }
+  },
+  "./subdir": {
+    ".": {
+      "children": 1
+    }
+  }
+}

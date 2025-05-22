@@ -1,0 +1,48 @@
+[tool.ruff]
+target-version = "py312"
+lint.fixable = ["ALL"]
+lint.ignore = [
+    "COM812"
+]
+lint.extend-select = [
+    "A",
+    "ARG",
+    "B",
+    "C4",
+    "COM",
+    "DTZ",
+    "E",
+    "EM",
+    "F",
+    "FURB",
+    "I",
+    "LOG",
+    "N",
+    "PERF",
+    "PIE",
+    "PLR",
+    "PLW",
+    "PT",
+    "PTH",
+    "Q",
+    "RET",
+    "RSE",
+    "RUF",
+    "S",
+    "SIM",
+    "TC",
+    "TID",
+    "TRY",
+    "UP",
+    "W",
+]
+
+line-length = 140
+
+[tool.ruff.lint.extend-per-file-ignores]
+"**/tests/*.py" = [
+    "S101", # Ignore asserts
+    "DTZ005", # Ignore datetime.UTC
+    "PLR2004", # Ignore magic values
+]
+"**/references/*" = ["ALL"]
