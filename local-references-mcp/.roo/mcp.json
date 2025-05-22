@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "local_references": {
+      "command": "uv",
+      "args": [
+        "run",
+        "./src/local_references_mcp/main.py",
+        "--reference",
+        "Best Practices:./sample/best_practices",
+        "--reference",
+        "How To:./sample/how_to"
+      ]
+    }
+  }
+}
