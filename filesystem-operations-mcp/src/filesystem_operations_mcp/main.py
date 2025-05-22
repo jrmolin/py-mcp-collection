@@ -14,6 +14,7 @@ from filesystem_operations_mcp.filesystem.models import (
     FileEntryChunkedContent,
     FileEntryContent,
     FileEntryPreview,
+    FileEntryWithNameAndContent,
     FileEntryWithSize,
     FlatDirectoryResult,
 )
@@ -60,6 +61,18 @@ class FileServer(MCPMixin):
         """
         ctx.info(f"Request to read file {path}")
         return self.filesystem_server.read_file(path)
+
+
+    @mcp_tool()
+    def read_many(self, ctx: Context, path: list[Path] = PATH_FILE_MULTI_FIELD) -> list[FileEntryWithNameAndContent]:
+        """Read the contents of many files.
+
+        Returns:
+            The contents of the file.
+        """
+        ctx.info(f"Request to read files {path}")
+        return self.filesystem_server.read_files(path)
+
 
     @mcp_tool()
     def preview(self, ctx: Context, path: Path = PATH_FILE_SINGLE_FIELD) -> str:

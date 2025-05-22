@@ -8,7 +8,9 @@ from filesystem_operations_mcp.filesystem.models import (
     FileEntryChunk,
     FileEntryChunkedContent,
     FileEntryContent,
+    FileEntryWithNameAndContent,
     FileEntryPreview,
+    FileEntryWithNameAndContent,
     FlatDirectoryResult,
     SummaryDirectoryEntry,
 )
@@ -121,6 +123,11 @@ class FilesystemServer:
         """Read a file."""
         return self._get_file(FileEntryContent, path).content
 
+    def read_files(self, paths: list[Path]) -> list[FileEntryWithNameAndContent]:
+        """Read many files."""
+        return [self._get_file(FileEntryWithNameAndContent, path) for path in paths]
+
+
     def preview_file(self, path: Path) -> str:
         """Preview a file."""
         result = self._get_file(FileEntryPreview, path)
@@ -132,9 +139,9 @@ class FilesystemServer:
 
     def _get_file(self, entry_type: type[R], path: Path) -> R:
         """Get a file."""
-        self._resolve_and_validate(path)
+        absolute_path = self._resolve_and_validate(path)
 
-        return entry_type(absolute_path=path, root=self.root)
+        return entry_type(absolute_path=absolute_path, root=self.root)
 
     # Directory Commands
 
