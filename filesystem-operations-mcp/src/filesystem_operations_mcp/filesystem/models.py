@@ -22,7 +22,7 @@ class BaseFileEntry(BaseModel):
             return f.readlines()
 
 
-type FileEntryTypes = FileEntry | FileEntryPreview | FileEntryContent | FileEntryChunkedContent
+type FileEntryTypes = FileEntry | FileEntryPreview | FileEntryContent | FileEntryChunkedContent | FileEntryWithSize
 
 T = TypeVar("T", bound=FileEntryTypes)
 
@@ -31,11 +31,13 @@ class FileEntry(BaseFileEntry):
     pass
 
 
-class FileEntryPreview(BaseFileEntry):
-
+class FileEntryWithSize(BaseFileEntry):
     @computed_field
     def size(self) -> int:
         return self.absolute_path.stat().st_size
+
+
+class FileEntryPreview(FileEntryWithSize):
 
     @computed_field
     def content(self) -> str | None:
@@ -52,11 +54,7 @@ class FileEntryPreview(BaseFileEntry):
         return None
 
 
-class FileEntryContent(BaseFileEntry):
-
-    @computed_field
-    def size(self) -> int:
-        return self.absolute_path.stat().st_size
+class FileEntryContent(FileEntryWithSize):
 
     @computed_field
     def content(self) -> str:

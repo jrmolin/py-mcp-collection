@@ -7,17 +7,44 @@ import pydantic_core
 import yaml
 from fastmcp import Context, FastMCP
 from fastmcp.contrib.mcp_mixin.mcp_mixin import MCPMixin, mcp_tool
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from filesystem_operations_mcp.filesystem.models import (
     FileEntry,
     FileEntryChunkedContent,
     FileEntryContent,
     FileEntryPreview,
+    FileEntryWithSize,
     FlatDirectoryResult,
 )
 from filesystem_operations_mcp.filesystem.server import FilesystemServer
 from filesystem_operations_mcp.filesystem.skip import DEFAULT_SKIP_LIST, DEFAULT_SKIP_READ
+
+PATH_DIR_SINGLE_FIELD = Field(..., description="A single directory to operate on.")
+PATH_FILE_SINGLE_FIELD = Field(..., description="A single file to operate on.")
+
+PATH_DIR_MULTI_FIELD = Field(default_factory=list, min_length=1, description="A list of directories to operate on.")
+PATH_FILE_MULTI_FIELD = Field(default_factory=list, min_length=1, description="A list of files to operate on.")
+
+SEARCH_FIELD = Field(
+    default_factory=list,
+    description="A string to search for. If `search_is_regex` is `True`, this will be treated as a regex pattern. Otherwise, only files that contain the exact string will be included.",
+)
+SEARCH_IS_REGEX_FIELD = Field(default=False, description="Whether the search string is a regex pattern.")
+
+BEFORE_LINES_FIELD = Field(default=3, description="The number of lines to include before the match.")
+AFTER_LINES_FIELD = Field(default=3, description="The number of lines to include after the match.")
+
+CONTENT_FIELD = Field(..., description="The content to write to the file.")
+
+INCLUDE_FILTERS_FIELD = Field(default_factory=list, description="A list of glob patterns to use to constrain the results.")
+EXCLUDE_FILTERS_FIELD = Field(default_factory=list, description="A list of glob patterns to use to exclude from the results.")
+
+RECURSE_FIELD = Field(default=False, description="Whether to recurse into subdirectories.")
+BYPASS_DEFAULT_EXCLUSIONS_FIELD = Field(
+    default=False,
+    description="Whether to bypass the default exclusions. Not typical, do not set this unless you're sure you're searching for hidden or system files.",
+)
 
 
 class FileServer(MCPMixin):
@@ -25,11 +52,8 @@ class FileServer(MCPMixin):
         self.filesystem_server = filesystem_server
 
     @mcp_tool()
-    def read(self, ctx: Context, path: Path) -> str:
+    def read(self, ctx: Context, path: Path = PATH_FILE_SINGLE_FIELD) -> str:
         """Read the contents of a file.
-
-        Args:
-            path: The path to the file to read.
 
         Returns:
             The contents of the file.
@@ -38,11 +62,8 @@ class FileServer(MCPMixin):
         return self.filesystem_server.read_file(path)
 
     @mcp_tool()
-    def preview(self, ctx: Context, path: Path) -> str:
+    def preview(self, ctx: Context, path: Path = PATH_FILE_SINGLE_FIELD) -> str:
         """Preview the contents of a file.
-
-        Args:
-            path: The path to the file to preview.
 
         Returns:
             A preview of the contents of the file.
@@ -51,11 +72,8 @@ class FileServer(MCPMixin):
         return self.filesystem_server.preview_file(path)
 
     @mcp_tool()
-    def delete(self, ctx: Context, path: Path) -> bool:
+    def delete(self, ctx: Context, path: Path = PATH_FILE_SINGLE_FIELD) -> bool:
         """Delete a file.
-
-        Args:
-            path: The path to the file to delete.
 
         Returns:
             True if the file was deleted. Raises an error otherwise.
@@ -66,16 +84,15 @@ class FileServer(MCPMixin):
 
     @mcp_tool()
     def search(
-        self, ctx: Context, path: Path, search: str, search_is_regex: bool = False, before: int = 3, after: int = 3
+        self,
+        ctx: Context,
+        path: Path = PATH_FILE_SINGLE_FIELD,
+        search: str = SEARCH_FIELD,
+        search_is_regex: bool = SEARCH_IS_REGEX_FIELD,
+        before: int = BEFORE_LINES_FIELD,
+        after: int = AFTER_LINES_FIELD,
     ) -> FileEntryChunkedContent | None:
         """Search a specific file for a string or regex pattern.
-
-        Args:
-            path: The path to the file to search.
-            search: The search string.
-            search_is_regex: Whether the search is a regex.
-            before: The number of lines to include before the match.
-            after: The number of lines to include after the match.
 
         Returns:
             A list of chunks containing the search results.
@@ -90,12 +107,8 @@ class FileServer(MCPMixin):
         return self.filesystem_server.search_file(path=path, search=search, search_is_regex=search_is_regex, before=before, after=after)
 
     @mcp_tool()
-    def create(self, ctx: Context, path: Path, content: str) -> bool:
+    def create(self, ctx: Context, path: Path = PATH_FILE_SINGLE_FIELD, content: str = CONTENT_FIELD) -> bool:
         """Create a file.
-
-        Args:
-            path: The path to the file to create.
-            content: The content to write to the file.
 
         Returns:
             True if the file was created. Raises an error otherwise.
@@ -107,12 +120,8 @@ class FileServer(MCPMixin):
         return True
 
     @mcp_tool()
-    def append(self, ctx: Context, path: Path, content: str) -> bool:
+    def append(self, ctx: Context, path: Path = PATH_FILE_SINGLE_FIELD, content: str = CONTENT_FIELD) -> bool:
         """Append to a file.
-
-        Args:
-            path: The path to the file to append to.
-            content: The content to append to the file.
 
         Returns:
             True if the file was appended to. Raises an error otherwise.
@@ -130,11 +139,8 @@ class DirectoryServer(MCPMixin):
         self.filesystem_server = filesystem_server
 
     @mcp_tool(name="create")
-    def create_dir(self, ctx: Context, path: Path) -> bool:
+    def create_dir(self, ctx: Context, path: Path = PATH_DIR_SINGLE_FIELD) -> bool:
         """Create a directory.
-
-        Args:
-            path: The path to the directory to create.
 
         Returns:
             True if the directory was created. Raises an error otherwise.
@@ -148,21 +154,13 @@ class DirectoryServer(MCPMixin):
     def list_contents(
         self,
         ctx: Context,
-        path: list[Path],
-        include: list[str] | None = None,
-        exclude: list[str] | None = None,
-        recurse: bool = False,
-        bypass_default_exclusions: bool = False,
+        path: list[Path] = PATH_DIR_MULTI_FIELD,
+        include: list[str] = INCLUDE_FILTERS_FIELD,
+        exclude: list[str] = EXCLUDE_FILTERS_FIELD,
+        recurse: bool = RECURSE_FIELD,
+        bypass_default_exclusions: bool = BYPASS_DEFAULT_EXCLUSIONS_FIELD,
     ) -> FlatDirectoryResult[FileEntry]:
         """List the contents of a directory.
-
-        Args:
-            path: (Required) A list of paths to list contents for.
-            recurse: (Optional) Whether to recurse into subdirectories.
-            include: (Optional) A list of glob patterns to include.
-            exclude: (Optional) A list of glob patterns to exclude.
-            bypass_default_exclusions: (Optional) Whether to bypass the default exclusions. By default, hidden folders
-                and cache directories are excluded. Defaults to False.
 
         Returns:
             A flat directory result containing the contents of listed directories.
@@ -185,27 +183,19 @@ class DirectoryServer(MCPMixin):
             exclude.extend(DEFAULT_SKIP_LIST)
 
         ctx.info(f"Request to list contents of {path}: recurse={recurse}, include={include}, exclude={exclude}")
-        return self.filesystem_server.flat_dir(FileEntry, path, recurse, include, exclude)
+        return self.filesystem_server.flat_dir(FileEntryWithSize, path, recurse, include, exclude)
 
     @mcp_tool(name="preview")
     def preview_contents(
         self,
         ctx: Context,
-        path: list[Path],
-        include: list[str],
-        exclude: list[str],
-        recurse: bool = False,
-        bypass_default_exclusions: bool = False,
+        path: list[Path] = PATH_DIR_MULTI_FIELD,
+        include: list[str] = INCLUDE_FILTERS_FIELD,
+        exclude: list[str] = EXCLUDE_FILTERS_FIELD,
+        recurse: bool = RECURSE_FIELD,
+        bypass_default_exclusions: bool = BYPASS_DEFAULT_EXCLUSIONS_FIELD,
     ) -> FlatDirectoryResult[FileEntryPreview]:
         """Preview the contents of the files in a directory.
-
-        Args:
-            path: (Required) A list of paths to preview contents for.
-            recurse: (Required) Whether to recurse into subdirectories.
-            include: (Required) A list of glob patterns to include.
-            exclude: (Required) A list of glob patterns to exclude.
-            bypass_default_exclusions: (Optional) Whether to bypass the default exclusions. By default, hidden folders, cache directories,
-             and compiled files are excluded. Defaults to False.
 
         Returns:
             A flat directory result containing the previewed contents of listed directories. If the file is smaller than the preview
@@ -234,21 +224,13 @@ class DirectoryServer(MCPMixin):
     def read_contents(
         self,
         ctx: Context,
-        path: list[Path],
-        include: list[str],
-        exclude: list[str],
-        recurse: bool = False,
-        bypass_default_exclusions: bool = False,
+        path: list[Path] = PATH_DIR_MULTI_FIELD,
+        include: list[str] = INCLUDE_FILTERS_FIELD,
+        exclude: list[str] = EXCLUDE_FILTERS_FIELD,
+        recurse: bool = RECURSE_FIELD,
+        bypass_default_exclusions: bool = BYPASS_DEFAULT_EXCLUSIONS_FIELD,
     ) -> FlatDirectoryResult[FileEntryContent]:
         """Read the contents of the files in a directory.
-
-        Args:
-            path: (Required) A list of paths to read contents for.
-            recurse: (Required) Whether to recurse into subdirectories.
-            include: (Required) A list of glob patterns to include.
-            exclude: (Required) A list of glob patterns to exclude.
-            bypass_default_exclusions: (Optional) Whether to bypass the default exclusions. By default, hidden folders, cache directories,
-             and compiled files are excluded.
 
         Returns:
             A flat directory result containing the read contents of listed directories.
@@ -274,29 +256,17 @@ class DirectoryServer(MCPMixin):
     def search_contents(
         self,
         ctx: Context,
-        path: list[Path],
-        search: str,
-        recurse: bool = False,
-        include: list[str] | None = None,
-        exclude: list[str] | None = None,
-        before: int = 3,
-        after: int = 3,
-        search_is_regex: bool = False,
-        bypass_default_exclusions: bool = False,
+        path: list[Path] = PATH_DIR_MULTI_FIELD,
+        search: str = SEARCH_FIELD,
+        include: list[str] = INCLUDE_FILTERS_FIELD,
+        exclude: list[str] = EXCLUDE_FILTERS_FIELD,
+        recurse: bool = RECURSE_FIELD,
+        before: int = BEFORE_LINES_FIELD,
+        after: int = AFTER_LINES_FIELD,
+        search_is_regex: bool = SEARCH_IS_REGEX_FIELD,
+        bypass_default_exclusions: bool = BYPASS_DEFAULT_EXCLUSIONS_FIELD,
     ) -> FlatDirectoryResult[FileEntryChunkedContent]:
         """Search the contents of the files in a directory.
-
-        Args:
-            path: (Required) A list of directories to search files for contents.
-            search: (Required) The search string.
-            recurse: (Optional) Whether to recurse into subdirectories.
-            include: (Optional) A list of glob patterns to include.
-            exclude: (Optional) A list of glob patterns to exclude.
-            before: (Optional) The number of lines to include before the match.
-            after: (Optional) The number of lines to include after the match.
-            search_is_regex: (Optional) Whether the search is a regex.
-            bypass_default_exclusions: (Optional) Whether to bypass the default exclusions. By default, hidden folders, cache directories,
-             and compiled files are excluded.
 
         Returns:
             A flat directory result containing the search results.
