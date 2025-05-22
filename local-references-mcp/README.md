@@ -4,12 +4,34 @@ A local reference management and preview tool, built on [FastMCP](https://github
 
 Useful to allow a coding assistant to preview local documentation, best practices, or knowledge snippets.
 
-## Features
+## The Story
 
-- **Reference Management**: Register and manage references from local files.
-- **Preview References**: Quickly preview the contents of registered references.
-- **Retrieve Reference Content**: Fetch the full content of a specific reference by type and name.
-- **Extensible**: Easily add new reference types or integrate with other MCP tools.
+Imagine you're in the Beats repo and you tell it that there's a "Winlogbeat" reference at https://github.com/elastic/beats/tree/main/docs/reference/winlogbeat. For this, you'd pass `--reference "Winlogbeat:docs/reference/winlogbeat"`. From there, the LLM has a couple of tools available to it.
+
+### List References 
+
+When the LLM calls List References, something like this is returned:
+
+``` 
+  # Local References 
+  Below is a list of available reference types. We will show each type, and a preview of its entries.Note: previews are truncated to 1000 characters.
+  
+  ## References for: `Winlogbeat`
+  Below are the available references that you can leverage when working with Winlogbeat
+  
+  ### Type: `Winlogbeat`, Name: `Add cloud metadata`
+  The add_cloud_metadata processor enriches each event with instance metadata from the machine’s hosting provider. At startup it will query a list of hosting providers and cache the instance metadata.
+
+  ### Type: `Winlogbeat`, Name: `Add Cloud Foundry metadata`
+  The add_cloudfoundry_metadata processor annotates each event with relevant metadata from Cloud Foundry applications. The events are annotated with Cloud Foundry metadata, only if the event contains a reference to a Cloud Foundry application (using field cloudfoundry.app.id) and the configured Cloud Foundry client is able to retrieve information for the application.
+  ....
+```
+
+and if the LLM wants the full reference can call, `get_reference("Winlogbeat", "Add Cloud Metadata")`
+
+You can have the LLM run list_references automatically on start-up and then it knows how and where to get best practices, how tos, etc from the docs in your repo.
+
+This is especially useful when you want to expose guides / instructions to an LLM without giving it general read/write access to the filesystem.
 
 ## VS Code McpServer Usage
 
