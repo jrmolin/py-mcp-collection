@@ -1,0 +1,63 @@
+[project]
+name = "doc_store_vector_search_mcp"
+version = "0.1.0"
+description = "Doc Store Vector Search Mcp project"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "asyncclick>=8.1.8",
+    "beautifulsoup4>=4.13.4",
+    "duckdb>=1.2.2",
+    "faiss-cpu>=1.11.0",
+    "fastmcp>=2.3.5",
+    "markdownify>=1.1.0",
+    "mcp>=1.9.0",
+    "numpy>=2.2.6",
+    "pytest>=8.3.5",
+    "requests>=2.32.3",
+    "sentence-transformers>=4.1.0",
+    "torch>=2.7.0",
+    "transformers>=4.52.1",
+    "langchain-core",
+    "langchain-community",
+    "langchain",
+    "sqlite-vss", # Or other chosen vector store
+    "unstructured", # For various document types
+    "jq", # For JSON processing
+    "tiktoken", # For token counting/splitting
+    "pytest-asyncio>=0.26.0",
+]
+
+[tool.poetry]
+packages = [
+    { include = "doc_store_vector_search_mcp", from = "src" }
+]
+[tool.hatch.metadata]
+allow-direct-references=true
+
+[tool.poetry.scripts]
+doc_store_vector_search_mcp = "doc_store_vector_search_mcp.main:run_mcp"
+
+
+[tool.pytest]
+addopts = "-vvv"
+
+
+
+[dependency-groups]
+dev = [
+  "pytest",
+  "pytest-mock",
+  "ruff",
+  "syrupy>=4.9.1",
+]
+lint = [
+  "ruff"
+]
+
+[build-system]
+requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+extend="../pyproject.toml"
