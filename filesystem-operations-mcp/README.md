@@ -14,7 +14,7 @@ This project provides a FastMCP server that exposes tools for performing bulk fi
             "Filesystem Operations": {
                 "command": "uvx",
                 "args": [
-                    "https://github.com/strawgate/mcp-many-files.git"
+                    "git+https://github.com/strawgate/py-mcp-collection.git#subdirectory=filesystem-operations-mcp",
                 ]
             }
         }
@@ -29,23 +29,9 @@ Simply add the following to your McpServer configuration. Edit the AlwaysAllow l
     "Filesystem Operations": {
       "command": "uvx",
       "args": [
-        "https://github.com/strawgate/mcp-many-files.git"
+        "git+https://github.com/strawgate/py-mcp-collection.git#subdirectory=filesystem-operations-mcp"
       ],
-      "alwaysAllow": [
-        "file_read",
-        "file_create",
-        "file_append",
-        "file_erase",
-        "file_move",
-        "file_delete",
-        "folder_create",
-        "folder_contents",
-        "folder_move",
-        "folder_delete",
-        "folder_empty",
-        "call_tool_bulk",
-        "call_tools_bulk"
-      ]
+      "alwaysAllow": []
     },
 ```
 
