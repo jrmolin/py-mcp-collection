@@ -144,6 +144,12 @@ class FilesystemServer:
 
         return path.is_dir()
 
+    def create_dir(self, path: Path) -> None:
+        """Create a directory."""
+        self._resolve_and_validate(path)
+
+        path.mkdir(parents=True, exist_ok=True)
+
     def get_dir(self, path: Path) -> FlatDirectoryResult[FileEntry]:
         """Get a directory."""
         self._resolve_and_validate(path)

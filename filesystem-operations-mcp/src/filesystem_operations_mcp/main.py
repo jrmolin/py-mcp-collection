@@ -129,6 +129,21 @@ class DirectoryServer(MCPMixin):
     def __init__(self, filesystem_server: FilesystemServer):
         self.filesystem_server = filesystem_server
 
+    @mcp_tool(name="create")
+    def create_dir(self, ctx: Context, path: Path) -> bool:
+        """Create a directory.
+
+        Args:
+            path: The path to the directory to create.
+
+        Returns:
+            True if the directory was created. Raises an error otherwise.
+        """
+
+        ctx.info(f"Request to create directory {path}")
+        self.filesystem_server.create_dir(path)
+        return True
+
     @mcp_tool(name="list")
     def list_contents(
         self,
