@@ -1,0 +1,37 @@
+{
+  ".": {
+    ".": {
+      "children": 6
+    },
+    "a.txt": {
+      "content": "hello world",
+      "size": 11
+    },
+    "b.md": {
+      "content": "markdown content",
+      "size": 16
+    },
+    "file_with_many_lines.txt": {
+      "content": "one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\n",
+      "size": 49
+    },
+    "large.txt": {
+      "preview": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...",
+      "size": 10000
+    }
+  },
+  "./empty_dir": {
+    ".": {
+      "children": 0
+    }
+  },
+  "./subdir": {
+    ".": {
+      "children": 1
+    },
+    "c.py": {
+      "content": "print('hi')",
+      "size": 11
+    }
+  }
+}

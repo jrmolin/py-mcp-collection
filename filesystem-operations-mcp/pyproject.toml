@@ -1,0 +1,54 @@
+[project]
+name = "filesystem_operations_mcp"
+version = "0.1.0"
+description = "Filesystem Operations Mcp project"
+readme = "README.md"
+requires-python = ">=3.12"
+
+dependencies = [
+    "asyncclick>=8.1.8",
+    "fastmcp>=2.3.5",
+    "mcp>=1.9.0",
+    "pyyaml>=6.0.2",
+    "syrupy>=4.9.1",
+]
+
+[tool.poetry]
+packages = [
+    { include = "filesystem_operations_mcp", from = "src" }
+]
+[tool.hatch.metadata]
+allow-direct-references=true
+
+[tool.poetry.scripts]
+filesystem_operations_mcp = "filesystem_operations_mcp.main:run_mcp"
+
+
+[dependency-groups]
+dev = [
+  "pytest",
+  "pytest-asyncio>=0.26.0",
+  "pytest-mock",
+  "ruff",
+]
+lint = [
+  "ruff"
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+
+[build-system]
+requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+extend="../pyproject.toml"
+
+
+[tool.ruff.lint.extend-per-file-ignores]
+"**/*.py" = [
+    "PLR0917", # Ingore too many args
+    "PLR0913", # Ignore positional args
+]

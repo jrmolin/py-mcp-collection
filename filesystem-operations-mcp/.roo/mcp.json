@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "Filesystem Operations": {
+      "command": "uv",
+      "args": [
+        "run",
+        "./src/filesystem_operations_mcp/main.py"
+      ],
+      "disabled": false
+    },
+    "Filesystem Operations - sse": {
+      "url": "http://localhost:8000/sse",
+      "disabled": true,
+      "timeout": 30,
+      "alwaysAllow": [
+        "directory_preview",
+        "file_preview",
+        "file_read"
+      ]
+    }
+  }
+}

@@ -9,6 +9,10 @@
 			"name": "Fetch MCP Server"
 		},
 		{
+			"path": "filesystem-operations-mcp",
+			"name": "Filesystem Operations MCP"
+		},
+		{
 			"path": "doc-store-vector-search-mcp",
 			"name": "Doc Store and Vector Search MCP"
 		},
