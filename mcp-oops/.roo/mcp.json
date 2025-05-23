@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "MCPOops": {
+      "command": "uv",
+      "args": [
+        "run",
+        "./src/MCPOops/main.py"
+      ]
+    }
+  }
+}

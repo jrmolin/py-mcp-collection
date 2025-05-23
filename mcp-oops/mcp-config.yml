@@ -1,0 +1,24 @@
+mcpServers:
+  fetch:
+    command: "uvx"
+    args: ["mcp-server-fetch"]
+    description: "Access a webpage"
+  "Filesystem Operations":
+    command: "uvx"
+    args: ["git+https://github.com/strawgate/py-mcp-collection.git#subdirectory=filesystem-operations-mcp"]
+    description: "Access the local filesystem"
+  tree-sitter:
+    command: "uvx"
+    args: ["--directory", ".", "mcp-server-tree-sitter"]
+    description: "Explore a codebase using tree-sitter"
+  "Local References":
+    command: "uvx"
+    args:
+    - "git+https://github.com/strawgate/py-mcp-collection.git#subdirectory=local-references-mcp"
+    - "--reference"
+    - "Git Repositories:docs/best-practices"
+    description: "Access local references"
+  git:
+    command: "npx"
+    args: ["-y", "@cyanheads/git-mcp-server"]
+    description: "Perform git-related actions"
