@@ -1,54 +1,44 @@
-# MCPOops
+# mcp-oops
 
-A MCPOops project for creating MCP Servers.
+It's easy to run into "Oops"-es while using MCP Servers. It's great that I can query every issue in my GitHub repo but why did the LLM try to do it in one call?
+
+What you need is an MCP Server that prevents these kinds of Oops-es. With MCPOops, "Oops"-es are no more.
+
+The mcp-oops server gives any existing uvx (npx coming soon), sse, or streamable MCP Server an "Oops"-proof wrapper by:
+- Limiting the size of responses from tool calls
+- Allowing you to redirect any tool call to a file on disk
+- Splitting large tool calls into multiple files that can be consumed in a fan-out fan-in workflow
+
+(Coming Soon): Another major feature is the ability to set default parameters for tool calls, restricting tools to being called with only the parameters you want them to have. Give your Assistant the ability to post a comment only on the PR that is being reviewed, not any PR in the repo! That's a great way to prevent "Oops"-es.
 
 ## Features
 
-- **CLI**: A CLI for the MCP Server.
-- **Extensible**: Easily add new reference types or integrate with other MCP tools.
-
-## Installation
-
-```bash
-uv sync
-```
-
-Or, for development:
-
-```bash
-uv sync --group dev
-```
+- **Block Large Tool Calls**: Prevents tool calls from returning responses that are too large. Enabling the LLM to call tools that return large responses is a great way to get "Oops"-es.
+- **Large Response Handling**: Intercepts tool call responses and redirects large ones to specified files, optionally splitting them into chunks.
+- **Default Parameters**: Set default parameters for tool calls, restricting tools to being called with only the parameters you want them to have. (Coming Soon)
 
 ## Usage
 
-### Command-Line Interface
-
-Run the MCP server with your references:
-
-```bash
-uv run MCPOops --cli-arg-1 "cli-arg-1" --cli-arg-2 "cli-arg-2" --cli-arg-3 "cli-arg-3"
-```
-
-## VS Code McpServer Usage
-
-1. Open the command palette (Ctrl+Shift+P or Cmd+Shift+P).
-2. Type "Settings" and select "Preferences: Open User Settings (JSON)".
-3. Add the following MCP Server configuration
+### VS Code McpServer Usage
 
 ```json
 {
     "mcp": {
         "servers": {
-            "Mcpoops": {
+            "MCPOopsProxy": {
                 "command": "uvx",
                 "args": [
-                    "https://github.com/strawgate/py-mcp-collection.git#subdirectory=MCPOops",
-                    "--cli-arg-1",
-                    "cli-arg-1",
-                    "--cli-arg-2",
-                    "cli-arg-2",
-                    "--cli-arg-3",
-                    "cli-arg-3"
+                    "https://github.com/strawgate/py-mcp-collection.git#subdirectory=mcp-oops",
+                    "--mcp-config",
+                    "/path/to/your/mcp-config.yml",
+                    "--max-response-size",
+                    "200", // 200KB
+                    "--max-redirected-response-size",
+                    "10000", // 10MB
+                    "--split-redirected-responses",
+                    "1000",
+                    "--mcp-transport",
+                    "stdio"
                 ]
             }
         }
@@ -56,27 +46,25 @@ uv run MCPOops --cli-arg-1 "cli-arg-1" --cli-arg-2 "cli-arg-2" --cli-arg-3 "cli-
 }
 ```
 
-## Roo Code / Cline McpServer Usage
-Simply add the following to your McpServer configuration. Edit the AlwaysAllow list to include the tools you want to use without confirmation.
+### Roo Code / Cline McpServer Usage
+
+Simply add the following to your McpServer configuration, adjusting the arguments as needed. Edit the AlwaysAllow list to include the tools you want to use without confirmation.
 
 ```
-    "Local References": {
+    "MCPOopsProxy": {
       "command": "uvx",
       "args": [
-        "https://github.com/strawgate/py-mcp-collection.git#subdirectory=MCPOops"
+        "https://github.com/strawgate/py-mcp-collection.git#subdirectory=mcp-oops",
+        "--mcp-config",
+        "/path/to/your/mcp-config.yml",
+        "--max-response-size",
+        "200", // 200KB
+        "--max-redirected-response-size",
+        "10000", // 10MB
+        "--split-redirected-responses",
+        "1000", // 1MB
+        "--mcp-transport",
+        "stdio"
       ]
     }
 ```
-
-## Development & Testing
-
-- Tests should be placed alongside the source code or in a dedicated `tests/` directory.
-- Use `pytest` for running tests.
-
-```bash
-pytest
-```
-
-## License
-
-See [LICENSE](LICENSE).
