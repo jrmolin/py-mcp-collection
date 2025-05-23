@@ -18,7 +18,7 @@ packages = [
 [tool.hatch.metadata]
 allow-direct-references=true
 
-[tool.poetry.scripts]
+[project.scripts]
 mcp-oops = "mcp_oops.main:run_mcp"
 
 

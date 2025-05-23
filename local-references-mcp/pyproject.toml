@@ -22,7 +22,6 @@ allow-direct-references=true
 
 [project.scripts]
 local-references-mcp = "local_references_mcp.main:run_mcp"
-local_references_mcp = "local_references_mcp.main:run_mcp"
 
 
 [dependency-groups]

@@ -22,8 +22,6 @@ allow-direct-references=true
 
 [project.scripts]
 filesystem-operations-mcp = "filesystem_operations_mcp.main:run_mcp"
-filesystem_operations_mcp = "filesystem_operations_mcp.main:run_mcp"
-
 
 [dependency-groups]
 dev = [
