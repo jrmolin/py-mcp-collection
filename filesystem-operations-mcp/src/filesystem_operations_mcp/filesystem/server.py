@@ -8,6 +8,7 @@ from filesystem_operations_mcp.filesystem.models import (
     FileEntryChunk,
     FileEntryChunkedContent,
     FileEntryContent,
+    FileEntryNotFound,
     FileEntryWithNameAndContent,
     FileEntryPreview,
     FileEntryWithNameAndContent,
@@ -15,7 +16,7 @@ from filesystem_operations_mcp.filesystem.models import (
     SummaryDirectoryEntry,
 )
 
-R = TypeVar("R", bound=FileEntry | FileEntryContent | FileEntryPreview)
+R = TypeVar("R", bound=FileEntry | FileEntryContent | FileEntryPreview | FileEntryWithNameAndContent)
 
 
 class FilesystemServerError(Exception):
@@ -42,6 +43,13 @@ class FilesystemServerFileNotFoundError(FilesystemServerError):
 
     def __init__(self, path: Path):
         super().__init__(f"File {path} does not exist")
+
+
+class FilesystemServerFileAlreadyExistsError(FilesystemServerError):
+    """An exception for when a file already exists."""
+
+    def __init__(self, path: Path):
+        super().__init__(f"File {path} already exists")
 
 
 class FilesystemServer:
@@ -96,11 +104,16 @@ class FilesystemServer:
 
         path.unlink()
 
+    def get_file(self, path: Path) -> FileEntry:
+        """Get a file."""
+        self._resolve_and_validate(path)
+        return self._get_file(FileEntry, path)
+
     def search_file(
         self, path: Path, search: str, search_is_regex: bool = False, before: int = 3, after: int = 3
     ) -> FileEntryChunkedContent | None:
         """Search a file for a string or regex pattern."""
-        self._resolve_and_validate(path)
+        file = self.get_file(path)
 
         return self._find_in_file(
             file=self._get_file(FileEntry, path), search=search, search_is_regex=search_is_regex, before=before, after=after
@@ -109,6 +122,10 @@ class FilesystemServer:
     def create_file(self, path: Path, content: str) -> None:
         """Create a file."""
         self._resolve_and_validate(path)
+
+        # if the file already exists, raise an error
+        if path.exists():
+            raise FilesystemServerFileAlreadyExistsError(path)
 
         path.write_text(content)
 
@@ -121,21 +138,21 @@ class FilesystemServer:
 
     def read_file(self, path: Path) -> str:
         """Read a file."""
-        return self._get_file(FileEntryContent, path).content
+        file = self._get_file(FileEntryContent, path)
+        if isinstance(file, FileEntryNotFound):
+            return file.error()
+        else:
+            return file.content()
 
     def read_files(self, paths: list[Path]) -> list[FileEntryWithNameAndContent]:
         """Read many files."""
         return [self._get_file(FileEntryWithNameAndContent, path) for path in paths]
 
-
     def preview_file(self, path: Path) -> str:
         """Preview a file."""
-        result = self._get_file(FileEntryPreview, path)
+        file = self._get_file(FileEntryPreview, path)
 
-        if result.preview:
-            return result.preview
-
-        return result.content
+        return file.preview()
 
     def _get_file(self, entry_type: type[R], path: Path) -> R:
         """Get a file."""

@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 from typing import TypeVar
 
 from pydantic import BaseModel, Field, RootModel, computed_field
@@ -10,20 +11,31 @@ class BaseFileEntry(BaseModel):
     absolute_path: Path = Field(exclude=True)
     root: Path = Field(exclude=True)
 
-
     def size(self) -> int:
         return self.absolute_path.stat().st_size
 
-    def read(self, head: int | None = None) -> str:
+    def read(self) -> str:
+        with self.absolute_path.open("r") as f:
+            return f.read()
+
+    def preview(self, head: int) -> str:
         with self.absolute_path.open("r") as f:
             return f.read(head)
+
+    def contents_match(self, pattern: str) -> list[int]:
+        """Searches for a pattern in the file and returns the line numbers of the matches."""
+        return [i for i, line in enumerate(self.read_lines()) if pattern in line]
+
+    def contents_match_regex(self, pattern: str) -> list[int]:
+        """Searches for a regex pattern in the file and returns the line numbers of the matches."""
+        return [i for i, line in enumerate(self.read_lines()) if re.search(pattern, line)]
 
     def read_lines(self) -> list[str]:
         with self.absolute_path.open("r") as f:
             return f.readlines()
 
 
-type FileEntryTypes = FileEntry | FileEntryPreview | FileEntryContent | FileEntryChunkedContent | FileEntryWithSize | FileEntryWithNameAndContent
+type FileEntryTypes = FileEntry | FileEntryPreview | FileEntryContent |  FileEntryWithSize | FileEntryWithNameAndContent
 
 T = TypeVar("T", bound=FileEntryTypes)
 
@@ -42,17 +54,24 @@ class FileEntryPreview(FileEntryWithSize):
 
     @computed_field
     def content(self) -> str | None:
-        if self.size <= PREVIEW_SIZE:
+        if self.size() <= PREVIEW_SIZE:
             return self.read()
 
         return None
 
     @computed_field
     def preview(self) -> str | None:
-        if self.size > PREVIEW_SIZE:
+        if self.size() > PREVIEW_SIZE:
             return self.read(PREVIEW_SIZE) + "..."
 
         return None
+
+
+class FileEntryNotFound(BaseFileEntry):
+
+    @computed_field
+    def error(self) -> str:
+        return f"File {self.absolute_path} does not exist"
 
 
 class FileEntryWithNameAndContent(BaseFileEntry):
@@ -60,7 +79,7 @@ class FileEntryWithNameAndContent(BaseFileEntry):
     @computed_field
     def path(self) -> Path:
         return self.absolute_path.relative_to(self.root)
-    
+
     @computed_field
     def content(self) -> str:
         return self.read()

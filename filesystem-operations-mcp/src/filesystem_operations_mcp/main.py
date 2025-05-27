@@ -24,11 +24,11 @@ from filesystem_operations_mcp.filesystem.skip import DEFAULT_SKIP_LIST, DEFAULT
 PATH_DIR_SINGLE_FIELD = Field(..., description="A single directory to operate on.")
 PATH_FILE_SINGLE_FIELD = Field(..., description="A single file to operate on.")
 
-PATH_DIR_MULTI_FIELD = Field(default_factory=list, min_length=1, description="A list of directories to operate on.")
-PATH_FILE_MULTI_FIELD = Field(default_factory=list, min_length=1, description="A list of files to operate on.")
+PATH_DIR_MULTI_FIELD = Field(default_factory=list[Path], min_length=1, description="A list of directories to operate on.")
+PATH_FILE_MULTI_FIELD = Field(default_factory=list[Path], min_length=1, description="A list of files to operate on.")
 
 SEARCH_FIELD = Field(
-    default_factory=list,
+    ...,
     description="A string to search for. If `search_is_regex` is `True`, this will be treated as a regex pattern. Otherwise, only files that contain the exact string will be included.",
 )
 SEARCH_IS_REGEX_FIELD = Field(default=False, description="Whether the search string is a regex pattern.")
@@ -38,8 +38,8 @@ AFTER_LINES_FIELD = Field(default=3, description="The number of lines to include
 
 CONTENT_FIELD = Field(..., description="The content to write to the file.")
 
-INCLUDE_FILTERS_FIELD = Field(default_factory=list, description="A list of glob patterns to use to constrain the results.")
-EXCLUDE_FILTERS_FIELD = Field(default_factory=list, description="A list of glob patterns to use to exclude from the results.")
+INCLUDE_FILTERS_FIELD = Field(default_factory=list[str], description="A list of glob patterns to use to constrain the results.")
+EXCLUDE_FILTERS_FIELD = Field(default_factory=list[str], description="A list of glob patterns to use to exclude from the results.")
 
 RECURSE_FIELD = Field(default=False, description="Whether to recurse into subdirectories.")
 BYPASS_DEFAULT_EXCLUSIONS_FIELD = Field(
@@ -53,50 +53,50 @@ class FileServer(MCPMixin):
         self.filesystem_server = filesystem_server
 
     @mcp_tool()
-    def read(self, ctx: Context, path: Path = PATH_FILE_SINGLE_FIELD) -> str:
+    async def read(self, ctx: Context, path: Path = PATH_FILE_SINGLE_FIELD) -> str:
         """Read the contents of a file.
 
         Returns:
             The contents of the file.
         """
-        ctx.info(f"Request to read file {path}")
+        await ctx.info(f"Request to read file {path}")
         return self.filesystem_server.read_file(path)
 
 
     @mcp_tool()
-    def read_many(self, ctx: Context, path: list[Path] = PATH_FILE_MULTI_FIELD) -> list[FileEntryWithNameAndContent]:
+    async def read_many(self, ctx: Context, path: list[Path] = PATH_FILE_MULTI_FIELD) -> list[FileEntryWithNameAndContent]:
         """Read the contents of many files.
 
         Returns:
             The contents of the file.
         """
-        ctx.info(f"Request to read files {path}")
+        await ctx.info(f"Request to read files {path}")
         return self.filesystem_server.read_files(path)
 
 
     @mcp_tool()
-    def preview(self, ctx: Context, path: Path = PATH_FILE_SINGLE_FIELD) -> str:
+    async def preview(self, ctx: Context, path: Path = PATH_FILE_SINGLE_FIELD) -> str:
         """Preview the contents of a file.
 
         Returns:
             A preview of the contents of the file.
         """
-        ctx.info(f"Request to preview file {path}")
+        await ctx.info(f"Request to preview file {path}")
         return self.filesystem_server.preview_file(path)
 
     @mcp_tool()
-    def delete(self, ctx: Context, path: Path = PATH_FILE_SINGLE_FIELD) -> bool:
+    async def delete(self, ctx: Context, path: Path = PATH_FILE_SINGLE_FIELD) -> bool:
         """Delete a file.
 
         Returns:
             True if the file was deleted. Raises an error otherwise.
         """
-        ctx.info(f"Request to delete file {path}")
+        await ctx.info(f"Request to delete file {path}")
         self.filesystem_server.delete_file(path)
         return True
 
     @mcp_tool()
-    def search(
+    async def search(
         self,
         ctx: Context,
         path: Path = PATH_FILE_SINGLE_FIELD,
