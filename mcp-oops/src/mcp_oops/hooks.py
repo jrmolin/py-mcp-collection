@@ -2,13 +2,11 @@ from logging import getLogger
 from pathlib import Path
 from typing import Any
 
-from fastmcp.server.context import Context
-from fastmcp.server.proxy import ProxyTool
+from fastmcp.contrib.tool_transformer.types import PostToolCallHookProtocol
 from mcp.types import BlobResourceContents, EmbeddedResource, ImageContent, TextContent, TextResourceContents
 
 from mcp_oops.models.errors import (
     MCPoopsRedirectSerializationError,
-    MCPoopsRedirectTooLargeError,
     MCPoopsResponseTooLargeError,
     MCPoopsWriteDataError,
 )
@@ -30,19 +28,6 @@ def convert_response_to_serializable(response: list[TextContent | ImageContent |
             serializable_response.append(item.resource.blob)
 
     return "\n".join(serializable_response)
-
-
-def error_on_large_response(tool_name: str, tool_response: list[TextContent | ImageContent | EmbeddedResource], max_size: int):
-    total_size = len(convert_response_to_serializable(tool_response))
-
-    if total_size > max_size:
-        raise MCPoopsResponseTooLargeError(tool_name, total_size, max_size)
-
-
-def error_on_large_redirect(tool_name: str, tool_response: list[TextContent | ImageContent | EmbeddedResource], max_size: int):
-    total_size = len(convert_response_to_serializable(tool_response))
-    if total_size > max_size:
-        raise MCPoopsRedirectTooLargeError(tool_name, total_size, max_size)
 
 
 def write_data_to_file(data: str, file_path: str, split_size: int):
@@ -79,32 +64,26 @@ def redirect_response(
     return file_paths_with_sizes
 
 
-class InterceptingProxyTool(ProxyTool):
-    """
-    A ProxyTool subclass that intercepts the run method to handle redirection.
-    """
+def get_content_size(response: list[TextContent | ImageContent | EmbeddedResource]) -> int:
+    serializable_response = convert_response_to_serializable(response)
+    return len(serializable_response)
 
-    max_response_size: int
-    max_redirected_response_size: int
-    split_redirected_responses: int
 
-    async def run(
-        self,
-        arguments: dict[str, Any],
-        context: Context | None = None,
-    ) -> list[TextContent | ImageContent | EmbeddedResource]:
-        # Extract redirect_to from arguments
-        redirect_to = arguments.pop("redirect_to", None)
+def get_post_call_hook(
+    limit_response_size: int,
+) -> PostToolCallHookProtocol:
+    async def post_call_hook(
+        response: list[TextContent | ImageContent | EmbeddedResource],
+        tool_args: dict[str, Any],
+        hook_args: dict[str, Any],
+    ) -> None:
+        logger.debug("Post call hook called with response: %s", response)
+        logger.debug("Post call hook called with tool args: %s", tool_args)
+        logger.debug("Post call hook called with hook args: %s", hook_args)
 
-        response = await super().run(arguments=arguments, context=context)
+        total_size = get_content_size(response)
+        if total_size > limit_response_size:
+            msg = f"Response for tool is too large: {total_size} bytes. The maximum size is {limit_response_size} bytes."
+            raise MCPoopsResponseTooLargeError(msg)
 
-        error_on_large_response(self.name, response, self.max_response_size)
-
-        if redirect_to:
-            error_on_large_redirect(self.name, response, self.max_redirected_response_size)
-            file_paths_with_sizes = redirect_response(self.name, response, redirect_to, self.split_redirected_responses)
-            return [TextContent(type="text", text=f"Redirected tool responses to {file_paths_with_sizes}")]
-
-        error_on_large_response(self.name, response, self.max_response_size)
-
-        return response
+    return post_call_hook

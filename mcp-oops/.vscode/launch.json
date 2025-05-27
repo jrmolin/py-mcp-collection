@@ -5,13 +5,22 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Module",
+            "name": "Use Config mcp-config.yml",
             "type": "debugpy",
             "request": "launch",
             "module": "mcp_oops.main",
             "cwd": "${workspaceFolder}",
             "justMyCode": false,
-            "args": ["--mcp-config", "mcp-config.yml", "--mcp-transport", "sse"]
+            "args": ["config", "mcp-config.yml", "--oops-transport", "sse", ]
+        },
+        {
+            "name": "Use stdio",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "mcp_oops.main",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false,
+            "args": ["stdio", "--oops-transport", "sse", "uvx", "mcp-server-fetch"]
         }
     ]
 }

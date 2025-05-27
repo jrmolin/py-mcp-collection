@@ -6,9 +6,10 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "asyncclick>=8.1.8",
-    "fastmcp>=2.3.5",
+    "fastmcp>=2.0.0",
     "mcp>=1.9.0",
     "pyyaml>=6.0.2",
+    "requests>=2.32.3",
 ]
 
 [tool.poetry]
@@ -19,7 +20,8 @@ packages = [
 allow-direct-references=true
 
 [project.scripts]
-mcp-oops = "mcp_oops.main:run_mcp"
+mcp-oops-config = "mcp_oops.main:from_config_cli"
+mcp-oops-single = "mcp_oops.main:single_server_cli"
 
 
 [dependency-groups]
@@ -38,3 +40,7 @@ build-backend = "hatchling.build"
 
 [tool.ruff]
 extend="../pyproject.toml"
+
+[tool.uv.sources]
+fastmcp = { git = "https://github.com/strawgate/fastmcp.git", branch = "proxy_tool" }
+fastmcp_agents = { git = "https://github.com/strawgate/fastmcp-agents.git", branch = "main" }
