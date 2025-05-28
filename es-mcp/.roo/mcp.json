@@ -1,0 +1,59 @@
+{
+  "mcpServers": {
+    "es_mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "./src/es_mcp/main.py"
+      ],
+      "alwaysAllow": [
+        "allocation",
+        "aliases",
+        "ping",
+        "info",
+        "allocation",
+        "aliases",
+        "component_templates",
+        "count",
+        "fielddata",
+        "health",
+        "help",
+        "indices",
+        "master",
+        "ml_data_frame_analytics",
+        "ml_datafeeds",
+        "ml_jobs",
+        "ml_trained_models",
+        "nodeattrs",
+        "nodes",
+        "pending_tasks",
+        "plugins",
+        "recovery",
+        "repositories",
+        "segments",
+        "shards",
+        "snapshots",
+        "tasks",
+        "templates",
+        "thread_pool",
+        "transforms",
+        "health",
+        "state",
+        "stats",
+        "info",
+        "stats",
+        "create_data_stream",
+        "get_data_stream",
+        "data_streams_stats",
+        "resolve_index",
+        "get_lifecycle",
+        "explain_lifecycle",
+        "get_status",
+        "get_lifecycle",
+        "get_stats",
+        "get_status",
+        "get_node"
+      ]
+    }
+  }
+}
