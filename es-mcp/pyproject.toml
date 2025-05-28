@@ -5,9 +5,12 @@ description = "Es Mcp project"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "aiohttp>=3.12.2",
     "asyncclick>=8.1.8",
+    "elasticsearch>=8.18.0,<9.0.0",
     "fastmcp>=2.3.5",
     "mcp>=1.9.0",
+    "python-dotenv>=1.1.0",
 ]
 
 [tool.poetry]
@@ -17,7 +20,7 @@ packages = [
 [tool.hatch.metadata]
 allow-direct-references=true
 
-[tool.poetry.scripts]
+[project.scripts]
 es_mcp = "es_mcp.main:run_mcp"
 
 

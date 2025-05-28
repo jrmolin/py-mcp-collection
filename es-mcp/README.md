@@ -26,7 +26,7 @@ uv sync --group dev
 Run the MCP server with your references:
 
 ```bash
-uv run es_mcp --cli-arg-1 "cli-arg-1" --cli-arg-2 "cli-arg-2" --cli-arg-3 "cli-arg-3"
+uv run es_mcp --cli-arg-a "cli-arg-a" --cli-arg-b "cli-arg-b" --cli-arg-c "cli-arg-c"
 ```
 
 ## VS Code McpServer Usage
@@ -43,12 +43,12 @@ uv run es_mcp --cli-arg-1 "cli-arg-1" --cli-arg-2 "cli-arg-2" --cli-arg-3 "cli-a
                 "command": "uvx",
                 "args": [
                     "https://github.com/strawgate/py-mcp-collection.git#subdirectory=es_mcp",
-                    "--cli-arg-1",
-                    "cli-arg-1",
-                    "--cli-arg-2",
-                    "cli-arg-2",
-                    "--cli-arg-3",
-                    "cli-arg-3"
+                    "--cli-arg-a",
+                    "cli-arg-a",
+                    "--cli-arg-b",
+                    "cli-arg-b",
+                    "--cli-arg-c",
+                    "cli-arg-c"
                 ]
             }
         }
