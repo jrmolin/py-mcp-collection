@@ -7,26 +7,27 @@ A es_mcp project for creating MCP Servers.
 - **CLI**: A CLI for the MCP Server.
 - **Extensible**: Easily add new reference types or integrate with other MCP tools.
 
-## Installation
+## Setup in Windsurf
 
-```bash
-uv sync
-```
+On the right in the cascade window press the hammer icon and add a server with the following configuration:
 
-Or, for development:
-
-```bash
-uv sync --group dev
-```
-
-## Usage
-
-### Command-Line Interface
-
-Run the MCP server with your references:
-
-```bash
-uv run es_mcp --cli-arg-a "cli-arg-a" --cli-arg-b "cli-arg-b" --cli-arg-c "cli-arg-c"
+```json
+{
+    "mcpServers": {
+        "es-mcp": {
+            "command": "uvx",
+            "args": [
+                "--from",
+                "git+https://github.com/strawgate/py-mcp-collection.git#subdirectory=es-mcp",
+                "es-mcp"
+            ],
+            "env": {
+                "ES_HOST": "https://my-cloud-cluster:443",
+                "ES_API_KEY": "MYCOOLAPIKEY"
+            }
+        }
+    }
+}
 ```
 
 ## VS Code McpServer Usage
@@ -42,13 +43,9 @@ uv run es_mcp --cli-arg-a "cli-arg-a" --cli-arg-b "cli-arg-b" --cli-arg-c "cli-a
             "Es Mcp": {
                 "command": "uvx",
                 "args": [
-                    "https://github.com/strawgate/py-mcp-collection.git#subdirectory=es_mcp",
-                    "--cli-arg-a",
-                    "cli-arg-a",
-                    "--cli-arg-b",
-                    "cli-arg-b",
-                    "--cli-arg-c",
-                    "cli-arg-c"
+                    "--from",
+                    "git+https://github.com/strawgate/py-mcp-collection.git#subdirectory=es_mcp",
+                    "es-mcp"
                 ]
             }
         }
@@ -60,22 +57,16 @@ uv run es_mcp --cli-arg-a "cli-arg-a" --cli-arg-b "cli-arg-b" --cli-arg-c "cli-a
 Simply add the following to your McpServer configuration. Edit the AlwaysAllow list to include the tools you want to use without confirmation.
 
 ```
-    "Local References": {
+    "es-mcp": {
       "command": "uvx",
       "args": [
-        "https://github.com/strawgate/py-mcp-collection.git#subdirectory=es_mcp"
+        "--from",
+        "git+https://github.com/strawgate/py-mcp-collection.git#subdirectory=es_mcp",
+        "es-mcp"
       ]
     }
 ```
 
-## Development & Testing
-
-- Tests should be placed alongside the source code or in a dedicated `tests/` directory.
-- Use `pytest` for running tests.
-
-```bash
-pytest
-```
 
 ## License
 
