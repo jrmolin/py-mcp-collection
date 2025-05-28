@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "es_mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "./src/es_mcp/main.py"
+      ]
+    }
+  }
+}
