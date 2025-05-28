@@ -21,7 +21,7 @@ packages = [
 allow-direct-references=true
 
 [project.scripts]
-es_mcp = "es_mcp.main:run_mcp"
+es-mcp = "es_mcp.main:run_mcp"
 
 
 [dependency-groups]
