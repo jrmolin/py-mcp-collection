@@ -5,10 +5,6 @@
 			"name": "Local References MCP Server"
 		},
 		{
-			"path": "fetch-mcp",
-			"name": "Fetch MCP Server"
-		},
-		{
 			"path": "filesystem-operations-mcp",
 			"name": "Filesystem Operations MCP"
 		},
@@ -17,16 +13,15 @@
 			"name": "Doc Store and Vector Search MCP"
 		},
 		{
+			"path": "mcp-utils",
+			"name": "MCP Utils"
+		},
+		{
 			"path": ".",
 			"name": "root"
 		}
 	],
 	"settings": {
 		"python.analysis.typeCheckingMode": "off",
-		"python.testing.pytestArgs": [
-			"tests"
-		],
-		"python.testing.unittestEnabled": false,
-		"python.testing.pytestEnabled": true
 	}
 }

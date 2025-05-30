@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from itertools import chain
 from typing import Any, TypeAlias
 
 import langchain_text_splitters
@@ -55,7 +56,11 @@ class MarkdownSplitter:
 
     def split_to_documents(self, text: str) -> list[Document]:
         per_header_documents: list[Document] = self.header_splitter.split_text(text)
-        chunked_documents: list[Document] = [self.chunk_splitter.split_documents([document]) for document in per_header_documents]
+        chunked_documents: list[Document] = []
+
+        for document in per_header_documents:
+            chunked_documents.extend(self.chunk_splitter.split_documents([document]))
+
         return tag_document_order(chunked_documents)
 
 

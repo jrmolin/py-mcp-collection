@@ -1,0 +1,8 @@
+# serializer version: 1
+# name: test_markdownsplitter_splits_by_headers_and_chunks
+  list([
+    Document(metadata={'Header 1': 'Header 1', 'order': 0}, page_content='# Header 1  \nCONTENT 1'),
+    Document(metadata={'Header 1': 'Header 1', 'Header 2': 'Header 2', 'order': 1}, page_content='## Header 2  \nCONTENT 2  \n### Header 3  \nCONTENT 3'),
+    Document(metadata={'Header 1': 'Header 4', 'order': 2}, page_content='# Header 4  \nCONTENT 4'),
+  ])
+# ---

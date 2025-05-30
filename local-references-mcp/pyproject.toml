@@ -23,12 +23,12 @@ allow-direct-references=true
 [project.scripts]
 local-references-mcp = "local_references_mcp.main:run_mcp"
 
-
 [dependency-groups]
 dev = [
   "pytest",
+  "pytest-asyncio>=1.0.0",
   "pytest-mock",
-  "ruff"
+  "ruff",
 ]
 lint = [
   "ruff"

@@ -33,9 +33,7 @@ def test_markdownsplitter_splits_by_headers_and_chunks(snapshot: SnapshotAsserti
     assert isinstance(split_documents, list)
     assert len(split_documents) > 0
 
-    flat_documents = [item for sublist in split_documents for item in sublist]
-
-    for doc in flat_documents:
+    for doc in split_documents:
         assert isinstance(doc, Document)
 
         assert any(header in doc.metadata for header in ["Header 1", "Header 2", "Header 3", "Header 4"])

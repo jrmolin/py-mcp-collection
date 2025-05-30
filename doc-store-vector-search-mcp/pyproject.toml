@@ -25,7 +25,7 @@ dependencies = [
     "unstructured[md]", # For various document types
     "jq", # For JSON processing
     "tiktoken", # For token counting/splitting
-    "pytest-asyncio>=0.26.0",
+    "langchain-text-splitters>=0.3.8",
 ]
 
 [tool.poetry]
