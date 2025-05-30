@@ -116,31 +116,31 @@ class FileServer(MCPMixin):
                 FileEntryChunkedContent(path="a.txt", content="hello world"),
             ]
         """
-        ctx.info(f"Request to search file {path} for {search}")
+        await ctx.info(f"Request to search file {path} for {search}")
         return self.filesystem_server.search_file(path=path, search=search, search_is_regex=search_is_regex, before=before, after=after)
 
     @mcp_tool()
-    def create(self, ctx: Context, path: Path = PATH_FILE_SINGLE_FIELD, content: str = CONTENT_FIELD) -> bool:
+    async def create(self, ctx: Context, path: Path = PATH_FILE_SINGLE_FIELD, content: str = CONTENT_FIELD) -> bool:
         """Create a file.
 
         Returns:
             True if the file was created. Raises an error otherwise.
         """
-        ctx.info(f"Request to create file {path}")
+        await ctx.info(f"Request to create file {path}")
 
         self.filesystem_server.create_file(path, content)
 
         return True
 
     @mcp_tool()
-    def append(self, ctx: Context, path: Path = PATH_FILE_SINGLE_FIELD, content: str = CONTENT_FIELD) -> bool:
+    async def append(self, ctx: Context, path: Path = PATH_FILE_SINGLE_FIELD, content: str = CONTENT_FIELD) -> bool:
         """Append to a file.
 
         Returns:
             True if the file was appended to. Raises an error otherwise.
         """
 
-        ctx.info(f"Request to append to file {path}")
+        await ctx.info(f"Request to append to file {path}")
 
         self.filesystem_server.append_file(path, content)
 
@@ -152,19 +152,19 @@ class DirectoryServer(MCPMixin):
         self.filesystem_server = filesystem_server
 
     @mcp_tool(name="create")
-    def create_dir(self, ctx: Context, path: Path = PATH_DIR_SINGLE_FIELD) -> bool:
+    async def create_dir(self, ctx: Context, path: Path = PATH_DIR_SINGLE_FIELD) -> bool:
         """Create a directory.
 
         Returns:
             True if the directory was created. Raises an error otherwise.
         """
 
-        ctx.info(f"Request to create directory {path}")
+        await ctx.info(f"Request to create directory {path}")
         self.filesystem_server.create_dir(path)
         return True
 
     @mcp_tool(name="list")
-    def list_contents(
+    async def list_contents(
         self,
         ctx: Context,
         path: list[Path] = PATH_DIR_MULTI_FIELD,
@@ -195,7 +195,7 @@ class DirectoryServer(MCPMixin):
             exclude = exclude or []
             exclude.extend(DEFAULT_SKIP_LIST)
 
-        ctx.info(f"Request to list contents of {path}: recurse={recurse}, include={include}, exclude={exclude}")
+        await ctx.info(f"Request to list contents of {path}: recurse={recurse}, include={include}, exclude={exclude}")
         return self.filesystem_server.flat_dir(FileEntryWithSize, path, recurse, include, exclude)
 
     @mcp_tool(name="preview")

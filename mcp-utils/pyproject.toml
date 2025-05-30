@@ -31,7 +31,7 @@ lint = [
 ]
 
 [tool.hatch.version]
-path = "mcp_utils/__about__.py"
+path = "src/mcp_utils/__about__.py"
 
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
