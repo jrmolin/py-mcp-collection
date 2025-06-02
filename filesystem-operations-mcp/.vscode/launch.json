@@ -5,12 +5,25 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python Debugger: Summarize Code",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/filesystem_operations_mcp/filesystem/summarize/code.py",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Python Debugger: Module",
             "type": "debugpy",
             "request": "launch",
+            "justMyCode": true,
             "module": "filesystem_operations_mcp.main",
             "cwd": "${workspaceFolder}/playground",
-            "args": ["--mcp-transport", "sse", "--root-dir", "${workspaceFolder}/playground"]
+            "args": [
+                "--mcp-transport",
+                "sse",
+                "--root-dir",
+                "${workspaceFolder}/playground"
+            ]
         }
     ]
 }

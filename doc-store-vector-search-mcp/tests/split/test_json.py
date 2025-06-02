@@ -19,10 +19,7 @@ def generate_large_json_list(n: int) -> list[dict[str, Any]]:
             "author": f"item {i} author",
         }
 
-    return [
-        new_entry(i)
-        for i in range(1, n + 1)
-    ]
+    return [new_entry(i) for i in range(1, n + 1)]
 
 
 MOCK_JSON_DICT = json.dumps({"items": generate_large_json_list(2)})

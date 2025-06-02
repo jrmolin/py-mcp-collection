@@ -6,10 +6,9 @@ from typing import Any
 import aiofiles
 from fastmcp import Context
 from fastmcp.exceptions import ToolError
+from fastmcp_utils.content.split import split_text_content
+from fastmcp_utils.content.view import read_content
 from mcp.types import EmbeddedResource, ImageContent, TextContent
-
-from mcp_utils.content.split import split_text_content
-from mcp_utils.content.view import read_content
 
 
 async def redirect_to_split_tool_calls(

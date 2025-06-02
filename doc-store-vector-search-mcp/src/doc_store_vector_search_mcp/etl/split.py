@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from itertools import chain
 from typing import Any, TypeAlias
 
 import langchain_text_splitters

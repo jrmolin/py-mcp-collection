@@ -48,3 +48,4 @@ line-length = 140
     
 ]
 "**/references/*" = ["ALL"]
+"template/*" = ["ALL"]

@@ -1,5 +1,4 @@
 import asyncio
-from typing import Annotated
 
 import asyncclick as click
 from dotenv import load_dotenv

@@ -1,4 +1,3 @@
-
 import pytest
 from langchain_core.documents import Document
 from syrupy.assertion import SnapshotAssertion
@@ -70,12 +69,15 @@ func main() {
 """
 
 
-@pytest.mark.parametrize(("code", "language"), [
-    (MOCK_PYTHON_CODE, CodeSplitterLanguage.PYTHON),
-    (MOCK_GOLANG_CODE, CodeSplitterLanguage.GO),
-], ids=["python", "golang"])
+@pytest.mark.parametrize(
+    ("code", "language"),
+    [
+        (MOCK_PYTHON_CODE, CodeSplitterLanguage.PYTHON),
+        (MOCK_GOLANG_CODE, CodeSplitterLanguage.GO),
+    ],
+    ids=["python", "golang"],
+)
 def test_codesplitter_splits_by_language_syntax(code: str, language: CodeSplitterLanguage, snapshot: SnapshotAssertion):
-
     splitter = CodeSplitter(language=language)
 
     split_documents = splitter.split_to_documents(code)

@@ -1,4 +1,5 @@
 import asyncio
+
 import aiohttp
 import pytest
 
@@ -43,11 +44,11 @@ MOCK_JSONL_CONTENT = """
 def is_url_reachable(url):
     async def _check():
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, timeout=5) as resp:
-                    return resp.status == 200
+            async with aiohttp.ClientSession() as session, session.get(url, timeout=5) as resp:
+                return resp.status == 200
         except Exception:
             return False
+
     return asyncio.get_event_loop().run_until_complete(_check())
 
 
@@ -59,9 +60,9 @@ async def test_directoryloader_loads_specific_file_types(tmp_path):
     txt_file.write_text("Text content.")
 
     directory_path = str(tmp_path)
-    
+
     glob_pattern = "*.md"
-    
+
     loader = DirectoryLoader()
     documents = [value async for value in loader.load(directory_path, glob=glob_pattern)]
 
@@ -75,11 +76,11 @@ async def test_directoryloader_loads_specific_file_types(tmp_path):
 def test_load_json_jq(tmp_path):
     json_path = tmp_path / "test.json"
     json_path.write_text(MOCK_JSON_CONTENT)
- 
+
     loader = JSONJQLoader()
- 
+
     documents = list(loader.load(str(json_path), content_key="text"))
- 
+
     assert len(documents) == 2
     assert documents[0].page_content == "item 1 content"
     assert documents[1].page_content == "item 2 content"
@@ -108,7 +109,6 @@ async def test_load_sitemap():
     assert any("sitemaps.org" in s for s in sources)
 
 
-
 def test_recursivewebloader_loads_linked_pages():
     url = "https://www.sitemaps.org"
     if not is_url_reachable(url):
@@ -117,8 +117,8 @@ def test_recursivewebloader_loads_linked_pages():
     documents = []
 
     async def gather_docs():
-        async for doc in loader.load(url):
-            documents.append(doc)
+        documents.extend([doc async for doc in loader.load(url)])
+
     asyncio.get_event_loop().run_until_complete(gather_docs())
     flat_docs = []
     for d in documents:

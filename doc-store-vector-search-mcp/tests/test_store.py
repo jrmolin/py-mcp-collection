@@ -1,5 +1,3 @@
-
-
 import uuid
 
 import pytest
@@ -93,7 +91,6 @@ async def test_adds_project_metadata_to_duckdb():
 
 @pytest.mark.asyncio
 async def test_adds_kb_metadata_to_duckdb():
-
     code_settings = DuckDBSettings(db_path=":memory:")
     document_settings = DuckDBSettings(db_path=":memory:")
 

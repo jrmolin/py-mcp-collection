@@ -1,7 +1,7 @@
 [project]
-name = "mcp_utils"
+name = "mcp-utils"
 version = "0.1.3"
-description = "Mcp Utils project"
+description = "MCP Utilities project"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -20,7 +20,7 @@ packages = [
 allow-direct-references=true
 
 [tool.poetry.scripts]
-mcp_utils = "mcp_utils.main:run_mcp"
+mcp-utils = "mcp_utils.main:run_mcp"
 
 
 [tool.pytest.ini_options]
