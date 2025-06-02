@@ -1,14 +1,13 @@
-from abc import ABC, abstractmethod
-from collections.abc import Callable
 from typing import Any, TypeVar
-from langchain_core.documents import Document
-from langchain_core.embeddings import Embeddings
+
 import duckdb
 import torch
 from langchain_community.vectorstores import DuckDB, ElasticsearchStore
+from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
 from pydantic import BaseModel
-from transformers import AutoModel, AutoTokenizer
 from sentence_transformers import SentenceTransformer
+from transformers import AutoModel, AutoTokenizer
 
 type VectorStoreTypes = DuckDB | ElasticsearchStore
 
@@ -36,7 +35,6 @@ S = TypeVar("S", bound=VectorStoreSettings)
 
 class TextEmbedding(Embeddings):
     def __init__(self, model: str = "all-MiniLM-L6-v2"):
-
         self.model = SentenceTransformer(model)
 
     def embed(self, text: str) -> list[float]:

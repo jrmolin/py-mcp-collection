@@ -5,8 +5,7 @@ def split_text_content(
     content: TextContent,
     split_size: int,
 ) -> list[TextContent]:
-    """Split a text content into a list of text contents, each of which is less than or equal to the split size.
-    """
+    """Split a text content into a list of text contents, each of which is less than or equal to the split size."""
 
     if len(content.text) <= split_size:
         return [content]

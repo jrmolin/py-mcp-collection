@@ -1,6 +1,6 @@
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, mock_open, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from mcp.types import EmbeddedResource, ImageContent, TextContent
@@ -23,10 +23,12 @@ def mock_first_tool():
 def mock_second_tool():
     return AsyncMock()
 
+
 @pytest.fixture
 def temp_directory():
     with tempfile.TemporaryDirectory() as temp_dir:
         yield Path(temp_dir)
+
 
 @pytest.mark.asyncio
 async def test_redirect_to_tool_call(mock_ctx, mock_first_tool, mock_second_tool):
@@ -62,7 +64,7 @@ async def test_redirect_to_tool_call(mock_ctx, mock_first_tool, mock_second_tool
 
 
 @pytest.mark.asyncio
-async def test_redirect_to_split_tool_calls(mock_ctx, mock_first_tool, mock_second_tool, temp_directory):
+async def test_redirect_to_split_tool_calls(mock_ctx, mock_first_tool, mock_second_tool):
     """Test redirect_to_split_tool_calls splits the result of the first tool and redirects to multiple second tool calls."""
 
     first_tool_result = [
@@ -81,7 +83,7 @@ async def test_redirect_to_split_tool_calls(mock_ctx, mock_first_tool, mock_seco
     second_tool_args = {"input_list": []}
     second_tool_response_arg = "input_list"
 
-    with patch("mcp_utils.responses.redirect.write_content_to_file", new_callable=AsyncMock) as mock_write_content_to_file:
+    with patch("mcp_utils.responses.redirect.write_content_to_file", new_callable=AsyncMock):
         result = await redirect_to_split_tool_calls(
             mock_ctx,
             first_tool_name="first_tool",
@@ -92,7 +94,7 @@ async def test_redirect_to_split_tool_calls(mock_ctx, mock_first_tool, mock_seco
             split_on_json_array_entries=True,
             entries_per_tool_call=1,
         )
-    
+
     mock_first_tool.run.assert_awaited_once_with({"arg1": "value1"})
     assert mock_second_tool.run.call_count == 6
     mock_second_tool.run.assert_awaited_with({"input_list": [{"data": "item6"}]})  # Check the last call
@@ -135,7 +137,7 @@ async def test_redirect_to_files(mock_ctx, mock_fastmcp, mock_first_tool, temp_d
 
     with patch("mcp_utils.responses.redirect.write_content_to_file", new_callable=AsyncMock) as mock_write_content_to_file:
         mock_write_content_to_file.return_value = temp_directory / "output-0.txt"
-        
+
         result = await redirect_to_files(
             mock_ctx,
             tool_name="test_tool",
@@ -159,7 +161,7 @@ async def test_redirect_to_split_files(mock_ctx, mock_fastmcp, mock_first_tool, 
 
     with patch("mcp_utils.responses.redirect.write_content_to_file", new_callable=AsyncMock) as mock_write_content_to_file:
         mock_write_content_to_file.return_value = temp_directory / "output-0.txt"
-    
+
         result = await redirect_to_split_files(
             mock_ctx,
             tool_name="test_tool",
@@ -185,4 +187,9 @@ async def test_redirect_to_split_files(mock_ctx, mock_fastmcp, mock_first_tool, 
     assert write_content_calls[3].args[0].text == "ng"
     assert write_content_calls[3].kwargs["path"] == temp_directory / "output-3.txt"
 
-    assert result == [temp_directory / "output-0.txt", temp_directory / "output-1.txt", temp_directory / "output-2.txt", temp_directory / "output-3.txt"]
+    assert result == [
+        temp_directory / "output-0.txt",
+        temp_directory / "output-1.txt",
+        temp_directory / "output-2.txt",
+        temp_directory / "output-3.txt",
+    ]

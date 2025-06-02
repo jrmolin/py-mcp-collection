@@ -38,8 +38,10 @@ def test_read_content_embedded_resource():
 
 def test_read_content_unsupported_type():
     """Test read_content with an unsupported type."""
+
     class UnsupportedType:
         pass
+
     content = UnsupportedType()
     with pytest.raises(ValueError, match="Unsupported content type:"):
         read_content(content)  # type: ignore
@@ -50,7 +52,6 @@ def test_preview_content():
     content = TextContent(text="This is a long string that should be truncated.", type="text")
     assert preview_content(content, max_length=10) == "This is a "
     assert preview_content(content, max_length=100) == "This is a long string that should be truncated."
-
 
 
 def test_size_content_text_content():
@@ -86,8 +87,10 @@ def test_size_content_embedded_resource():
 
 def test_size_content_unsupported_type():
     """Test size_content with an unsupported type."""
+
     class UnsupportedType:
         pass
+
     content = UnsupportedType()
     with pytest.raises(ValueError, match="Unsupported content type:"):
         size_content(content)  # type: ignore

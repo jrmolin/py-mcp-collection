@@ -1,6 +1,6 @@
 # Filesystem Operations MCP Server
 
-This project provides a FastMCP server that exposes tools for performing bulk file and folder operations. It includes centralized exception handling for filesystem operations.
+This project provides a FastMCP server that exposes tools for performing bulk file and folder operations. It offers tree-sitter based code summarization and natural language text summarization for navigating codebases.
 
 ## VS Code McpServer Usage
 1. Open the command palette (Ctrl+Shift+P or Cmd+Shift+P).

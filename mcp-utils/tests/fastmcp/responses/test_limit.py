@@ -4,7 +4,7 @@ import pytest
 from fastmcp.exceptions import ToolError
 from mcp.types import ImageContent, TextContent
 
-from mcp_utils.responses.limit import limit_tool_response, truncate_tool_response
+from mcp_utils.fastmcp.responses.limit import limit_tool_response, truncate_tool_response
 
 
 @pytest.fixture
