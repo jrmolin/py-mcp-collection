@@ -62,6 +62,7 @@ async def cli(es_host: str, api_key: str):
     mcp.add_tool(es.slm.get_stats)
     mcp.add_tool(es.slm.get_status)
     mcp.add_tool(es.shutdown.get_node)
+    mcp.add_tool(es.search)
 
     await mcp.run_async()
 

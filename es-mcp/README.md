@@ -1,11 +1,23 @@
 # es_mcp
 
-A es_mcp project for creating MCP Servers.
+An MCP Server for Elasticsearch.
+
+This project provides a Model Context Protocol (MCP) server implemented in Python using `fastmcp`. Its primary purpose is to expose a wide range of Elasticsearch client functionalities as callable MCP tools, allowing for interaction with an Elasticsearch cluster via the MCP.
 
 ## Features
 
+- **Elasticsearch Tooling**: Exposes numerous Elasticsearch client APIs as MCP tools, including:
+    - CAT APIs (allocation, aliases, count, indices, nodes, shards, etc.)
+    - Cluster APIs (health, state, stats)
+    - Nodes APIs (info, stats)
+    - Indices APIs (create/get data stream, stats, resolve index)
+    - ILM and SLM APIs (get/explain lifecycle, get status, get stats)
+    - Shutdown APIs (get node)
+    - Search API
 - **CLI**: A CLI for the MCP Server.
-- **Extensible**: Easily add new reference types or integrate with other MCP tools.
+- **Extensible**: Easily add new Elasticsearch client methods as MCP tools or integrate with other MCP tools.
+- **Sample Script**: Includes `sample_multisearch.py` to demonstrate using the Elasticsearch Python client for multi-searches.
+- **Testing**: Includes unit tests for the exposed tools and sample scripts using `pytest`.
 
 ## Setup in Windsurf
 
