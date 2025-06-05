@@ -11,11 +11,7 @@ jobs:
     strategy:
       matrix:
         package:
-          - mcp-utils
           - local-references-mcp
-          - doc-store-vector-search-mcp
-          - filesystem-operations-mcp
-          - es-mcp
 
     continue-on-error: true 
     defaults:
@@ -37,6 +33,9 @@ jobs:
 
       - name: "Build ${matrix.package}"
         run: uv build
+
+      - name: "Test ${matrix.package}"
+        run: uv test
 
       - name: "Publish to PyPi ${matrix.package}"
         run: uv publish -v dist/*

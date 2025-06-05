@@ -1,0 +1,41 @@
+name: Publish MCP Servers to PyPI
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package:
+          - doc-store-vector-search-mcp
+
+    continue-on-error: true 
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v6
+      
+      - name: "Install ${matrix.package}"
+        run: uv sync --locked --group dev
+        working-directory: "${{ matrix.package }}"
+
+      - name: "Test ${matrix.package}"
+        run: uv run pytest tests
+
+      - name: "Build ${matrix.package}"
+        run: uv build
+
+      - name: "Test ${matrix.package}"
+        run: uv test
+
+      - name: "Publish to PyPi ${matrix.package}"
+        run: uv publish -v dist/*
