@@ -33,7 +33,7 @@ class FileEntryMatch(BaseModel):
     after: list[FileLine] = Field(description="The lines of text after the line")
 
 
-class FileEntry(BaseNode):  # noqa: PLR0904
+class FileEntry(BaseNode):
     """A file entry in the filesystem."""
 
     @property

@@ -4,12 +4,12 @@ from typing import Literal
 
 import asyncclick as click
 from fastmcp import FastMCP
+from fastmcp.tools import FunctionTool
 
 from filesystem_operations_mcp.filesystem.file_system import FileSystem
 from filesystem_operations_mcp.filesystem.view import (
     caller_controlled_directory_fields,
     caller_controlled_file_fields,
-    caller_controlled_files_and_directories_fields,
     tips_directory_exportable_field,
     tips_file_exportable_field,
 )
@@ -32,15 +32,15 @@ async def cli(root_dir: str, mcp_transport: Literal["stdio", "sse", "streamable-
 
     file_system = FileSystem(Path(root_dir))
 
-    mcp.add_tool(caller_controlled_directory_fields(file_system.get_root))
-    mcp.add_tool(caller_controlled_directory_fields(file_system.get_structure))
-    mcp.add_tool(caller_controlled_file_fields(file_system.get_files))
-    mcp.add_tool(caller_controlled_directory_fields(file_system.get_directories))
-    mcp.add_tool(file_system.get_file_matches)
-    mcp.add_tool(caller_controlled_file_fields(file_system.find_files))
-    mcp.add_tool(caller_controlled_directory_fields(file_system.find_dirs))
-    mcp.add_tool(tips_file_exportable_field)
-    mcp.add_tool(tips_directory_exportable_field)
+    mcp.add_tool(FunctionTool.from_function(caller_controlled_directory_fields(file_system.get_root)))
+    mcp.add_tool(FunctionTool.from_function(caller_controlled_directory_fields(file_system.get_structure)))
+    mcp.add_tool(FunctionTool.from_function(caller_controlled_file_fields(file_system.get_files)))
+    mcp.add_tool(FunctionTool.from_function(caller_controlled_directory_fields(file_system.get_directories)))
+    mcp.add_tool(FunctionTool.from_function(file_system.get_file_matches))
+    mcp.add_tool(FunctionTool.from_function(caller_controlled_file_fields(file_system.find_files)))
+    mcp.add_tool(FunctionTool.from_function(caller_controlled_directory_fields(file_system.find_dirs)))
+    mcp.add_tool(FunctionTool.from_function(tips_file_exportable_field))
+    mcp.add_tool(FunctionTool.from_function(tips_directory_exportable_field))
 
     await mcp.run_async(transport=mcp_transport)
 

@@ -1,7 +1,6 @@
-import math
-import nltk
 import re
-from pathlib import Path
+
+import nltk
 from sumy.models.dom import Sentence
 from sumy.nlp.stemmers import Stemmer
 from sumy.nlp.tokenizers import Tokenizer
@@ -9,12 +8,12 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.summarizers.edmundson import EdmundsonSummarizer
 from sumy.summarizers.lex_rank import LexRankSummarizer
 from sumy.summarizers.lsa import LsaSummarizer
-from sumy.summarizers.reduction import ReductionSummarizer
 from sumy.summarizers.luhn import LuhnSummarizer
+from sumy.summarizers.reduction import ReductionSummarizer
 from sumy.summarizers.text_rank import TextRankSummarizer
 from sumy.utils import get_stop_words
-
 from textstat import textstat
+
 from filesystem_operations_mcp.logging import BASE_LOGGER
 
 logger = BASE_LOGGER.getChild("summarize")
@@ -36,9 +35,8 @@ stop_words = get_stop_words("english")
 
 
 def ideal_sentences_count(document: str) -> int:
-
     # Estimate current sentence count as 100 characters (20 words) per sentence
-    estimated_sentences = len(document) // 100 
+    estimated_sentences = len(document) // 100
 
     if estimated_sentences < 10:  # noqa: PLR2004
         return 2
@@ -68,25 +66,25 @@ def has_verb_and_noun(tokenizer: Tokenizer, sentence: str) -> bool:
     pos_tagged = nltk.pos_tag(tokenized)
     return any(tag.startswith("VB") for word, tag in pos_tagged) and any(tag.startswith("NN") for word, tag in pos_tagged)
 
+
 def strip_long_non_words(document: str) -> str:
     return re.sub(r"\b\S{25,}\b", "", document)
+
 
 def strip_code_blocks(document: str) -> str:
     return re.sub(r"```.*?```", "", document, flags=re.DOTALL)
 
+
 def strip_unwanted(document: str) -> str:
     return strip_code_blocks(strip_long_non_words(document))
+
 
 def summarize_text(document: str) -> str:
     summarizer, tokenizer = get_luhn_summarizer("english")
 
     sentences = tokenizer.to_sentences(document)
 
-    interesting_sentences = [
-        strip_unwanted(sentence)
-        for sentence in sentences
-        if has_verb_and_noun(tokenizer, sentence)
-    ]
+    interesting_sentences = [strip_unwanted(sentence) for sentence in sentences if has_verb_and_noun(tokenizer, sentence)]
 
     sentences_count = ideal_sentences_count(document)
 
@@ -118,6 +116,7 @@ def print_sentence_stats(sentence: str):
     print("gulpease_index", textstat.gulpease_index(sentence))
     print("osman", textstat.osman(sentence))
 
+
 def reduction_summarizer(document: str) -> str:
     summarizer = ReductionSummarizer(Stemmer("english"))
     summarizer.stop_words = stop_words
@@ -134,4 +133,3 @@ def text_rank_summarizer(document: str) -> str:
     sentences_count = ideal_sentences_count(document)
     summary: tuple[Sentence, ...] = summarizer(parser.document, sentences_count)
     return summary_to_text(summary)
-

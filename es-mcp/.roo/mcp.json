@@ -52,7 +52,8 @@
         "get_lifecycle",
         "get_stats",
         "get_status",
-        "get_node"
+        "get_node",
+        "search"
       ]
     }
   }

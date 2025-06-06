@@ -27,5 +27,3 @@ class CodeSummaryError(FilesystemServerError):
 class LanguageNotSupportedError(CodeSummaryError):
     def __init__(self, language: str):
         super().__init__(f"Language {language} not supported")
-
-
