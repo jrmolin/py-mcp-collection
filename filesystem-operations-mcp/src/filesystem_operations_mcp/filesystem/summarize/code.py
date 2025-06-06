@@ -85,10 +85,7 @@ class ViewNode(BaseModel):
         result = super().model_dump(*args, **kwargs)
 
         for key, children in self.child_nodes.items():
-            result[key] = [
-                child.model_dump(*args, **kwargs)
-                for child in children
-            ]
+            result[key] = [child.model_dump(*args, **kwargs) for child in children]
 
         if len(result) == 1 and "identifier" in result:
             return result["identifier"]
@@ -103,7 +100,7 @@ class ViewNode(BaseModel):
             return None
 
         docs = [
-            doc_node.text.decode("utf-8").strip("/""'# ")
+            doc_node.text.decode("utf-8").strip("/'# ")
             for doc_node in self.doc_nodes  # linter is wrong
             if doc_node.text is not None
         ]
@@ -122,7 +119,8 @@ class ViewNode(BaseModel):
 def new_pruned_tree(node: Node, interesting_nodes: list[Node], doc_nodes: list[Node]) -> ViewNode:
     """Produce a pruned tree of the interesting nodes.
 
-    A pruned tree has a root node and branches, the branches are only interesting nodes and their children. We return ViewNode objects for each node.
+    A pruned tree has a root node and branches, the branches are only interesting nodes and their children. 
+    We return ViewNode objects for each node.
     """
     root_node = ViewNode(ast_id=node.id, ast_node=node, identifier=node.type, is_root_node=True, doc_nodes=[])
 
@@ -159,18 +157,14 @@ def prune_branches(last_interesting_node_view: ViewNode, node: Node, interesting
 
             previous_sibling: Node | None = node.prev_sibling
 
-            while (
-                previous_sibling is not None
-                and previous_sibling.grammar_name == "comment"
-                and previous_sibling in doc_nodes
-            ):
+            while previous_sibling is not None and previous_sibling.grammar_name == "comment" and previous_sibling in doc_nodes:
                 view_node.doc_nodes.append(previous_sibling)
                 previous_sibling = previous_sibling.prev_sibling
 
             for doc_node in view_node.doc_nodes:
                 if doc_node in doc_nodes:
                     doc_nodes.remove(doc_node)
-        
+
         if node in doc_nodes:
             last_interesting_node_view.doc_nodes.append(node)
 

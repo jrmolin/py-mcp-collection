@@ -1,6 +1,6 @@
 from enum import StrEnum
-from magika.types import ContentTypeLabel, ContentTypeInfo
-from typing import Literal
+
+from magika.types import ContentTypeLabel
 
 
 class TreeSitterLanguage(StrEnum):
