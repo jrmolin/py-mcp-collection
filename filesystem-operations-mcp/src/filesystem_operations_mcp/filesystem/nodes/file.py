@@ -33,7 +33,7 @@ class FileEntryMatch(BaseModel):
     after: list[FileLine] = Field(description="The lines of text after the line")
 
 
-class FileEntry(BaseNode):
+class FileEntry(BaseNode):  # noqa: PLR0904
     """A file entry in the filesystem."""
 
     @property
@@ -65,7 +65,7 @@ class FileEntry(BaseNode):
     def is_code(self) -> bool:
         return (
             self.magika_content_type_label in code_mappings  # bad linter
-            or self.magika_content_type in script_mappings
+            or self.magika_content_type_label in script_mappings
         )
 
     @property
