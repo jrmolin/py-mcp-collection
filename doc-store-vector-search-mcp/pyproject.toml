@@ -35,7 +35,7 @@ packages = [
 [tool.hatch.metadata]
 allow-direct-references=true
 
-[tool.poetry.scripts]
+[project.scripts]
 doc_store_vector_search_mcp = "doc_store_vector_search_mcp.main:run_mcp"
 
 

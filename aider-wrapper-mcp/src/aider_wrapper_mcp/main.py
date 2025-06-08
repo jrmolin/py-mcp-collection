@@ -44,6 +44,10 @@ class AiderClient(MCPMixin):
 
     root: Path | None = None
     coder: Coder | None = None
+    ask_coder: Coder | None = None
+    model: str | None = None
+    aider_model: Model | None = None
+    aider_ask_model: Model | None = None
     repo_map: str | None = None
     file_structure: list[str]
     structured_file_structure: dict[str, list[str]]
@@ -116,24 +120,49 @@ class AiderClient(MCPMixin):
 
             self.structured_file_structure[file_dir].append(file_name)
 
-    def set_repo(self, root: Path):
-        logger.info(f"Setting repo to {root}")
+    @mcp_tool()
+    def set_repo(self, repo: Path) -> None:
+        """Set the repository for Aider to work with. Required to be called before
+        any other tools are used. This is a one-time setup step and will populate
+        the repo map and file structure.
 
-        self.root = root.resolve()
+        Args:
+            root: The root directory of the repository.
 
-        self.model = Model(
+        Returns:
+            None on success.
+        """
+
+        logger.info(f"Setting repo to {repo}")
+
+        self.root = repo.resolve()
+        repo_str = str(self.root)
+
+        self.aider_model = Model(
             self.model,
             editor_edit_format="diff-fenced",
         )
 
+        self.aider_ask_model = Model(
+            self.model,
+            editor_edit_format="ask",
+        )
+
+
         io = InputOutput(yes=True)
 
-        repo = GitRepo(io=io, fnames=[], git_dname=root, models=[self.model])
+        aider_repo = GitRepo(io=io, fnames=[], git_dname=repo_str, models=[self.aider_model])
+
+        self.ask_coder = Coder.create(
+            main_model=self.aider_ask_model,
+            io=io,
+            repo=aider_repo,
+        )
 
         self.coder = Coder.create(
-            main_model=self.model,
+            main_model=self.aider_model,
             io=io,
-            repo=repo,
+            repo=aider_repo,
         )
 
         if self.coder is None:
@@ -154,6 +183,8 @@ class AiderClient(MCPMixin):
         """Module-level vars, classes, functions -> File"""
 
         self.get_structured_repo_map()
+
+        logger.info(f"Repo set to {self.root}")
 
     def get_tools(self) -> dict[str, Callable]:
         """Get the tools available to the Aider client."""
@@ -294,6 +325,46 @@ class AiderClient(MCPMixin):
         return result
 
     @mcp_tool()
+    def ask(self, prompt: str) -> str:
+        """
+        Executes Aider with a prompt, allowing it to answer questions. It cannot run any comments in this mode,
+        only answer questions.
+
+        Args:
+            prompt: The detailed natural language instructions for the desired answer.
+
+        Returns:
+            str: A string containing the answer to the question.
+
+        Raises:
+            AiderError: If there's an error during Aider execution.
+            AiderNoneResultError: If Aider returns None unexpectedly.
+        """
+
+        self.validate_repo_set()
+
+        if self.ask_coder is None:
+            raise AiderError(message="Ask coder not set")
+
+        logger.info(f"Invoking Aider in {self.root}, cwd: {Path.cwd()} with prompt prefix (not shown) and prompt: {prompt[:100]}...")
+
+        final_prompt = prompt
+
+        try:
+            result = self.ask_coder.run(with_message=final_prompt)
+        except Exception as e:
+            msg = "Error invoking Aider with prompt: " + prompt
+            logger.exception(msg)
+            raise AiderError(msg) from e
+
+        if result is None:
+            msg = "Aider returned None"
+            raise AiderNoneResultError(msg)
+
+        return result
+
+
+    @mcp_tool()
     def write_code(self, prompt: str, commit_when_done: bool = True) -> str:
         """
         Executes Aider with a prompt, allowing it to apply code changes directly.
@@ -372,7 +443,7 @@ async def cli(mcp_transport: Literal["stdio", "streamable-http", "sse"], model: 
     aider_client = AiderClient(model=model)
 
     if repo:
-        aider_client.set_repo(root=Path(repo))
+        aider_client.set_repo(repo=Path(repo))
         del AiderClient.set_repo
 
     aider_client.register_tools(mcp_server=mcp)
