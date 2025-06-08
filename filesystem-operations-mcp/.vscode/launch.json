@@ -5,14 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Summarize Code",
+            "name": "Filesystem Operations MCP: Summarize Code",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/src/filesystem_operations_mcp/filesystem/summarize/code.py",
             "console": "integratedTerminal"
         },
         {
-            "name": "Python Debugger: Module",
+            "name": "Filesystem Operations MCP: Run MCP Server",
             "type": "debugpy",
             "request": "launch",
             "justMyCode": true,

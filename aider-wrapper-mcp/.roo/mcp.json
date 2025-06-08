@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "aider_wrapper_mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "./src/aider_wrapper_mcp/main.py"
+      ]
+    }
+  }
+}
