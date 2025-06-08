@@ -13,6 +13,10 @@
 			"name": "Doc Store and Vector Search MCP"
 		},
 		{
+			"path": "aider-wrapper-mcp",
+			"name": "Aider MCP"
+		},
+		{
 			"path": "es-mcp",
 			"name": "Elasticsearch MCP"
 		},

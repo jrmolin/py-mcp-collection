@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Module",
+            "name": "Doc Store and Vector Search MCP",
             "type": "debugpy",
             "request": "launch",
             "module": "doc_store_vector_search_mcp.main",

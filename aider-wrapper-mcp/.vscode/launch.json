@@ -5,12 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Local References MCP Server",
+            "name": "Aider MCP Server",
             "type": "debugpy",
             "request": "launch",
-            "module": "local_references_mcp.main",
+            "module": "aider_wrapper_mcp.main",
             "cwd": "${workspaceFolder}",
-            "args": ["--reference", "Best Practices:sample/best_practices"]
+            "envFile": "${workspaceFolder}/.env",
+            "args": [
+                "--mcp-transport",
+                "sse",
+                "--repo",
+                "./playground"
+            ]
         }
     ]
 }
