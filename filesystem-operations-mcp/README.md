@@ -2,6 +2,18 @@
 
 This project provides a FastMCP server that exposes tools for performing bulk file and folder operations. It offers tree-sitter based code summarization and natural language text summarization for navigating codebases.
 
+## Features
+
+- **File System Operations**: Read, search, and manipulate files and directories
+- **Smart File Type Detection**: Uses Magika for accurate file type detection, even for files without extensions
+- **Dynamic Field Selection**: Select which fields to include in the response. Allowing you to control the size of the response. Include summaries, previews, contents, metadata. Include what you need, and exclude what you don't.
+- **Code Summarization**: Tree-sitter based code analysis and summarization
+- **Text Summarization**: Natural language summarization of text files
+- **Flexible Filtering**: Glob-based include/exclude patterns for file operations
+- **Content Search**: Full-text search with regex support and context lines
+- **Metadata Access**: File and directory metadata (creation time, size, owner, etc.)
+- **Hidden File Handling**: Configurable handling of hidden files and directories
+
 ## VS Code McpServer Usage
 1. Open the command palette (Ctrl+Shift+P or Cmd+Shift+P).
 2. Type "Settings" and select "Preferences: Open User Settings (JSON)".
@@ -61,11 +73,9 @@ uv run filesystem_operations_mcp
 
 Optional command-line arguments:
 - `--root-dir`: The allowed filesystem paths for filesystem operations. Defaults to the current working directory for the server.
-- `--max-size`: The maximum size of a result in bytes before throwing an exception. Defaults to 400 kb.
-- `--serialize-as`: The format to serialize the response in. Defaults to json (options: json, yaml).
 - `--mcp-transport`: The transport to use for the MCP server. Defaults to stdio (options: stdio, sse, streamable-http).
 
-Note: When running the server, the `--root-dir` parameter determines the base directory for all file operations. Paths provided to the tools are relative to this root directory. During testing, the server's working directory was observed to be the repository root `/Users/billeaston/Documents/repos/py-mcp-collection/filesystem-operations-mcp`. Directory listing tools (`directory_list`, `directory_preview`, `directory_read`) when starting from the root (`.`) appear to be scoped to the server's root directory and its subdirectories.
+Note: When running the server, the `--root-dir` parameter determines the base directory for all file operations. Paths provided to the tools are relative to this root directory.
 
 ### Available Tools
 
@@ -85,7 +95,7 @@ The server provides the following tools, categorized by their function. Many too
 |---------------------------|---------------|------------------------------------------------------------------------------------------------------------|---------------------|
 | `include`                 | `list[str]`   | A list of glob patterns to include. Only files matching these patterns will be included. Defaults to `["*"]`. | `["*.py", "*.json"]` |
 | `exclude`                 | `list[str]`   | A list of glob patterns to exclude. Files matching these patterns will be excluded.                          | `["*.md", "*.txt"]` |
-| `bypass_default_exclusions` | `bool`        | Whether to bypass the server's default exclusions (hidden folders, cache directories, compiled files). Defaults to `false`. | `true`              |
+| `skip_hidden`            | `bool`        | Whether to skip hidden files and directories. Defaults to `true`. | `false`              |
 
 **Search Parameters** (Used in Search Operations)
 
@@ -96,37 +106,36 @@ The server provides the following tools, categorized by their function. Many too
 | `before`            | `int`   | The number of lines to include before a match in the result chunks. Defaults to `3`. | `1`                 |
 | `after`             | `int`   | The number of lines to include after a match in the result chunks. Defaults to `3`.  | `1`                 |
 
-#### Tool Specific Parameters
+**Field Selection Parameters**
+
+| Parameter           | Type    | Description                                                                 | Example             |
+|---------------------|---------|-----------------------------------------------------------------------------|---------------------|
+| `file_fields`       | `list[str]` | Fields to include in file responses. See `tips_file_exportable_field()` for options. | `["file_path", "size", "mime_type"]` |
+| `directory_fields`  | `list[str]` | Fields to include in directory responses. See `tips_directory_exportable_field()` for options. | `["directory_path", "children_count"]` |
+
+#### Core Operations
 
 **File Operations:**
-
-- `file_read`: Read the contents of a specific file.
-  - Parameters: `path` (Path)
-- `file_preview`: Get a preview of the contents of a specific file.
-  - Parameters: `path` (Path)
-- `file_delete`: Delete a specific file.
-  - Parameters: `path` (Path)
-- `file_search`: Search a specific file for a string or regex pattern.
-  - Parameters: `path` (Path), `search` (str), `search_is_regex` (bool, optional), `before` (int, optional), `after` (int, optional)
-- `file_create`: Create a new file with specified content.
-  - Parameters: `path` (Path), `content` (str)
-- `file_append`: Append content to an existing file.
-  - Parameters: `path` (Path), `content` (str)
+- `get_files`: Get information about specific files
+- `get_text_files`: Get information about text files
+- `get_file_matches`: Search file contents with context
+- `find_files`: Find files matching glob patterns
 
 **Directory Operations:**
+- `get_root`: Get the root directory
+- `get_structure`: Get directory structure with configurable depth
+- `get_directories`: Get information about specific directories
+- `find_dirs`: Find directories matching glob patterns
 
-- `directory_list`: List the contents of one or more directories.
-  - Parameters: `path` (list[Path]), `recurse` (bool, optional), `include` (list[str], optional), `exclude` (list[str], optional), `bypass_default_exclusions` (bool, optional)
-- `directory_preview`: Preview the contents of files within one or more directories.
-  - Parameters: `path` (list[Path]), `recurse` (bool, optional), `include` (list[str], optional), `exclude` (list[str], optional), `bypass_default_exclusions` (bool, optional)
-- `directory_read`: Read the contents of files within one or more directories.
-  - Parameters: `path` (list[Path]), `recurse` (bool, optional), `include` (list[str], optional), `exclude` (list[str], optional), `bypass_default_exclusions` (bool, optional)
-- `directory_search`: Search the contents of files within one or more directories for a string or regex pattern.
-  - Parameters: `path` (list[Path]), `search` (str), `recurse` (bool, optional), `include` (list[str], optional), `exclude` (list[str], optional), `before` (int, optional), `after` (int, optional), `search_is_regex` (bool, optional), `bypass_default_exclusions` (bool, optional)
+**Field Information:**
+- `tips_file_exportable_field`: Get documentation about available file fields
+- `tips_directory_exportable_field`: Get documentation about available directory fields
 
 ## Development & Testing
 
-- Tests are located in the `tests/` directory.
+- Tests are located in the `tests/` directory
+- Tests use real filesystem operations with temporary directories
+- Comprehensive test coverage for all major functionality
 - Use `pytest` for running tests:
 
 ```bash

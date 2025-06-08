@@ -3,11 +3,12 @@ import json
 from collections.abc import Awaitable, Callable
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 from makefun import wraps as makefun_wraps
 from pydantic import Field, RootModel
 
+from filesystem_operations_mcp.filesystem.errors import FilesystemServerResponseTooLargeError, FilesystemServerTooBigToSummarizeError
 from filesystem_operations_mcp.filesystem.mappings.magika_to_tree_sitter import code_mappings
 from filesystem_operations_mcp.filesystem.nodes.directory import DirectoryEntry
 from filesystem_operations_mcp.filesystem.nodes.file import FileEntry
@@ -16,6 +17,10 @@ from filesystem_operations_mcp.filesystem.summarize.text import summarize_text
 from filesystem_operations_mcp.logging import BASE_LOGGER
 
 logger = BASE_LOGGER.getChild("view")
+
+TOO_BIG_TO_SUMMARIZE_ITEMS_THRESHOLD = 300
+TOO_BIG_TO_SUMMARIZE_BYTES_THRESHOLD = 1_000_000
+TOO_BIG_TO_RETURN_BYTES_THRESHOLD = 1_000_000
 
 
 def tips_file_exportable_field() -> str:
@@ -42,6 +47,11 @@ def tips_file_exportable_field() -> str:
     | modified_at | datetime | The modification time of the file. | 2021-01-01 12:00:00 |
     | owner | int | The owner of the file. | 1000 |
     | group | int | The group of the file. | 1000 |
+
+    Notes: 
+    - The `code_summary_2000` and `text_summary_2000` fields are not supported for calls that return more than 300 results.
+    - If the total response is larger than 1MB, an error will be raised.
+    - Files larger than 1MB will have their summaries skipped.
     """  # noqa: E501
 
 
@@ -49,6 +59,7 @@ class FileExportableField(StrEnum):
     """The fields of a file that can be included in the response."""
 
     file_path = "file_path"
+    """The relative path of the file."""
     basename = "basename"
     extension = "extension"
     file_type = "file_type"
@@ -78,7 +89,10 @@ class FileExportableFields(RootModel):
             FileExportableField.file_type,
             FileExportableField.mime_type,
         ],
-        description="The fields of a file to include in the response.",
+        description="""
+        The fields of a file to include in the response. Defaults to file_path, size, file_type,
+        and mime_type. See `tips_file_exportable_field` for all available options.
+        """,
     )
 
     async def apply(self, node: FileEntry) -> dict[str, Any]:  # noqa: PLR0912
@@ -107,15 +121,25 @@ class FileExportableFields(RootModel):
             elif field == FileExportableField.extension:
                 model[field_name] = node.extension
             elif field == FileExportableField.file_type:
-                model[field_name] = node.magika_content_type
+                model[field_name] = node.magika_content_type_label
             elif field == FileExportableField.mime_type:
                 model[field_name] = node.mime_type
             elif field == FileExportableField.code_summary_2000 and node.is_code and node.magika_content_type:
+                if await node.size > TOO_BIG_TO_SUMMARIZE_BYTES_THRESHOLD:
+                    model[field_name] = None
+                    model[field_name + "_skipped"] = "Exceeded size limit"
+                    continue
+
                 content_type_to_language = code_mappings.get(node.magika_content_type.label)
                 if content_type_to_language is not None:
                     summary = summarize_code(content_type_to_language.value, await node.read_text)
                     model[field_name] = json.dumps(summary)[:2000]
             elif field == FileExportableField.text_summary_2000 and node.is_text and node.magika_content_type:
+                if await node.size > TOO_BIG_TO_SUMMARIZE_BYTES_THRESHOLD:
+                    model[field_name] = None
+                    model[field_name + "_skipped"] = "Exceeded size limit"
+                    continue
+
                 summary = summarize_text(await node.read_text)
                 model[field_name] = json.dumps(summary)[:2000]
             elif field == FileExportableField.is_binary:
@@ -149,23 +173,46 @@ def caller_controlled_file_fields(
 ) -> Callable[..., Awaitable[dict[str, Any]]]:
     @makefun_wraps(
         func,
-        append_args=inspect.Parameter(
-            "file_fields", inspect.Parameter.KEYWORD_ONLY, default=FileExportableFields(), annotation=FileExportableFields
-        ),
+        append_args=[
+            inspect.Parameter(
+                "file_fields", inspect.Parameter.KEYWORD_ONLY, default=FileExportableFields(), annotation=FileExportableFields
+            ),
+            inspect.Parameter(
+                "include_summaries",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=False,
+                annotation=Annotated[bool, Field(description="Whether to include summaries of each file in the response.")],
+            ),
+        ],
     )
-    async def wrapper(file_fields: FileExportableFields, *args: Any, **kwargs: Any) -> dict[str, Any]:
+    async def wrapper(
+        file_fields: FileExportableFields,
+        include_summaries: bool,
+        *args: Any,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         result = await func(*args, **kwargs)
 
+        if include_summaries and isinstance(result, list) and len(result) > TOO_BIG_TO_SUMMARIZE_ITEMS_THRESHOLD:
+            raise FilesystemServerTooBigToSummarizeError(result_set_size=len(result), max_size=TOO_BIG_TO_SUMMARIZE_ITEMS_THRESHOLD)
+
+        if include_summaries:
+            file_fields.root.append(FileExportableField.code_summary_2000)
+            file_fields.root.append(FileExportableField.text_summary_2000)
+
+        return_result = {}
+
         if isinstance(result, list):
-            return_result = {}
             for node in result:
                 return_result[node.file_path] = await file_fields.apply(node)
-                return_result[node.file_path].pop("file_path")
+                return_result[node.file_path].pop("file_path", None)
+        else:
+            return_result = await file_fields.apply(result)
 
-            print(return_result)
-            return return_result
+        if len(json.dumps(return_result)) > TOO_BIG_TO_RETURN_BYTES_THRESHOLD:
+            raise FilesystemServerResponseTooLargeError(response_size=len(json.dumps(return_result)), max_size=TOO_BIG_TO_RETURN_BYTES_THRESHOLD)
 
-        return await file_fields.apply(result)
+        return return_result
 
     return wrapper
 
@@ -178,8 +225,8 @@ def tips_directory_exportable_field() -> str:
     | Field | Type | Description | Example |
     |-------|------|-------------|---------|
     | directory_path | Path | The relative path of the directory. | "src/mycoolproject" |
-    | files_count | int | The number of children of the directory. | 2 |
-    | directories_count | int | The number of children of the directory. | 2 |
+    | files_count | int | The number of files in the directory. | 2 |
+    | directories_count | int | The number of directories in the directory. | 2 |
     | children_count | int | The number of children of the directory. | 2 |
     | children | list[FileEntry | DirectoryEntry] | The children of the directory. | [FileEntry(relative_path="src/mycoolproject/main.py", size=1000), DirectoryEntry(relative_path="src/mycoolproject/subdir", size=1000)] |
     | basename | str | The basename of the directory. | "mycoolproject" |
@@ -213,7 +260,10 @@ class DirectoryExportableFields(RootModel):
             DirectoryExportableField.directory_path,
             DirectoryExportableField.children_count,
         ],
-        description="The fields of a directory to include in the response.",
+        description="""
+        The fields of a directory to include in the response. Defaults to directory_path and
+        children_count. See `tips_directory_exportable_field` for all available options.
+        """,
     )
 
     async def apply(self, node: DirectoryEntry) -> dict[str, Any]:
@@ -261,7 +311,7 @@ def caller_controlled_directory_fields(
             return_result = {}
             for node in result:
                 return_result[node.directory_path] = await directory_fields.apply(node)
-                return_result[node.directory_path].pop("directory_path")
+                return_result[node.directory_path].pop("directory_path", None)
 
             return return_result
 
@@ -270,41 +320,41 @@ def caller_controlled_directory_fields(
     return wrapper
 
 
-def caller_controlled_files_and_directories_fields(
-    func: Callable[..., Awaitable[FileEntry | DirectoryEntry | list[FileEntry | DirectoryEntry]]],
-) -> Callable[..., Awaitable[dict[str, Any] | list[dict[str, Any]]]]:
-    @makefun_wraps(
-        func,
-        append_args=[
-            inspect.Parameter(
-                "directory_fields",
-                inspect.Parameter.KEYWORD_ONLY,
-                default=DirectoryExportableFields(),
-                annotation=DirectoryExportableFields,
-            ),
-            inspect.Parameter(
-                "file_fields", inspect.Parameter.KEYWORD_ONLY, default=FileExportableFields(), annotation=FileExportableFields
-            ),
-        ],
-    )
-    async def wrapper(
-        directory_fields: DirectoryExportableFields, file_fields: FileExportableFields, *args: Any, **kwargs: Any
-    ) -> dict[str, Any] | list[dict[str, Any]]:
-        result = await func(*args, **kwargs)
+# def caller_controlled_files_and_directories_fields(
+#     func: Callable[..., Awaitable[FileEntry | DirectoryEntry | list[FileEntry | DirectoryEntry]]],
+# ) -> Callable[..., Awaitable[dict[str, Any] | list[dict[str, Any]]]]:
+#     @makefun_wraps(
+#         func,
+#         append_args=[
+#             inspect.Parameter(
+#                 "directory_fields",
+#                 inspect.Parameter.KEYWORD_ONLY,
+#                 default=DirectoryExportableFields(),
+#                 annotation=DirectoryExportableFields,
+#             ),
+#             inspect.Parameter(
+#                 "file_fields", inspect.Parameter.KEYWORD_ONLY, default=FileExportableFields(), annotation=FileExportableFields
+#             ),
+#         ],
+#     )
+#     async def wrapper(
+#         directory_fields: DirectoryExportableFields, file_fields: FileExportableFields, *args: Any, **kwargs: Any
+#     ) -> dict[str, Any] | list[dict[str, Any]]:
+#         result = await func(*args, **kwargs)
 
-        if isinstance(result, list):
-            results: list[dict[str, Any]] = []
-            for node in result:
-                if isinstance(node, FileEntry):
-                    results.append(await file_fields.apply(node))
-                elif isinstance(node, DirectoryEntry):
-                    results.append(await directory_fields.apply(node))
+#         if isinstance(result, list):
+#             results: list[dict[str, Any]] = []
+#             for node in result:
+#                 if isinstance(node, FileEntry):
+#                     results.append(await file_fields.apply(node))
+#                 elif isinstance(node, DirectoryEntry):
+#                     results.append(await directory_fields.apply(node))
 
-            return results
+#             return results
 
-        if isinstance(result, FileEntry):
-            return await file_fields.apply(result)
+#         if isinstance(result, FileEntry):
+#             return await file_fields.apply(result)
 
-        return await directory_fields.apply(result)
+#         return await directory_fields.apply(result)
 
-    return wrapper
+#     return wrapper

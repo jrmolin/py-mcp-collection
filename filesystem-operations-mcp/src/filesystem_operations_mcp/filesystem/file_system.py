@@ -18,7 +18,7 @@ DirectoryPath = Annotated[str, Field(description="The root-relative path to the 
 FileGlob = Annotated[str, Field(description="The root-relative glob to search for.")]
 DirectoryGlob = Annotated[str, Field(description="The root-relative glob to search for.")]
 
-Depth = Annotated[int, Field(description="The depth of the search.")]
+Depth = Annotated[int, Field(description="The depth of the search. 0 means immediate children only.")]
 Includes = Annotated[list[str], Field(description="The root-relative globs to include in the search.")]
 Excludes = Annotated[list[str], Field(description="The root-relative globs to exclude from the search.")]
 
@@ -38,7 +38,7 @@ class FileSystem:
 
     def __init__(self, root: Path):
         self.root = root
-        self.root_directory = DirectoryEntry(absolute_path=self.root, relative_to=self.root)
+        self.root_directory = DirectoryEntry(absolute_path=self.root, root=self.root)
 
     async def get_root(self) -> DirectoryEntry:
         """Gets the root directory."""
@@ -51,17 +51,18 @@ class FileSystem:
         excludes: Excludes | None = None,
         skip_hidden: SkipHidden = True,
     ) -> list[DirectoryEntry]:
-        """Gets the structure of the filesystem.
+        """Gets the structure of the filesystem. Includes any children at the root but otherwise only includes
+        directories up to the specified depth. 
 
         Returns:
             A list of DirectoryEntry and FileEntry objects.
 
         Example:
-            >>> await get_structure(depth=2)
+            >>> await get_structure(depth=1)
             [
                 {"directory_path": ".", "children_count": 2},
-                {"directory_path": "directory_1", "children_count": 1},
-                {"directory_path": "directory_1/directory_a", "children_count": 0},
+                {"directory_path": "directory_1", "children_count": 1},  # Depth 0
+                {"directory_path": "directory_1/directory_a", "children_count": 0},  # Depth 1
             ]
         """
 
@@ -76,7 +77,7 @@ class FileSystem:
 
         return [self.root_directory, *child_dirs]
 
-    async def get_files(self, file_paths: list[str]) -> list[FileEntry]:
+    async def get_files(self, file_paths: FilePaths) -> list[FileEntry]:
         """Gets the files in the filesystem.
 
         Args:
@@ -85,13 +86,13 @@ class FileSystem:
         Returns:
             A list of file paths. Relative to the root of the File Server.
         """
-        return [FileEntry(absolute_path=Path(this_path).resolve(), relative_to=self.root) for this_path in file_paths]
+        return [FileEntry(absolute_path=self.root / Path(this_path), root=self.root) for this_path in file_paths]
 
-    async def get_text_files(self, file_paths: list[str]) -> list[FileEntry]:
+    async def get_text_files(self, file_paths: FilePaths) -> list[FileEntry]:
         """Gets the text files in the filesystem."""
         return [file for file in await self.get_files(file_paths) if not file.is_binary]
 
-    async def get_directories(self, directory_paths: list[str]) -> list[DirectoryEntry]:
+    async def get_directories(self, directory_paths: DirectoryPaths) -> list[DirectoryEntry]:
         """Gets the directories in the filesystem.
 
         Args:
@@ -100,17 +101,7 @@ class FileSystem:
         Returns:
             A list of directory paths. Relative to the root of the File Server.
         """
-        return [DirectoryEntry(absolute_path=Path(this_path).resolve(), relative_to=self.root) for this_path in directory_paths]
-
-    # @mcp_tool(name="read_file_contents")
-    # async def get_file_contents(self, file_path: str) -> str:
-    #     """Gets the contents of the file."""
-    #     return await FileEntry(absolute_path=Path(file_path).resolve(), relative_to=self.root).contents
-
-    # @mcp_tool(name="read_file_lines")
-    # async def get_file_lines(self, file_path: str) -> list[str]:
-    #     """Gets the lines of the file."""
-    #     return await FileEntry(absolute_path=Path(file_path).resolve(), relative_to=self.root).lines
+        return [DirectoryEntry(absolute_path=self.root / Path(this_path), root=self.root) for this_path in directory_paths]
 
     async def get_file_matches(
         self,
@@ -122,10 +113,8 @@ class FileSystem:
     ) -> list[FileEntryMatch]:
         """Gets the matches of the file."""
         if pattern_is_regex:
-            return await FileEntry(absolute_path=Path(file_path).resolve(), relative_to=self.root).contents_match_regex(
-                pattern, before, after
-            )
-        return await FileEntry(absolute_path=Path(file_path).resolve(), relative_to=self.root).contents_match(pattern, before, after)
+            return await FileEntry(absolute_path=self.root / Path(file_path), root=self.root).contents_match_regex(pattern, before, after)
+        return await FileEntry(absolute_path=self.root / Path(file_path), root=self.root).contents_match(pattern, before, after)
 
     async def find_files(
         self,
@@ -136,9 +125,7 @@ class FileSystem:
         skip_hidden: SkipHidden = True,
     ) -> list[FileEntry]:
         """Finds the files in the directory."""
-        return await DirectoryEntry(absolute_path=Path(directory_path).resolve(), relative_to=self.root).find_files(
-            glob, includes, excludes, skip_hidden
-        )
+        return await DirectoryEntry(absolute_path=self.root / Path(directory_path), root=self.root).find_files(glob, includes, excludes, skip_hidden)
 
     async def find_dirs(
         self,
@@ -149,6 +136,4 @@ class FileSystem:
         skip_hidden: SkipHidden = True,
     ) -> list[DirectoryEntry]:
         """Finds the directories in the directory."""
-        return await DirectoryEntry(absolute_path=Path(directory_path).resolve(), relative_to=self.root).find_dirs(
-            glob, includes, excludes, skip_hidden
-        )
+        return await DirectoryEntry(absolute_path=self.root / Path(directory_path), root=self.root).find_dirs(glob, includes, excludes, skip_hidden)

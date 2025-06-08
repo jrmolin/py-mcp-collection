@@ -33,9 +33,9 @@ class DirectoryEntry(BaseNode):
         dir_iterator = await scandir(self.absolute_path)
 
         children = [
-            DirectoryEntry(absolute_path=Path(entry.path), relative_to=self.relative_to)
+            DirectoryEntry(absolute_path=Path(entry.path), root=self.root)
             if entry.is_dir()
-            else FileEntry(absolute_path=Path(entry.path), relative_to=self.relative_to)
+            else FileEntry(absolute_path=Path(entry.path), root=self.root)
             for entry in dir_iterator
         ]
 
@@ -71,7 +71,7 @@ class DirectoryEntry(BaseNode):
             A list of files that match the glob.
         """
 
-        entries = [FileEntry(absolute_path=p, relative_to=self.relative_to) for p in self.absolute_path.glob(glob) if p.is_file()]
+        entries = [FileEntry(absolute_path=p, root=self.root) for p in self.absolute_path.rglob(glob) if p.is_file()]
 
         return [entry for entry in entries if entry.passes_filters(includes=includes, excludes=excludes, skip_hidden=skip_hidden)]
 
@@ -89,6 +89,6 @@ class DirectoryEntry(BaseNode):
             A list of directories that match the glob.
         """
 
-        entries = [DirectoryEntry(absolute_path=p, relative_to=self.relative_to) for p in self.absolute_path.glob(glob) if p.is_dir()]
+        entries = [DirectoryEntry(absolute_path=p, root=self.root) for p in self.absolute_path.rglob(glob) if p.is_dir()]
 
         return [entry for entry in entries if entry.passes_filters(includes=includes, excludes=excludes, skip_hidden=skip_hidden)]

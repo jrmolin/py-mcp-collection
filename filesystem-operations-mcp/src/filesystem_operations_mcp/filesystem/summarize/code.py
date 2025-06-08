@@ -119,7 +119,7 @@ class ViewNode(BaseModel):
 def new_pruned_tree(node: Node, interesting_nodes: list[Node], doc_nodes: list[Node]) -> ViewNode:
     """Produce a pruned tree of the interesting nodes.
 
-    A pruned tree has a root node and branches, the branches are only interesting nodes and their children. 
+    A pruned tree has a root node and branches, the branches are only interesting nodes and their children.
     We return ViewNode objects for each node.
     """
     root_node = ViewNode(ast_id=node.id, ast_node=node, identifier=node.type, is_root_node=True, doc_nodes=[])
@@ -176,6 +176,9 @@ def prune_branches(last_interesting_node_view: ViewNode, node: Node, interesting
 
 def summarize_code(language_name: str, code: str) -> dict[str, Any] | str | None:
     ensure_initialized()
+
+    if language_name not in tag_queries:
+        return None
 
     # Get the language and parser
     language: Language = get_language(language_name=language_name)

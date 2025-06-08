@@ -33,7 +33,7 @@ class FileEntryMatch(BaseModel):
     after: list[FileLine] = Field(description="The lines of text after the line")
 
 
-class FileEntry(BaseNode):  # noqa: PLR0904
+class FileEntry(BaseNode):
     """A file entry in the filesystem."""
 
     @property
@@ -149,7 +149,7 @@ class FileEntry(BaseNode):  # noqa: PLR0904
 
     def validate_in_root(self, root: Path) -> None:
         """Validates that the file is in the root."""
-        if not self.is_relative_to(root.resolve()):
+        if not self.is_relative_to(root):
             raise FilesystemServerOutsideRootError(self.absolute_path, root)
 
     def is_relative_to(self, other: Path) -> bool:
@@ -196,25 +196,25 @@ class FileEntry(BaseNode):  # noqa: PLR0904
 
     async def get_lines(self, line_numbers: list[int]) -> list[FileLine]:
         """Gets the lines of the file at the given line numbers."""
-        lines = await self.read_text_lines
-        return [self._get_line(lines, i) for i in line_numbers]
+        from_lines = await self.read_text_lines
+        return [self._get_line(from_lines, i) for i in line_numbers]
 
     @classmethod
-    def _get_line(cls, lines: list[str], line_number: int) -> FileLine:
-        return FileLine(root=(line_number, lines[line_number - 1]))
+    def _get_line(cls, from_lines: list[str], line_number: int) -> FileLine:
+        return FileLine(root=(line_number, from_lines[line_number]))
 
     @classmethod
-    def _get_lines(cls, lines: list[str]) -> list[FileLine]:
-        return [cls._get_line(lines, i) for i in range(1, len(lines) + 1)]
+    def _get_lines(cls, from_lines: list[str]) -> list[FileLine]:
+        return [FileLine(root=(i, line)) for i, line in enumerate(from_lines)]
 
     @classmethod
-    def _get_lines_range(cls, lines: list[str], start: int, end: int) -> list[FileLine]:
-        return [FileLine(root=(i, line)) for i, line in enumerate(lines[start:end])]
+    def _get_lines_range(cls, from_lines: list[str], start: int, end: int) -> list[FileLine]:
+        return [FileLine(root=(i, line)) for i, line in enumerate(from_lines[start:end])]
 
     @classmethod
-    def _get_lines_before(cls, lines: list[str], line_number: int, before: int) -> list[FileLine]:
-        return [FileLine(root=(i, line)) for i, line in enumerate(lines[line_number - before : line_number])]
+    def _get_lines_before(cls, from_lines: list[str], line_number: int, before: int) -> list[FileLine]:
+        return [FileLine(root=(i, line)) for i, line in enumerate(from_lines[line_number - before : line_number])]
 
     @classmethod
-    def _get_lines_after(cls, lines: list[str], line_number: int, after: int) -> list[FileLine]:
-        return [FileLine(root=(i, line)) for i, line in enumerate(lines[line_number : line_number + after])]
+    def _get_lines_after(cls, from_lines: list[str], line_number: int, after: int) -> list[FileLine]:
+        return [FileLine(root=(i, line)) for i, line in enumerate(from_lines[line_number : line_number + after])]

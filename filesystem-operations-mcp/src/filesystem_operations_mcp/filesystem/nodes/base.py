@@ -14,8 +14,12 @@ class BaseNode(BaseModel):
     absolute_path: Path = Field(exclude=True)
     """The absolute path of the node."""
 
-    relative_to: Path = Field(exclude=True)
+    root: Path = Field(exclude=True)
     """The path of the node relative to the root."""
+
+    def __post_init__(self):
+        self.absolute_path = self.absolute_path.resolve()
+        self.root = self.root.resolve()
 
     @property
     def name(self) -> str:
@@ -72,10 +76,10 @@ class BaseNode(BaseModel):
 
     @property
     def relative_path(self) -> Path:
-        return self.absolute_path.relative_to(self.relative_to.resolve())
+        return self.absolute_path.relative_to(self.root)
 
     def validate_in_root(self, root: Path) -> None:
-        if not self.is_relative_to(root.resolve()):
+        if not self.is_relative_to(root):
             raise FilesystemServerOutsideRootError(self.absolute_path, root)
 
     def is_relative_to(self, other: Path) -> bool:
@@ -100,8 +104,14 @@ class BaseNode(BaseModel):
         if skip_hidden:
             if excludes is None:
                 excludes = []
-            excludes.append(".*")
-            excludes.append("*/.*")
+
+            # What does .?* do?
+            # It matches any file or directory that starts with a dot (.) and is followed by 1 or more characters.
+            # So .?* does not match . but does match .folder and does match .file
+
+            excludes.append(".?*")  # any hidden files or directories in the root directory
+            excludes.append(".?*/")  # any hidden directories in the root directory
+            excludes.append("**/.?*")  # any hidden files or directories in any subdirectory
 
         if includes is None and excludes is None:
             return True

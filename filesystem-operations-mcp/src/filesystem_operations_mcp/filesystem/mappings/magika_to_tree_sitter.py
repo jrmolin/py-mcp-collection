@@ -525,19 +525,18 @@ magika_labels = [
     ContentTypeLabel.ZST,
 ]
 
-text_mappings = {
-    ContentTypeLabel.MARKDOWN: TreeSitterLanguage.MARKDOWN,
-}
+text_mappings: dict[ContentTypeLabel, TreeSitterLanguage | None] = {ContentTypeLabel.MARKDOWN: TreeSitterLanguage.MARKDOWN, ContentTypeLabel.TXT: None}
 
-data_mappings = {
+data_mappings: dict[ContentTypeLabel, TreeSitterLanguage | None] = {
     ContentTypeLabel.CSV: TreeSitterLanguage.CSV,
     ContentTypeLabel.JSON: TreeSitterLanguage.JSON,
+    ContentTypeLabel.JSONL: TreeSitterLanguage.JSON,
     ContentTypeLabel.TOML: TreeSitterLanguage.TOML,
     ContentTypeLabel.XML: TreeSitterLanguage.XML,
     ContentTypeLabel.YAML: TreeSitterLanguage.YAML,
 }
 
-code_mappings = {
+code_mappings: dict[ContentTypeLabel, TreeSitterLanguage | None] = {
     ContentTypeLabel.ADA: TreeSitterLanguage.ADA,
     ContentTypeLabel.ASM: TreeSitterLanguage.ASM,
     ContentTypeLabel.C: TreeSitterLanguage.C,
@@ -572,7 +571,7 @@ code_mappings = {
     ContentTypeLabel.ZIG: TreeSitterLanguage.ZIG,
 }
 
-script_mappings = {
+script_mappings: dict[ContentTypeLabel, TreeSitterLanguage | None] = {
     ContentTypeLabel.SHELL: TreeSitterLanguage.BASH,
     ContentTypeLabel.MAKEFILE: TreeSitterLanguage.MAKE,
     ContentTypeLabel.POWERSHELL: TreeSitterLanguage.POWERSHELL,
