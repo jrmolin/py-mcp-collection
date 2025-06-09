@@ -34,6 +34,57 @@ class FilesystemServerTooBigToSummarizeError(FilesystemServerError):
         super().__init__(f"Result set size {result_set_size} is too large to summarize. Max size is {max_size} files.")
 
 
+class DirectoryNotFoundError(FilesystemServerError):
+    """An exception for when a directory does not exist."""
+
+    def __init__(self, directory_path: str):
+        super().__init__(f"Directory {directory_path} does not exist.")
+
+
+class DirectoryNotEmptyError(FilesystemServerError):
+    """An exception for when a directory is not empty."""
+
+    def __init__(self, directory_path: str):
+        super().__init__(f"Directory {directory_path} is not empty.")
+
+
+class DirectoryAlreadyExistsError(FilesystemServerError):
+    """An exception for when a directory already exists."""
+
+    def __init__(self, directory_path: str):
+        super().__init__(f"Directory {directory_path} already exists.")
+
+
+class FileAlreadyExistsError(FilesystemServerError):
+    """An exception for when a file already exists."""
+
+    def __init__(self, file_path: str):
+        super().__init__(f"File {file_path} already exists.")
+
+
+class FileIsNotTextError(FilesystemServerError):
+    """An exception for when a file is not text."""
+
+    def __init__(self, file_path: str):
+        super().__init__(f"File {file_path} is not text.")
+
+
+class FilePatchDoesNotMatchError(FilesystemServerError):
+    """An exception for when a file patch does not match the current file."""
+
+    def __init__(self, starting_line_number: int, current_lines: list[str], file_lines: list[str]):
+        super().__init__(
+            f"Patch starting at line {starting_line_number}. Patch lines {current_lines} do not match the file lines {file_lines}"
+        )
+
+
+class FilePatchIndexError(FilesystemServerError):
+    """An exception for when a file patch index is out of bounds."""
+
+    def __init__(self, index: int, max_index: int):
+        super().__init__(f"File patch line target {index} is out of bounds. File is only {max_index} lines long.")
+
+
 class CodeSummaryError(FilesystemServerError):
     pass
 
