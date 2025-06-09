@@ -17,17 +17,15 @@ from filesystem_operations_mcp.filesystem.nodes.file import FileEntry
 class DirectoryEntry(BaseNode):
     """A directory entry in the filesystem."""
 
-    @property
     async def is_empty(self) -> bool:
         """Whether the directory is empty."""
-        return not any(await self.children)
+        return not any(await self.children())
 
     @property
     def directory_path(self) -> str:
         """The path of the directory."""
         return str(self.relative_path)
 
-    @property
     async def children(self) -> list["DirectoryEntry | FileEntry"]:
         """The children of the directory."""
         return await self._children(depth=0)
@@ -117,7 +115,7 @@ class DirectoryEntry(BaseNode):
 
         files = await self.find_files(glob, includes, excludes, skip_hidden)
 
-        files = [file for file in files if file.is_text]
+        files = [file for file in files if not file.is_binary]
 
         return [file for file in files if await file.contents_match(pattern, pattern_is_regex)]
 

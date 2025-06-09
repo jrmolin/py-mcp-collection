@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any
 
 from aiofiles.os import stat
-from asyncstdlib import cached_property
 from pydantic import BaseModel, Field
 
 from filesystem_operations_mcp.filesystem.errors import FilesystemServerOutsideRootError
@@ -26,27 +25,22 @@ class BaseNode(BaseModel):
     def name(self) -> str:
         return self.absolute_path.name
 
-    @property
     async def created_at(self) -> datetime:
-        stat_result = await self._stat
+        stat_result = await self._stat()
         return datetime.fromtimestamp(stat_result.st_ctime, tz=UTC)
 
-    @property
     async def modified_at(self) -> datetime:
-        stat_result = await self._stat
+        stat_result = await self._stat()
         return datetime.fromtimestamp(stat_result.st_mtime, tz=UTC)
 
-    @property
     async def owner(self) -> int:
-        stat_result = await self._stat
+        stat_result = await self._stat()
         return stat_result.st_uid
 
-    @property
     async def group(self) -> int:
-        stat_result = await self._stat
+        stat_result = await self._stat()
         return stat_result.st_gid
 
-    @cached_property
     async def _stat(self) -> stat_result:
         """The stat result of the file.
 
@@ -86,9 +80,11 @@ class BaseNode(BaseModel):
     def is_relative_to(self, other: Path) -> bool:
         return self.absolute_path.is_relative_to(other)
 
+    @property
     def is_file(self) -> bool:
         return self.absolute_path.is_file()
 
+    @property
     def is_dir(self) -> bool:
         return self.absolute_path.is_dir()
 

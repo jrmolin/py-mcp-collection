@@ -131,18 +131,18 @@ async def test_get_file_matches(file_system: FileSystem):
     # Test simple content matching
     matches = await file_system.get_file_matches("large.txt", "Target line")
     assert len(matches) == 1
-    assert "Target line" in matches[0].match.line
+    assert "Target line" in matches[0].match.lines()[0]
 
     # Test regex matching
     matches = await file_system.get_file_matches("code.py", r"def \w+", pattern_is_regex=True)
     assert len(matches) == 1
-    assert "def hello" in matches[0].match.line
+    assert "def hello" in matches[0].match.lines()[0]
 
     # Test context lines
     matches = await file_system.get_file_matches("large.txt", "Target line", before=2, after=2)
     assert len(matches) == 1
-    assert len(matches[0].before) == 2
-    assert len(matches[0].after) == 2
+    assert len(matches[0].before.lines()) == 2
+    assert len(matches[0].after.lines()) == 2
 
 
 @pytest.mark.asyncio

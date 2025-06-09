@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from filesystem_operations_mcp.filesystem.errors import FilePatchDoesNotMatchError, FilePatchIndexError
 
@@ -9,7 +9,10 @@ from filesystem_operations_mcp.filesystem.errors import FilePatchDoesNotMatchErr
 class BaseFilePatch(BaseModel, ABC):
     """A base class for file patches."""
 
-    patch_type: Literal["insert", "replace", "delete", "append"] = Field(description="The type of patch.")
+    patch_type: Literal["insert", "replace", "delete", "append"] = Field(...)
+    """The type of patch."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
 
     @abstractmethod
     def apply(self, lines: list[str]) -> list[str]:
@@ -28,12 +31,17 @@ class BaseFilePatch(BaseModel, ABC):
 class FileInsertPatch(BaseFilePatch):
     """A patch for inserting lines into a file."""
 
-    patch_type: Literal["insert"] = Field(default="insert", description="The type of patch.")
+    patch_type: Literal["insert"] = "insert"
+    """The type of patch."""
 
-    line_number: int = Field(description="The line number to insert the lines at.")
-    current_line: str = Field(description="The current line of text at `line_number`, new lines will be inserted before this line.")
+    line_number: int = Field(...)
+    """The line number to insert the lines at."""
 
-    lines: list[str] = Field(description="The lines to insert into the file.")
+    current_line: str = Field(...)
+    """The current line of text at `line_number`, new lines will be inserted immediately before this line."""
+
+    lines: list[str] = Field(...)
+    """The lines to insert into the file."""
 
     def apply(self, lines: list[str]) -> list[str]:
         """Applies the patch to the file."""
@@ -50,9 +58,11 @@ class FileInsertPatch(BaseFilePatch):
 class FileAppendPatch(BaseFilePatch):
     """A patch for appending lines to a file."""
 
-    patch_type: Literal["append"] = Field(default="append", description="The type of patch.")
+    patch_type: Literal["append"] = "append"
+    """The type of patch."""
 
-    lines: list[str] = Field(description="The lines to append to the file.")
+    lines: list[str] = Field(...)
+    """The lines to append to the end of thefile."""
 
     def apply(self, lines: list[str]) -> list[str]:
         """Applies the patch to the file."""
@@ -62,9 +72,11 @@ class FileAppendPatch(BaseFilePatch):
 class FileDeletePatch(BaseFilePatch):
     """A patch to delete lines from a file."""
 
-    patch_type: Literal["delete"] = Field(default="delete", description="The type of patch.")
+    patch_type: Literal["delete"] = "delete"
+    """The type of patch."""
 
-    line_numbers: list[int] = Field(description="The line numbers to delete from the file.")
+    line_numbers: list[int] = Field(...)
+    """The exact line numbers to delete from the file."""
 
     def apply(self, lines: list[str]) -> list[str]:
         """Applies the patch to the file."""
@@ -76,11 +88,17 @@ class FileDeletePatch(BaseFilePatch):
 class FileReplacePatch(BaseFilePatch):
     """A patch to replace lines in a file."""
 
-    patch_type: Literal["replace"] = Field(default="replace", description="The type of patch.")
+    patch_type: Literal["replace"] = "replace"
+    """The type of patch."""
 
-    start_line_number: int = Field(description="The line number to start replacing at.")
-    current_lines: list[str] = Field(description="The lines to replace.")
-    new_lines: list[str] = Field(description="The lines to replace the existing lines with.")
+    start_line_number: int = Field(...)
+    """The line number to start replacing at. The line at this number and the lines referenced in `current_lines` will be replaced."""
+
+    current_lines: list[str] = Field(...)
+    """The lines to replace. Must match the lines at `start_line_number` to `start_line_number + len(current_lines) - 1` exactly."""
+
+    new_lines: list[str] = Field(...)
+    """The lines to replace the existing lines with. Does not have to match the length of `current_lines`."""
 
     def apply(self, lines: list[str]) -> list[str]:
         """Applies the patch to the file."""

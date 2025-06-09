@@ -1,6 +1,6 @@
-# doc_store_vector_search_mcp
+# Doc Store Vector Search MCP
 
-A doc_store_vector_search_mcp project for creating MCP Servers.
+An MCP Server for managing and searching document stores using vector embeddings.
 
 ## Features
 
@@ -26,7 +26,7 @@ uv sync --group dev
 Run the MCP server with your references:
 
 ```bash
-uv run doc_store_vector_search_mcp --cli-arg-1 "cli-arg-1" --cli-arg-2 "cli-arg-2" --cli-arg-3 "cli-arg-3"
+uv run doc_store_vector_search_mcp
 ```
 
 ## VS Code McpServer Usage
@@ -42,13 +42,7 @@ uv run doc_store_vector_search_mcp --cli-arg-1 "cli-arg-1" --cli-arg-2 "cli-arg-
             "Doc Store Vector Search Mcp": {
                 "command": "uvx",
                 "args": [
-                    "https://github.com/strawgate/py-mcp-collection.git#subdirectory=doc_store_vector_search_mcp",
-                    "--cli-arg-1",
-                    "cli-arg-1",
-                    "--cli-arg-2",
-                    "cli-arg-2",
-                    "--cli-arg-3",
-                    "cli-arg-3"
+                    "https://github.com/strawgate/py-mcp-collection.git#subdirectory=doc_store_vector_search_mcp"
                 ]
             }
         }
@@ -60,7 +54,7 @@ uv run doc_store_vector_search_mcp --cli-arg-1 "cli-arg-1" --cli-arg-2 "cli-arg-
 Simply add the following to your McpServer configuration. Edit the AlwaysAllow list to include the tools you want to use without confirmation.
 
 ```
-    "Local References": {
+    "Doc Store Vector Search Mcp": {
       "command": "uvx",
       "args": [
         "https://github.com/strawgate/py-mcp-collection.git#subdirectory=doc_store_vector_search_mcp"

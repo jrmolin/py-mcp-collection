@@ -47,8 +47,8 @@ async def test_base_node_properties(temp_dir: Path):
 
     assert node.name == temp_dir.name
     assert node.relative_path == Path()
-    assert node.is_dir()
-    assert not node.is_file()
+    assert node.is_dir
+    assert not node.is_file
 
     # Test filters
     assert node.passes_filters()
@@ -72,23 +72,23 @@ async def test_file_entry_properties(temp_dir: Path):
     assert not node.is_data
 
     # Test file reading
-    content = await node.read_text
+    content = await node.read_text()
     assert content == "Hello, World!"
 
     # Test binary reading
-    binary = await node.read_binary_base64
+    binary = await node.read_binary_base64()
     assert isinstance(binary, str)  # Should be base64 encoded
 
     # Test line reading
-    lines = await node.read_text_lines
-    assert len(lines) == 1
-    assert lines[0] == "Hello, World!"
+    lines = await node.read_lines()
+    assert len(lines.lines()) == 1
+    assert lines.lines()[0] == "Hello, World!"
 
     # Test line numbers
-    line_numbers = await node.read_text_line_numbers
-    assert len(line_numbers) == 1
-    assert line_numbers[0].line_number == 0
-    assert line_numbers[0].line == "Hello, World!"
+    line_numbers = await node.read_lines()
+    assert len(line_numbers.lines()) == 1
+    assert line_numbers.line_numbers()[0] == 0
+    assert line_numbers.lines()[0] == "Hello, World!"
 
 
 @pytest.mark.asyncio
@@ -99,7 +99,7 @@ async def test_directory_entry_properties(temp_dir: Path):
     assert node.directory_path == "."
 
     # Test children
-    children = await node.children
+    children = await node.children()
     assert len(children) == 4  # test.txt, code.py, data.json, subdir
 
     # Test finding files
@@ -126,24 +126,24 @@ async def test_file_content_matching(temp_dir: Path):
     # Test simple content matching
     matches = await node.contents_match("print")
     assert len(matches) == 1
-    assert "print" in matches[0].match.line
+    assert "print" in matches[0].match.lines()[0]
 
     # Test simple content matching
     matches = await node.contents_match("print", before=1)
     assert len(matches) == 1
-    assert "print" in matches[0].match.line
-    assert "hello" in matches[0].before[0].line
+    assert "print" in matches[0].match.lines()[0]
+    assert "hello" in matches[0].before.lines()[0]
 
     # Test regex matching
     matches = await node.contents_match_regex(r"def \w+")
     assert len(matches) == 1
-    assert "def hello" in matches[0].match.line
+    assert "def hello" in matches[0].match.lines()[0]
 
     # Test context lines
     matches = await node.contents_match("print", before=1, after=0)
     assert len(matches) == 1
-    assert len(matches[0].before) == 1
-    assert "def hello" in matches[0].before[0].line
+    assert len(matches[0].before.lines()) == 1
+    assert "def hello" in matches[0].before.lines()[0]
 
 
 @pytest.mark.asyncio

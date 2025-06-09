@@ -17,22 +17,55 @@ from filesystem_operations_mcp.filesystem.patches.file import FileMultiplePatchT
 magika = init_magika()
 
 
-class FileLine(RootModel):
-    root: tuple[int, str] = Field(description="The line number and line of text")
+class FileLines(RootModel):
+    root: dict[int, str] = Field(description="The lines of the file as a dictionary of line numbers and lines of text")
 
-    @property
-    def line_number(self) -> int:
-        return self.root[0]
+    def lines(self) -> list[str]:
+        return list(self.root.values())
 
-    @property
-    def line(self) -> str:
-        return self.root[1]
+    def line_numbers(self) -> list[int]:
+        return list(self.root.keys())
+
+    def search(self, pattern: str) -> "FileLines":
+        line_numbers = [line_number for line_number, line in self.root.items() if pattern in line]
+
+        return self.get_lines(line_numbers)
+
+    def search_regex(self, pattern: str) -> "FileLines":
+        line_numbers = [line_number for line_number, line in self.root.items() if re.search(pattern, line)]
+
+        return self.get_lines(line_numbers)
+
+    @classmethod
+    def from_lines(cls, lines: list[str]) -> "FileLines":
+        return cls(root=dict(enumerate(lines)))
+
+    @classmethod
+    async def from_file(cls, file_path: Path) -> "FileLines":
+        async with aopen(file_path, encoding="utf-8") as f:
+            lines = await f.readlines()
+            return cls.from_lines(lines)
+
+    def get_lines(self, line_numbers: list[int]) -> "FileLines":
+        return FileLines(root={i: self.root[i] for i in line_numbers})
+
+
+# class FileLine(RootModel):
+#     root: tuple[int, str] = Field(description="The line number and line of text")
+
+#
+#     def line_number(self) -> int:
+#         return self.root[0]
+
+#
+#     def line(self) -> str:
+#         return self.root[1]
 
 
 class FileEntryMatch(BaseModel):
-    match: FileLine = Field(description="The line of text that matches the pattern")
-    before: list[FileLine] = Field(description="The lines of text before the line")
-    after: list[FileLine] = Field(description="The lines of text after the line")
+    match: FileLines = Field(description="The line of text that matches the pattern")
+    before: FileLines = Field(description="The lines of text before the line")
+    after: FileLines = Field(description="The lines of text after the line")
 
 
 class FileEntry(BaseNode):
@@ -108,12 +141,10 @@ class FileEntry(BaseNode):
 
         return False
 
-    @property
     async def size(self) -> int:
-        stat_result = await self._stat
+        stat_result = await self._stat()
         return stat_result.st_size
 
-    @property
     async def read_binary_base64(self) -> str:
         """Read the binary contents of the file and convert it to a base64 string."""
 
@@ -122,28 +153,25 @@ class FileEntry(BaseNode):
 
         return base64.b64encode(binary).decode("utf-8")
 
-    @property
+    async def _read(self, head: int | None = None) -> str:
+        """Read the contents of the file."""
+        async with aopen(self.absolute_path, encoding="utf-8") as f:
+            return await f.read(head)
+
     async def read_text(self) -> str:
         """The contents of the file as text."""
         if self.is_binary_mime_type:
             raise FileIsNotTextError(file_path=self.file_path)
 
-        async with aopen(self.absolute_path, encoding="utf-8") as f:
-            return await f.read()
+        return await self._read()
 
-    @property
-    async def read_text_lines(self) -> list[str]:
+    async def read_lines(self) -> FileLines:
         """The lines of the file as a list of strings."""
-        # get the file encoding from the magika content type
-        async with aopen(self.absolute_path, encoding="utf-8") as f:
-            lines = await f.readlines()
-            return [line.strip() for line in lines]
+        return await FileLines.from_file(self.absolute_path)
 
-    @property
-    async def read_text_line_numbers(self) -> list[FileLine]:
-        """The lines of the file as a list of FileLine objects which are a tuple of the line number and the line of text."""
-        lines = await self.read_text_lines
-        return self._get_lines(lines)
+    async def read_raw_lines(self) -> list[str]:
+        """The lines of the file as a list of strings."""
+        return (await self._read()).splitlines()
 
     @classmethod
     async def create_file(cls, file_path: Path, content: str) -> None:
@@ -160,13 +188,13 @@ class FileEntry(BaseNode):
 
     async def apply_patch(self, patch: FilePatchTypes) -> None:
         """Applies the patch to the file."""
-        lines = await self.read_text_lines
-        lines = patch.apply(lines)
+        file_lines = await self.read_raw_lines()
+        lines = patch.apply(file_lines)
         await self.save(lines)
 
     async def apply_patches(self, patches: FileMultiplePatchTypes) -> None:
         """Applies the patches to the file."""
-        lines = await self.read_text_lines
+        lines = await self.read_raw_lines()
 
         # Reverse the patches if they are a list so that they are applied in the correct order.
         patches_to_apply: list[FilePatchTypes] = list(reversed(patches)) if isinstance(patches, list) else [patches]
@@ -183,8 +211,7 @@ class FileEntry(BaseNode):
 
     async def preview_contents(self, head: int) -> str:
         """The first `head` bytes of the file."""
-        async with aopen(self.absolute_path, encoding="utf-8") as f:
-            return await f.read(head)
+        return await self._read(head)
 
     def validate_in_root(self, root: Path) -> None:
         """Validates that the file is in the root."""
@@ -203,15 +230,20 @@ class FileEntry(BaseNode):
             before: The number of lines before the match to include.
             after: The number of lines after the match to include.
         """
-        lines = await self.read_text_lines
-        match_lines: list[int] = [i for i, line in enumerate(lines) if pattern in line]
+        all_file_lines: FileLines = await self.read_lines()
+
+        matching_lines = all_file_lines.search(pattern)
+
+        if not matching_lines:
+            return []
+
         return [
             FileEntryMatch(
-                match=self._get_line(lines, i),
-                before=self._get_lines_before(lines, i, before),
-                after=self._get_lines_after(lines, i, after),
+                match=all_file_lines.get_lines([line_number]),
+                before=all_file_lines.get_lines(list(range(line_number - before, line_number))),
+                after=all_file_lines.get_lines(list(range(line_number + 1, line_number + after + 1))),
             )
-            for i in match_lines
+            for line_number in matching_lines.line_numbers()
         ]
 
     async def contents_match_regex(self, pattern: str, before: int = 0, after: int = 0) -> list[FileEntryMatch]:
@@ -222,38 +254,18 @@ class FileEntry(BaseNode):
             before: The number of lines before the match to include.
             after: The number of lines after the match to include.
         """
-        lines = await self.read_text_lines
+        all_file_lines: FileLines = await self.read_lines()
+
+        matching_lines = all_file_lines.search_regex(pattern)
+
+        if not matching_lines:
+            return []
+
         return [
             FileEntryMatch(
-                match=self._get_line(lines, i),
-                before=self._get_lines_before(lines, i, before),
-                after=self._get_lines_after(lines, i, after),
+                match=all_file_lines.get_lines([line_number]),
+                before=all_file_lines.get_lines(list(range(line_number - before, line_number))),
+                after=all_file_lines.get_lines(list(range(line_number + 1, line_number + after + 1))),
             )
-            for i, line in enumerate(lines)
-            if re.search(pattern, line)
+            for line_number in matching_lines.line_numbers()
         ]
-
-    async def get_lines(self, line_numbers: list[int]) -> list[FileLine]:
-        """Gets the lines of the file at the given line numbers."""
-        from_lines = await self.read_text_lines
-        return [self._get_line(from_lines, i) for i in line_numbers]
-
-    @classmethod
-    def _get_line(cls, from_lines: list[str], line_number: int) -> FileLine:
-        return FileLine(root=(line_number, from_lines[line_number]))
-
-    @classmethod
-    def _get_lines(cls, from_lines: list[str]) -> list[FileLine]:
-        return [FileLine(root=(i, line)) for i, line in enumerate(from_lines)]
-
-    @classmethod
-    def _get_lines_range(cls, from_lines: list[str], start: int, end: int) -> list[FileLine]:
-        return [FileLine(root=(i, line)) for i, line in enumerate(from_lines[start:end])]
-
-    @classmethod
-    def _get_lines_before(cls, from_lines: list[str], line_number: int, before: int) -> list[FileLine]:
-        return [FileLine(root=(i, line)) for i, line in enumerate(from_lines[line_number - before : line_number])]
-
-    @classmethod
-    def _get_lines_after(cls, from_lines: list[str], line_number: int, after: int) -> list[FileLine]:
-        return [FileLine(root=(i, line)) for i, line in enumerate(from_lines[line_number : line_number + after])]

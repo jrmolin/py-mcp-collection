@@ -142,7 +142,7 @@ class ReferenceManager(MCPMixin):
             ),
             "\n",
         ]
-        return ("".join(content)).strip()
+        return ("".join(content)).rstrip()
 
     @mcp_tool()
     def get_reference(self, reference_type: str, reference_name: str) -> str:

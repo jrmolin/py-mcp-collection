@@ -218,7 +218,7 @@ async def test_file_entry_apply_single_patches(temp_file, patch: FilePatchTypes,
     # Read the file and verify changes
     async with aopen(temp_file) as f:
         lines = await f.readlines()
-        lines = [line.strip() for line in lines]
+        lines = [line.rstrip() for line in lines]
 
     assert lines == expected_lines
 
@@ -278,7 +278,7 @@ async def test_file_entry_apply_multiple_patches(temp_file, patches: FileMultipl
     # Read the file and verify changes
     async with aopen(temp_file) as f:
         lines = await f.readlines()
-        lines = [line.strip() for line in lines]
+        lines = [line.rstrip() for line in lines]
 
     assert lines == expected_lines
 

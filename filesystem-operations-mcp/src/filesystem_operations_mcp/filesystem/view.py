@@ -48,10 +48,12 @@ class FileExportableField(BaseModel):
     """Size of the file in bytes. """
 
     read_text: bool = Field(default=False)
-    """Read the contents of the file only if it is text."""
+    """Read the contents of the file only if it is text. Do not use if you plan to apply edits to specific lines of the file."""
 
     read_lines: bool = Field(default=False)
-    """Read the file as a set of lines only if it is text. The response will be a dictionary of line numbers to lines of text."""
+    """Read the file as a set of lines only if it is text.
+    The response will be a dictionary of line numbers to lines of text.
+    Use `read_lines` instead of `read_text` when you plan to patch/edit specific lines of the file."""
 
     read_binary_base64: bool = Field(default=False)
     """Read the contents of the file as base64 encoded binary."""
@@ -89,23 +91,25 @@ class FileExportableField(BaseModel):
     async def _apply_summaries(self, node: FileEntry) -> dict[str, Any]:
         model = {}
         if self.code_summary and node.is_code and node.magika_content_type:
-            if await node.size > TOO_BIG_TO_SUMMARIZE_BYTES_THRESHOLD:
+            if await node.size() > TOO_BIG_TO_SUMMARIZE_BYTES_THRESHOLD:
                 model["code_summary"] = None
                 model["code_summary_skipped"] = "Exceeded size limit"
             else:
                 content_type_to_language = code_mappings.get(node.magika_content_type.label)
                 if content_type_to_language is not None:
-                    summary = summarize_code(content_type_to_language.value, await node.read_text)
+                    summary = summarize_code(content_type_to_language.value, await node.read_text())
                     as_json = json.dumps(summary)
                     if len(as_json) > self.limit_summaries:
                         model["code_summary"] = as_json[: self.limit_summaries]
+                    else:
+                        model["code_summary"] = summary
 
         if self.text_summary and node.is_text and node.magika_content_type:
-            if await node.size > TOO_BIG_TO_SUMMARIZE_BYTES_THRESHOLD:
+            if await node.size() > TOO_BIG_TO_SUMMARIZE_BYTES_THRESHOLD:
                 model["text_summary"] = None
                 model["text_summary_skipped"] = "Exceeded size limit"
             else:
-                summary = summarize_text(await node.read_text)
+                summary = summarize_text(await node.read_text())
                 model["text_summary"] = summary[: self.limit_summaries]
 
         return model
@@ -113,9 +117,9 @@ class FileExportableField(BaseModel):
     async def _apply_owner_and_group(self, node: FileEntry) -> dict[str, Any]:
         model = {}
         if self.owner:
-            model["owner"] = await node.owner
+            model["owner"] = await node.owner()
         if self.group:
-            model["group"] = await node.group
+            model["group"] = await node.group()
         return model
 
     async def _apply_read_preview(self, node: FileEntry) -> dict[str, Any]:
@@ -123,12 +127,11 @@ class FileExportableField(BaseModel):
         if self.preview and not node.is_binary:
             model["preview"] = await node.preview_contents(head=self.limit_preview)
         if self.read_text and not node.is_binary:
-            model["read_text"] = await node.read_text
+            model["read_text"] = await node.read_text()
         if self.read_lines and not node.is_binary:
-            model["read_lines"] = await node.read_text_line_numbers
-            model["read_lines"] = {line.line_number: line.line for line in model["read_lines"]}
+            model["read_lines"] = await node.read_lines()
         if self.read_binary_base64 and node.is_binary:
-            model["read_binary_base64"] = await node.read_binary_base64
+            model["read_binary_base64"] = await node.read_binary_base64()
 
         return model
 
@@ -154,12 +157,12 @@ class FileExportableField(BaseModel):
         if self.extension:
             model["extension"] = node.extension
         if self.size:
-            model["size"] = await node.size
+            model["size"] = await node.size()
 
         if self.created_at:
-            model["created_at"] = await node.created_at
+            model["created_at"] = await node.created_at()
         if self.modified_at:
-            model["modified_at"] = await node.modified_at
+            model["modified_at"] = await node.modified_at()
 
         model.update(await self._apply_file_type(node))
         model.update(await self._apply_summaries(node))
@@ -256,26 +259,30 @@ class DirectoryExportableField(BaseModel):
 
         logger.info(f"Applying directory fields to {node.directory_path}")
 
+        needs_children = self.files_count or self.directories_count or self.children_count or self.children
+        if needs_children:
+            children = await node.children()
+
         if self.directory_path:
             model["directory_path"] = node.directory_path
         if self.basename:
             model["basename"] = node.name
         if self.files_count:
-            model["files_count"] = len([child for child in await node.children if child.is_file()])
+            model["files_count"] = len([child for child in children if child.is_file])
         if self.directories_count:
-            model["directories_count"] = len([child for child in await node.children if child.is_dir()])
+            model["directories_count"] = len([child for child in children if child.is_dir])
         if self.children_count:
-            model["children_count"] = len(await node.children)
+            model["children_count"] = len(children)
         if self.children:
-            model["children"] = await node.children
+            model["children"] = children
         if self.created_at:
-            model["created_at"] = await node.created_at
+            model["created_at"] = await node.created_at()
         if self.modified_at:
-            model["modified_at"] = await node.modified_at
+            model["modified_at"] = await node.modified_at()
         if self.owner:
-            model["owner"] = await node.owner
+            model["owner"] = await node.owner()
         if self.group:
-            model["group"] = await node.group
+            model["group"] = await node.group()
 
         return model
 

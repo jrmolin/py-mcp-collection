@@ -1,7 +1,7 @@
 [project]
 name = "doc_store_vector_search_mcp"
-version = "0.1.1"
-description = "Doc Store Vector Search Mcp project"
+version = "0.2.0"
+description = "An MCP Server for managing and searching document stores using vector embeddings."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -44,7 +44,7 @@ addopts = "-vvv"
 
 
 [tool.hatch.version]
-path = "src/mcp_utils/__about__.py"
+path = "src/doc_store_vector_search_mcp/__about__.py"
 
 
 [dependency-groups]

@@ -1,6 +1,6 @@
-# aider_wrapper_mcp
+# Aider Wrapper MCP
 
-A aider_wrapper_mcp project for creating MCP Servers.
+An MCP Server that wraps the Aider tool, allowing AI-driven code modifications and interactions within a structured repository context.
 
 ## Features
 
@@ -26,7 +26,7 @@ uv sync --group dev
 Run the MCP server with your references:
 
 ```bash
-uv run aider_wrapper_mcp --cli-arg-1 "cli-arg-1" --cli-arg-2 "cli-arg-2" --cli-arg-3 "cli-arg-3"
+uv run aider_wrapper_mcp --model "gemini/gemini-2.5-flash-preview-04-17"
 ```
 
 ## VS Code McpServer Usage
@@ -43,12 +43,8 @@ uv run aider_wrapper_mcp --cli-arg-1 "cli-arg-1" --cli-arg-2 "cli-arg-2" --cli-a
                 "command": "uvx",
                 "args": [
                     "https://github.com/strawgate/py-mcp-collection.git#subdirectory=aider_wrapper_mcp",
-                    "--cli-arg-1",
-                    "cli-arg-1",
-                    "--cli-arg-2",
-                    "cli-arg-2",
-                    "--cli-arg-3",
-                    "cli-arg-3"
+                    "--model",
+                    "gemini/gemini-2.5-flash-preview-04-17"
                 ]
             }
         }
@@ -60,10 +56,12 @@ uv run aider_wrapper_mcp --cli-arg-1 "cli-arg-1" --cli-arg-2 "cli-arg-2" --cli-a
 Simply add the following to your McpServer configuration. Edit the AlwaysAllow list to include the tools you want to use without confirmation.
 
 ```
-    "Local References": {
+    "Aider Wrapper MCP": {
       "command": "uvx",
       "args": [
-        "https://github.com/strawgate/py-mcp-collection.git#subdirectory=aider_wrapper_mcp"
+        "https://github.com/strawgate/py-mcp-collection.git#subdirectory=aider_wrapper_mcp",
+        "--model",
+        "gemini/gemini-2.5-flash-preview-04-17"
       ]
     }
 ```

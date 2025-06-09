@@ -59,11 +59,10 @@ class FileSystem:
         skip_hidden: SkipHidden = True,
         skip_empty: SkipEmpty = True,
     ) -> list[DirectoryEntry]:
-        """Gets the structure of the filesystem. Includes any children at the root but otherwise only includes
-        directories up to the specified depth.
+        """Gets the directory structure of the filesystem.
 
         Returns:
-            A list of DirectoryEntry and FileEntry objects.
+            A list of DirectoryEntry objects.
 
         Example:
             >>> await get_structure(depth=1)
@@ -81,10 +80,10 @@ class FileSystem:
             skip_hidden=skip_hidden,
         )
 
-        child_dirs: list[DirectoryEntry] = [child for child in children if child.is_dir()]  # type: ignore
+        child_dirs: list[DirectoryEntry] = [child for child in children if child.is_dir]  # type: ignore
 
         if skip_empty:
-            child_dirs = [child for child in child_dirs if not await child.is_empty]
+            child_dirs = [child for child in child_dirs if not await child.is_empty()]
 
         return [self.root_directory, *child_dirs]
 
