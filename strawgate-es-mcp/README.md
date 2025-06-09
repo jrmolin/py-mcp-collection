@@ -1,6 +1,8 @@
-# es_mcp
+# strawgate_es_mcp
 
-An MCP Server for Elasticsearch.
+Strawgate's Unofficial MCP Server for Elasticsearch.
+
+Use at your own risk. This is not an official Elasticsearch product. This MCP Server will probably break your Elasticsearch cluster. Do not use it.
 
 This project provides a Model Context Protocol (MCP) server implemented in Python using `fastmcp`. Its primary purpose is to expose a wide range of Elasticsearch client functionalities as callable MCP tools, allowing for interaction with an Elasticsearch cluster via the MCP.
 

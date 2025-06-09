@@ -208,7 +208,7 @@ wheels = [
 
 [[package]]
 name = "mcp-utils"
-version = "0.1.3"
+version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },

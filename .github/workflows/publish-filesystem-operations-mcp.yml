@@ -1,4 +1,4 @@
-name: Publish MCP Servers to PyPI
+name: Publish File System Operations MCP to PyPI
 
 on:
   release:
@@ -8,12 +8,14 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    environment: pypi
     strategy:
       matrix:
         package:
           - filesystem-operations-mcp
 
-    continue-on-error: true 
     defaults:
       run:
         working-directory: ${{ matrix.package }}
@@ -26,16 +28,12 @@ jobs:
       
       - name: "Install ${matrix.package}"
         run: uv sync --locked --group dev
-        working-directory: "${{ matrix.package }}"
 
       - name: "Test ${matrix.package}"
         run: uv run pytest tests
 
       - name: "Build ${matrix.package}"
         run: uv build
-
-      - name: "Test ${matrix.package}"
-        run: uv test
 
       - name: "Publish to PyPi ${matrix.package}"
         run: uv publish -v dist/*

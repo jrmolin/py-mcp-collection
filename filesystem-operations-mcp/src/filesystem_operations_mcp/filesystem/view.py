@@ -1,11 +1,10 @@
 import inspect
 import json
 from collections.abc import Awaitable, Callable
-from enum import StrEnum
 from typing import Annotated, Any
 
 from makefun import wraps as makefun_wraps
-from pydantic import BaseModel, ConfigDict, Field, RootModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from filesystem_operations_mcp.filesystem.errors import FilesystemServerResponseTooLargeError, FilesystemServerTooBigToSummarizeError
 from filesystem_operations_mcp.filesystem.mappings.magika_to_tree_sitter import code_mappings
@@ -279,6 +278,7 @@ class DirectoryExportableField(BaseModel):
             model["group"] = await node.group
 
         return model
+
 
 def caller_controlled_directory_fields(
     func: Callable[..., Awaitable[DirectoryEntry | list[DirectoryEntry]]],

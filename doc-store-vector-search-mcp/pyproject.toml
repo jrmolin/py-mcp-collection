@@ -1,6 +1,6 @@
 [project]
 name = "doc_store_vector_search_mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "Doc Store Vector Search Mcp project"
 readme = "README.md"
 requires-python = ">=3.12"

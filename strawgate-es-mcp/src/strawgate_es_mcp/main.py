@@ -17,7 +17,7 @@ async def cli(es_host: str, api_key: str):
 
     await es.ping()
 
-    mcp = FastMCP(name="Local Es Mcp")
+    mcp = FastMCP(name="Strawgate Elasticsearch MCP")
 
     mcp.add_tool(FunctionTool.from_function(es.ping))
     mcp.add_tool(FunctionTool.from_function(es.info))

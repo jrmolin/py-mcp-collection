@@ -1,7 +1,7 @@
 [project]
-name = "es_mcp"
-version = "0.1.0"
-description = "Es Mcp project"
+name = "strawgate_es_mcp"
+version = "0.1.1"
+description = "Strawgate's Es Mcp project"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -15,13 +15,13 @@ dependencies = [
 
 [tool.poetry]
 packages = [
-    { include = "es_mcp", from = "src" }
+    { include = "strawgate_es_mcp", from = "src" }
 ]
 [tool.hatch.metadata]
 allow-direct-references=true
 
 [project.scripts]
-es-mcp = "es_mcp.main:run_mcp"
+strawgate-es-mcp = "strawgate_es_mcp.main:run_mcp"
 
 
 [dependency-groups]

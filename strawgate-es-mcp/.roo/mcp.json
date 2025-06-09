@@ -4,7 +4,7 @@
       "command": "uv",
       "args": [
         "run",
-        "./src/es_mcp/main.py"
+        "./src/strawgate_es_mcp/main.py"
       ],
       "alwaysAllow": [
         "allocation",

@@ -1,4 +1,4 @@
-name: Publish Doc Store and Vector Search MCP to PyPI
+name: Publish Strawgate ES MCP to PyPI
 
 on:
   release:
@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         package:
-          - doc-store-vector-search-mcp
+          - strawgate-es-mcp
 
     defaults:
       run:

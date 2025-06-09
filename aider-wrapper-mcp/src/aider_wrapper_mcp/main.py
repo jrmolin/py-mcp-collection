@@ -148,7 +148,6 @@ class AiderClient(MCPMixin):
             editor_edit_format="ask",
         )
 
-
         io = InputOutput(yes=True)
 
         aider_repo = GitRepo(io=io, fnames=[], git_dname=repo_str, models=[self.aider_model])
@@ -362,7 +361,6 @@ class AiderClient(MCPMixin):
             raise AiderNoneResultError(msg)
 
         return result
-
 
     @mcp_tool()
     def write_code(self, prompt: str, commit_when_done: bool = True) -> str:

@@ -135,7 +135,7 @@ wheels = [
 
 [[package]]
 name = "aider-wrapper-mcp"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "aider-chat" },
@@ -157,7 +157,7 @@ lint = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aider-chat", specifier = ">=0.83.0,<0.84.0" },
+    { name = "aider-chat", specifier = ">=0.83.0,<0.85.0" },
     { name = "asyncclick", specifier = ">=8.1.8" },
     { name = "fastmcp", specifier = ">=2.3.5" },
     { name = "mcp", specifier = ">=1.9.0" },
