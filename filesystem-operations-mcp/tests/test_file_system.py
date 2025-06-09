@@ -32,11 +32,14 @@ async def create_test_structure(root: Path) -> None:
     # Create text files
     await create_test_file(root / "readme.md", "# Test Project\n\nThis is a test project.")
     await create_test_file(root / "notes.txt", "Important notes:\n1. First point\n2. Second point")
-    await create_test_file(root / "no_extension_text", """
+    await create_test_file(
+        root / "no_extension_text",
+        """
     This is a text file without extension. It contains a fair amount of text.
     It contains a lot of text. It should be able to be identified as text by its content even
     though it doesn't have an extension.
-    """)
+    """,
+    )
 
     # Create nested directory structure
     nested = root / "nested"
@@ -77,7 +80,7 @@ async def file_system(temp_dir):
 @pytest.mark.asyncio
 async def test_get_root(file_system, temp_dir):
     root = await file_system.get_root()
-    assert root.absolute_path == temp_dir
+    assert root.absolute_path == temp_dir.resolve()
     assert root.relative_path == Path()
 
 

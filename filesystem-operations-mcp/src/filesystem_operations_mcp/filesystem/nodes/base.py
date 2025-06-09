@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from fnmatch import fnmatch
 from os import stat_result
 from pathlib import Path
+from typing import Any
 
 from aiofiles.os import stat
 from asyncstdlib import cached_property
@@ -17,7 +18,7 @@ class BaseNode(BaseModel):
     root: Path = Field(exclude=True)
     """The path of the node relative to the root."""
 
-    def __post_init__(self):
+    def model_post_init(self, __context: Any):
         self.absolute_path = self.absolute_path.resolve()
         self.root = self.root.resolve()
 
@@ -49,7 +50,7 @@ class BaseNode(BaseModel):
     async def _stat(self) -> stat_result:
         """The stat result of the file.
 
-        This is cached very a very short period of timeto avoid repeated stat calls.
+        This is cached very a very short period of time to avoid repeated stat calls.
 
         A stat_result contains:
         - st_mode: protection bits,
@@ -105,7 +106,7 @@ class BaseNode(BaseModel):
             if excludes is None:
                 excludes = []
 
-            # What does .?* do?
+            # What does .?* do? It's not Regex! It's a glob!
             # It matches any file or directory that starts with a dot (.) and is followed by 1 or more characters.
             # So .?* does not match . but does match .folder and does match .file
 

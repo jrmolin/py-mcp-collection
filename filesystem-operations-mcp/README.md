@@ -4,15 +4,20 @@ This project provides a FastMCP server that exposes tools for performing bulk fi
 
 ## Features
 
-- **File System Operations**: Read, search, and manipulate files and directories
-- **Smart File Type Detection**: Uses Magika for accurate file type detection, even for files without extensions
-- **Dynamic Field Selection**: Select which fields to include in the response. Allowing you to control the size of the response. Include summaries, previews, contents, metadata. Include what you need, and exclude what you don't.
-- **Code Summarization**: Tree-sitter based code analysis and summarization
-- **Text Summarization**: Natural language summarization of text files
-- **Flexible Filtering**: Glob-based include/exclude patterns for file operations
-- **Content Search**: Full-text search with regex support and context lines
-- **Metadata Access**: File and directory metadata (creation time, size, owner, etc.)
-- **Hidden File Handling**: Configurable handling of hidden files and directories
+This server provides a comprehensive set of tools for interacting with the filesystem, designed for efficiency and flexibility:
+
+-   **Comprehensive File & Directory Management**: Create, delete, append, insert, and replace content within files, and manage directories with robust error handling.
+-   **Intelligent File Type Detection**: Utilizes Magika for highly accurate file type identification, including detection of binary, code, text, and data files, even for those lacking extensions.
+-   **Customizable Data Retrieval**: Offers granular control over the returned data for files and directories, allowing users to select specific fields like path, size, type, content previews, and detailed metadata (creation/modification times, owner, group).
+-   **Advanced Content Summarization**:
+    -   **Code Summarization**: Leverages Tree-sitter to parse and provide structured summaries of code, extracting definitions and documentation.
+    -   **Text Summarization**: Employs natural language processing techniques to generate concise summaries of text files.
+-   **Powerful Search & Filtering**:
+    -   **Glob-based Filtering**: Supports flexible glob patterns for including or excluding files and directories in searches and operations.
+    -   **Content Search**: Enables full-text searches within files, supporting both literal strings and regular expressions, with options to include contextual lines around matches.
+-   **Rich Metadata Access**: Provides access to detailed file and directory metadata, including size, creation/modification timestamps, and ownership information.
+-   **Hidden Item Control**: Configurable options to include or skip hidden files and directories during various operations.
+-   **Patch-based File Modifications**: Supports precise and validated modifications to file content through insert, append, delete, and replace patches.
 
 ## VS Code McpServer Usage
 1. Open the command palette (Ctrl+Shift+P or Cmd+Shift+P).
@@ -79,57 +84,81 @@ Note: When running the server, the `--root-dir` parameter determines the base di
 
 ### Available Tools
 
-The server provides the following tools, categorized by their function. Many tools share common parameters:
+The server provides a comprehensive suite of tools, categorized by their function, to facilitate various filesystem operations. Many tools share common parameters for consistent usage.
 
 #### Common Parameters
 
+These parameters are frequently used across multiple tools to refine operations or control output.
+
 **Path Parameters**
 
-| Parameter | Type          | Description                                                                 | Example        |
-|-----------|---------------|-----------------------------------------------------------------------------|----------------|
-| `path`    | `Path` or `list[Path]` | The path(s) to the file(s) or directory(ies) for the operation. Relative to the server's root directory. | `.` (current dir), `../src`, `test.txt`, `["./dir1", "./dir2"]` |
+| Parameter | Type | Description | Example |
+|---|---|---|---|
+| `file_path` | `str` | The root-relative path to the file for the operation. | `"path/to/file.txt"` |
+| `file_paths` | `list[str]` | A list of root-relative file paths for the operation. | `["path/to/file1.txt", "path/to/file2.txt"]` |
+| `directory_path` | `str` | The root-relative path to the directory for the operation. | `"path/to/directory"` |
+| `directory_paths` | `list[str]` | A list of root-relative directory paths for the operation. | `["path/to/dir1", "path/to/dir2"]` |
 
 **Filtering Parameters** (Used in Directory Operations)
 
-| Parameter                 | Type          | Description                                                                                                | Example             |
-|---------------------------|---------------|------------------------------------------------------------------------------------------------------------|---------------------|
-| `include`                 | `list[str]`   | A list of glob patterns to include. Only files matching these patterns will be included. Defaults to `["*"]`. | `["*.py", "*.json"]` |
-| `exclude`                 | `list[str]`   | A list of glob patterns to exclude. Files matching these patterns will be excluded.                          | `["*.md", "*.txt"]` |
-| `skip_hidden`            | `bool`        | Whether to skip hidden files and directories. Defaults to `true`. | `false`              |
+| Parameter | Type | Description | Example |
+|---|---|---|---|
+| `glob` | `str` | A glob pattern to search for files or directories. | `"*.py"`, `"src/**"` |
+| `includes` | `list[str]` | A list of glob patterns to include. Only files/directories matching these patterns will be included. | `["*.py", "*.json"]` |
+| `excludes` | `list[str]` | A list of glob patterns to exclude. Files/directories matching these patterns will be excluded. | `["*.md", "*.txt"]` |
+| `skip_hidden` | `bool` | Whether to skip hidden files and directories. Defaults to `true`. | `false` |
+| `skip_empty` | `bool` | Whether to skip empty directories. Defaults to `true`. | `false` |
+| `depth` | `int` | The depth of the directory structure to retrieve. `0` means immediate children only. | `1`, `3` |
 
 **Search Parameters** (Used in Search Operations)
 
-| Parameter           | Type    | Description                                                                 | Example             |
-|---------------------|---------|-----------------------------------------------------------------------------|---------------------|
-| `search`            | `str`   | The string or regex pattern to search for within file contents.             | `"hello world"`     |
-| `search_is_regex`   | `bool`  | Whether the `search` parameter should be treated as a regex pattern. Defaults to `false`. | `true`              |
-| `before`            | `int`   | The number of lines to include before a match in the result chunks. Defaults to `3`. | `1`                 |
-| `after`             | `int`   | The number of lines to include after a match in the result chunks. Defaults to `3`.  | `1`                 |
+| Parameter | Type | Description | Example |
+|---|---|---|---|
+| `pattern` | `str` | The string or regex pattern to search for within file contents. | `"hello world"` |
+| `pattern_is_regex` | `bool` | Whether the `pattern` parameter should be treated as a regex pattern. Defaults to `false`. | `true` |
+| `before` | `int` | The number of lines to include before a match in the result. | `2` |
+| `after` | `int` | The number of lines to include after a match in the result. | `2` |
 
 **Field Selection Parameters**
 
-| Parameter           | Type    | Description                                                                 | Example             |
-|---------------------|---------|-----------------------------------------------------------------------------|---------------------|
-| `file_fields`       | `list[str]` | Fields to include in file responses. See `tips_file_exportable_field()` for options. | `["file_path", "size", "mime_type"]` |
-| `directory_fields`  | `list[str]` | Fields to include in directory responses. See `tips_directory_exportable_field()` for options. | `["directory_path", "children_count"]` |
+| Parameter | Type | Description | Example |
+|---|---|---|---|
+| `file_fields` | `FileExportableField` | A Pydantic model to specify which fields of a `FileEntry` to include in the response. | `{"file_path": true, "size": true, "read_text": true}` |
+| `directory_fields` | `DirectoryExportableField` | A Pydantic model to specify which fields of a `DirectoryEntry` to include in the response. | `{"directory_path": true, "files_count": true}` |
+| `include_summaries` | `bool` | Whether to include code and text summaries for files. Defaults to `false`. | `true` |
 
 #### Core Operations
 
-**File Operations:**
-- `get_files`: Get information about specific files
-- `get_text_files`: Get information about text files
-- `get_file_matches`: Search file contents with context
-- `find_files`: Find files matching glob patterns
+These tools provide fundamental capabilities for managing and querying the filesystem.
 
-**Directory Operations:**
-- `get_root`: Get the root directory
-- `get_structure`: Get directory structure with configurable depth
-- `get_directories`: Get information about specific directories
-- `find_dirs`: Find directories matching glob patterns
+#### File Operations
 
-**Field Information:**
-- `tips_file_exportable_field`: Get documentation about available file fields
-- `tips_directory_exportable_field`: Get documentation about available directory fields
+-   `get_files(file_paths: list[str], file_fields: FileExportableField, include_summaries: bool)`: Retrieves detailed information for a list of specified files.
+-   `get_text_files(file_paths: list[str], file_fields: FileExportableField, include_summaries: bool)`: Retrieves detailed information for a list of specified text files.
+-   `get_file_matches(file_path: str, pattern: str, pattern_is_regex: bool, before: int, after: int)`: Searches for a pattern within a file and returns matching lines with optional context.
+-   `find_files(glob: str, directory_path: str, includes: list[str], excludes: list[str], skip_hidden: bool)`: Finds files matching a glob pattern within a directory, with optional filtering.
+-   `search_files(glob: str, pattern: str, pattern_is_regex: bool, directory_path: str, includes: list[str], excludes: list[str], skip_hidden: bool)`: Searches for files containing a specific pattern within a directory, with optional filtering.
+
+#### Directory Operations
+
+-   `get_root(directory_fields: DirectoryExportableField)`: Retrieves information about the root directory of the filesystem.
+-   `get_structure(depth: int, includes: list[str], excludes: list[str], skip_hidden: bool, skip_empty: bool)`: Retrieves the directory structure up to a specified depth, with optional filtering.
+-   `get_directories(directory_paths: list[str], directory_fields: DirectoryExportableField)`: Retrieves detailed information for a list of specified directories.
+-   `find_dirs(glob: str, directory_path: str, includes: list[str], excludes: list[str], skip_hidden: bool)`: Finds directories matching a glob pattern within a directory, with optional filtering.
+
+#### File Modification Operations
+
+-   `create_file(file_path: str, content: str)`: Creates a new file with the specified content.
+-   `append_file(file_path: str, content: str)`: Appends content to an existing file.
+-   `delete_file_lines(file_path: str, line_numbers: list[int])`: Deletes specific lines from a file.
+-   `replace_file_lines(file_path: str, patches: list[FileReplacePatch])`: Replaces lines in a file based on provided patches.
+-   `insert_file_lines(file_path: str, patches: list[FileInsertPatch])`: Inserts lines into a file based on provided patches.
+-   `delete_file(file_path: str)`: Deletes a specified file.
+
+#### Directory Modification Operations
+
+-   `create_directory(directory_path: str)`: Creates a new directory.
+-   `delete_directory(directory_path: str)`: Deletes an empty directory.
 
 ## Development & Testing
 

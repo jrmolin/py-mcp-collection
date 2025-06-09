@@ -1,14 +1,26 @@
 from itertools import chain
 from pathlib import Path
 
+from aiofiles.os import mkdir as amkdir
+from aiofiles.os import rmdir as armdir
 from aiofiles.os import scandir
 
+from filesystem_operations_mcp.filesystem.errors import (
+    DirectoryAlreadyExistsError,
+    DirectoryNotEmptyError,
+    DirectoryNotFoundError,
+)
 from filesystem_operations_mcp.filesystem.nodes.base import BaseNode
 from filesystem_operations_mcp.filesystem.nodes.file import FileEntry
 
 
 class DirectoryEntry(BaseNode):
     """A directory entry in the filesystem."""
+
+    @property
+    async def is_empty(self) -> bool:
+        """Whether the directory is empty."""
+        return not any(await self.children)
 
     @property
     def directory_path(self) -> str:
@@ -56,6 +68,58 @@ class DirectoryEntry(BaseNode):
             )
 
         return children
+
+    @classmethod
+    async def create_directory(cls, directory_path: Path) -> None:
+        """Creates a directory.
+
+        Returns:
+            None if the directory was created successfully, otherwise an error message.
+        """
+        if directory_path.exists():
+            raise DirectoryAlreadyExistsError(directory_path=str(directory_path))
+
+        await amkdir(directory_path)
+
+    async def delete_directory(self, directory_path: str) -> None:
+        """Deletes a directory.
+
+        Returns:
+            None if the directory was deleted successfully, otherwise an error message.
+        """
+        new_path: Path = self.absolute_path / Path(directory_path)
+
+        if not new_path.exists():
+            raise DirectoryNotFoundError(directory_path=str(new_path))
+
+        # Make sure the directory is empty
+        children = await self._children(depth=0)
+
+        if children:
+            raise DirectoryNotEmptyError(directory_path=str(new_path))
+
+        await armdir(new_path)
+
+    async def search_files(
+        self,
+        glob: str,
+        pattern: str,
+        pattern_is_regex: bool = False,
+        includes: list[str] | None = None,
+        excludes: list[str] | None = None,
+        skip_hidden: bool = True,
+    ) -> list[FileEntry]:
+        """Searches the text files in the directory for the given pattern.
+
+        Returns:
+            A list of files that match the pattern.
+        """
+
+        files = await self.find_files(glob, includes, excludes, skip_hidden)
+
+        files = [file for file in files if file.is_text]
+
+        return [file for file in files if await file.contents_match(pattern, pattern_is_regex)]
 
     async def find_files(
         self, glob: str, includes: list[str] | None = None, excludes: list[str] | None = None, skip_hidden: bool = True

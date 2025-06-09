@@ -7,12 +7,7 @@ from fastmcp import FastMCP
 from fastmcp.tools import FunctionTool
 
 from filesystem_operations_mcp.filesystem.file_system import FileSystem
-from filesystem_operations_mcp.filesystem.view import (
-    caller_controlled_directory_fields,
-    caller_controlled_file_fields,
-    tips_directory_exportable_field,
-    tips_file_exportable_field,
-)
+from filesystem_operations_mcp.filesystem.view import caller_controlled_directory_fields, caller_controlled_file_fields
 from filesystem_operations_mcp.logging import BASE_LOGGER
 
 logger = BASE_LOGGER.getChild("main")
@@ -39,8 +34,17 @@ async def cli(root_dir: str, mcp_transport: Literal["stdio", "sse", "streamable-
     mcp.add_tool(FunctionTool.from_function(file_system.get_file_matches))
     mcp.add_tool(FunctionTool.from_function(caller_controlled_file_fields(file_system.find_files)))
     mcp.add_tool(FunctionTool.from_function(caller_controlled_directory_fields(file_system.find_dirs)))
-    mcp.add_tool(FunctionTool.from_function(tips_file_exportable_field))
-    mcp.add_tool(FunctionTool.from_function(tips_directory_exportable_field))
+    mcp.add_tool(FunctionTool.from_function(caller_controlled_file_fields(file_system.search_files)))
+
+    mcp.add_tool(FunctionTool.from_function(file_system.create_file))
+    mcp.add_tool(FunctionTool.from_function(file_system.append_file))
+    mcp.add_tool(FunctionTool.from_function(file_system.delete_file_lines))
+    mcp.add_tool(FunctionTool.from_function(file_system.replace_file_lines))
+    mcp.add_tool(FunctionTool.from_function(file_system.insert_file_lines))
+    mcp.add_tool(FunctionTool.from_function(file_system.delete_file))
+
+    mcp.add_tool(FunctionTool.from_function(file_system.create_directory))
+    mcp.add_tool(FunctionTool.from_function(file_system.delete_directory))
 
     await mcp.run_async(transport=mcp_transport)
 

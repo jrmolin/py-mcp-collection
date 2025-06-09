@@ -76,7 +76,7 @@ async def test_file_entry_properties(temp_dir: Path):
     assert content == "Hello, World!"
 
     # Test binary reading
-    binary = await node.read_binary
+    binary = await node.read_binary_base64
     assert isinstance(binary, str)  # Should be base64 encoded
 
     # Test line reading

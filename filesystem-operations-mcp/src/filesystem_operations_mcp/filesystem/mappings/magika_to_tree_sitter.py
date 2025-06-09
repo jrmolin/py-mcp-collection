@@ -525,7 +525,10 @@ magika_labels = [
     ContentTypeLabel.ZST,
 ]
 
-text_mappings: dict[ContentTypeLabel, TreeSitterLanguage | None] = {ContentTypeLabel.MARKDOWN: TreeSitterLanguage.MARKDOWN, ContentTypeLabel.TXT: None}
+text_mappings: dict[ContentTypeLabel, TreeSitterLanguage | None] = {
+    ContentTypeLabel.MARKDOWN: TreeSitterLanguage.MARKDOWN,
+    ContentTypeLabel.TXT: None,
+}
 
 data_mappings: dict[ContentTypeLabel, TreeSitterLanguage | None] = {
     ContentTypeLabel.CSV: TreeSitterLanguage.CSV,
