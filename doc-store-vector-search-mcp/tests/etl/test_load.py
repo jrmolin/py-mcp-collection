@@ -44,7 +44,7 @@ MOCK_JSONL_CONTENT = """
 def is_url_reachable(url):
     async def _check():
         try:
-            async with aiohttp.ClientSession() as session, session.get(url, timeout=5) as resp:
+            async with aiohttp.ClientSession() as session, session.get(url) as resp:
                 return resp.status == 200
         except Exception:
             return False
@@ -73,13 +73,13 @@ async def test_directoryloader_loads_specific_file_types(tmp_path):
     assert any("file.md" in s for s in sources)
 
 
-def test_load_json_jq(tmp_path):
+async def test_load_json_jq(tmp_path):
     json_path = tmp_path / "test.json"
     json_path.write_text(MOCK_JSON_CONTENT)
 
     loader = JSONJQLoader()
 
-    documents = list(loader.load(str(json_path), content_key="text"))
+    documents = [value async for value in loader.load(str(json_path), content_key="text")]
 
     assert len(documents) == 2
     assert documents[0].page_content == "item 1 content"

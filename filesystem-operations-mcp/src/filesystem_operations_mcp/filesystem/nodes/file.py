@@ -43,7 +43,7 @@ class FileLines(RootModel):
     @classmethod
     async def from_file(cls, file_path: Path) -> "FileLines":
         async with aopen(file_path, encoding="utf-8") as f:
-            lines = await f.readlines()
+            lines = (await f.read()).splitlines()
             return cls.from_lines(lines)
 
     def get_lines(self, line_numbers: list[int]) -> "FileLines":

@@ -43,8 +43,8 @@ class TextEmbedding(Embeddings):
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         return self.model.encode(texts).tolist()
 
-    def embed_query(self, query: str) -> list[float]:
-        return self.model.encode([query])[0].tolist()
+    def embed_query(self, text: str) -> list[float]:
+        return self.model.encode([text])[0].tolist()
 
 
 class CodeEmbedding(Embeddings):
@@ -65,8 +65,8 @@ class CodeEmbedding(Embeddings):
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         return [self.embed(text) for text in texts]
 
-    def embed_query(self, query: str) -> list[float]:
-        return self.embed(query)
+    def embed_query(self, text: str) -> list[float]:
+        return self.embed(text)
 
 
 class VectorStoreManager[T: VectorStoreTypes, S: VectorStoreSettings]:
@@ -77,8 +77,8 @@ class VectorStoreManager[T: VectorStoreTypes, S: VectorStoreSettings]:
         self.code_embedding = CodeEmbedding()
         self.document_embedding = TextEmbedding()
 
-        self.code_vector_store: T = vector_store_class(embedding=self.code_embedding, connection=code_settings.connect())
-        self.document_vector_store: T = vector_store_class(embedding=self.document_embedding, connection=document_settings.connect())
+        self.code_vector_store: T = vector_store_class(embedding=self.code_embedding, connection=code_settings.connect())  # type: ignore
+        self.document_vector_store: T = vector_store_class(embedding=self.document_embedding, connection=document_settings.connect())  # type: ignore
 
     async def add_code_documents(self, documents: list[Document], metadata: dict[str, Any]):
         [document.metadata.update(metadata or {}) for document in documents]

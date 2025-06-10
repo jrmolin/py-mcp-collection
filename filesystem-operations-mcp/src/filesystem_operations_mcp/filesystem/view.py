@@ -50,10 +50,9 @@ class FileExportableField(BaseModel):
     read_text: bool = Field(default=False)
     """Read the contents of the file only if it is text. Do not use if you plan to apply edits to specific lines of the file."""
 
-    read_lines: bool = Field(default=False)
-    """Read the file as a set of lines only if it is text.
-    The response will be a dictionary of line numbers to lines of text.
-    Use `read_lines` instead of `read_text` when you plan to patch/edit specific lines of the file."""
+    read: bool = Field(default=False)
+    """Read the file as a set of lines. The response will be a dictionary of line numbers to lines of text.
+    Will not be included if the file is binary."""
 
     read_binary_base64: bool = Field(default=False)
     """Read the contents of the file as base64 encoded binary."""
@@ -128,8 +127,8 @@ class FileExportableField(BaseModel):
             model["preview"] = await node.preview_contents(head=self.limit_preview)
         if self.read_text and not node.is_binary:
             model["read_text"] = await node.read_text()
-        if self.read_lines and not node.is_binary:
-            model["read_lines"] = await node.read_lines()
+        if self.read and not node.is_binary:
+            model["read"] = (await node.read_lines()).model_dump()
         if self.read_binary_base64 and node.is_binary:
             model["read_binary_base64"] = await node.read_binary_base64()
 
