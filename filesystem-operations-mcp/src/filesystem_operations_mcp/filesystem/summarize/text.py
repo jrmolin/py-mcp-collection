@@ -45,7 +45,7 @@ def ideal_sentences_count(document: str) -> int:
     if estimated_sentences < 1000:  # noqa: PLR2004
         return 6
 
-    return 32
+    return 12
 
 
 def summary_to_text(summary: tuple[Sentence, ...]) -> str:

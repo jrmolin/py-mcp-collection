@@ -1,0 +1,172 @@
+# serializer version: 1
+# name: test_load_directories_loader_splitter_combo
+  dict({
+    'calls': list([
+      dict({
+        'docs': list([
+          dict({
+            'metadata': dict({
+              'order': 0,
+              'source': 'test_files',
+            }),
+            'page_content': '''
+              Header 1a  
+              This is a chunk of meaty content.  
+              It has multiple lines. The lines are separated by a newline character. And they get pretty long. This is another line. That is also pretty long. It is also separated by a newline character.  
+              And it has multiple paragraphs.  
+              Header 2
+            ''',
+          }),
+          dict({
+            'metadata': dict({
+              'order': 1,
+              'source': 'test_files',
+            }),
+            'page_content': '''
+              Header 2  
+              This is a chunk of meaty content.  
+              It has multiple lines. The lines are separated by a newline character. And they get pretty long. This is another line. That is also pretty long. It is also separated by a newline character.  
+              And it has multiple paragraphs.  
+              Header 3
+            ''',
+          }),
+          dict({
+            'metadata': dict({
+              'order': 2,
+              'source': 'test_files',
+            }),
+            'page_content': '''
+              Header 3  
+              This is a chunk of meaty content.  
+              It has multiple lines. The lines are separated by a newline character. And they get pretty long. This is another line. That is also pretty long. It is also separated by a newline character.  
+              And it has multiple paragraphs.  
+              Header 4
+            ''',
+          }),
+          dict({
+            'metadata': dict({
+              'order': 3,
+              'source': 'test_files',
+            }),
+            'page_content': '''
+              Header 4  
+              This is a chunk of meaty content.  
+              It has multiple lines. The lines are separated by a newline character. And they get pretty long. This is another line. That is also pretty long. It is also separated by a newline character.  
+              And it has multiple paragraphs.  
+              Header 1b
+            ''',
+          }),
+          dict({
+            'metadata': dict({
+              'order': 4,
+              'source': 'test_files',
+            }),
+            'page_content': '''
+              Header 1b  
+              This is a chunk of meaty content.  
+              It has multiple lines. The lines are separated by a newline character. And they get pretty long. This is another line. That is also pretty long. It is also separated by a newline character.  
+              And it has multiple paragraphs.  
+              Header 2b
+            ''',
+          }),
+          dict({
+            'metadata': dict({
+              'order': 5,
+              'source': 'test_files',
+            }),
+            'page_content': '''
+              Header 2b  
+              This is a chunk of meaty content.  
+              It has multiple lines. The lines are separated by a newline character. And they get pretty long. This is another line. That is also pretty long. It is also separated by a newline character.  
+              And it has multiple paragraphs.
+            ''',
+          }),
+        ]),
+        'metadata': dict({
+          'fetched': FakeDatetime(2025, 1, 1, 12, 0, tzinfo=datetime.timezone.utc),
+          'knowledge_base': 'test_kb',
+          'project': 'test_project',
+          'source': 'test_files',
+        }),
+      }),
+      dict({
+        'docs': list([
+          dict({
+            'metadata': dict({
+              'order': 0,
+              'source': 'test_files',
+            }),
+            'page_content': 'Just a plain text file.',
+          }),
+        ]),
+        'metadata': dict({
+          'fetched': FakeDatetime(2025, 1, 1, 12, 0, tzinfo=datetime.timezone.utc),
+          'knowledge_base': 'test_kb',
+          'project': 'test_project',
+          'source': 'test_files',
+        }),
+      }),
+    ]),
+    'summary': LoadSummary(source_documents=2, documents=2, chunks=7, took=0.0),
+  })
+# ---
+# name: test_load_webpage
+  dict({
+    'calls': list([
+      dict({
+        'docs': list([
+          dict({
+            'metadata': dict({
+              'Header 1': '#TITLE#',
+              'order': 0,
+              'source': 'test_files',
+            }),
+            'page_content': '''
+              Example Domain
+              This domain is for use in illustrative examples in documents. You may use this
+                  domain in literature without prior coordination or asking for permission.
+              More information...
+            ''',
+          }),
+        ]),
+        'metadata': dict({
+          'fetched': FakeDatetime(2025, 1, 1, 12, 0, tzinfo=datetime.timezone.utc),
+          'knowledge_base': 'test_kb',
+          'project': 'test_project',
+          'source': 'test_files',
+        }),
+      }),
+    ]),
+    'summary': LoadSummary(source_documents=1, documents=1, chunks=1, took=0.0),
+  })
+# ---
+# name: test_load_webpage_recursive
+  dict({
+    'calls': list([
+      dict({
+        'docs': list([
+          dict({
+            'metadata': dict({
+              'Header 1': 'Example Domain',
+              'order': 0,
+              'source': 'test_files',
+            }),
+            'page_content': '''
+              Example Domain 
+               This domain is for use in illustrative examples in documents. You may use this
+                  domain in literature without prior coordination or asking for permission. 
+               More information...
+            ''',
+          }),
+        ]),
+        'metadata': dict({
+          'fetched': FakeDatetime(2025, 1, 1, 12, 0, tzinfo=datetime.timezone.utc),
+          'knowledge_base': 'test_kb',
+          'project': 'test_project',
+          'source': 'test_files',
+        }),
+      }),
+    ]),
+    'summary': LoadSummary(source_documents=1, documents=1, chunks=1, took=0.0),
+  })
+# ---

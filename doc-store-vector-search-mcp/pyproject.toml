@@ -1,6 +1,6 @@
 [project]
 name = "doc_store_vector_search_mcp"
-version = "0.2.0"
+version = "0.2.1"
 description = "An MCP Server for managing and searching document stores using vector embeddings."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -26,6 +26,8 @@ dependencies = [
     "jq", # For JSON processing
     "tiktoken", # For token counting/splitting
     "langchain-text-splitters>=0.3.8",
+    "pytest-freezer>=0.4.9",
+    "html-to-markdown>=1.3.3",
 ]
 
 [tool.poetry]
@@ -37,10 +39,6 @@ allow-direct-references=true
 
 [project.scripts]
 doc_store_vector_search_mcp = "doc_store_vector_search_mcp.main:run_mcp"
-
-
-[tool.pytest]
-addopts = "-vvv"
 
 
 [tool.hatch.version]
@@ -66,6 +64,7 @@ build-backend = "hatchling.build"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
+addopts = "-vvv"
 
 [tool.ruff]
 extend="../pyproject.toml"

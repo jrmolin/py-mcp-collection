@@ -8,6 +8,7 @@ from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
     RecursiveJsonSplitter,
 )
+from langchain_text_splitters.html import HTMLSectionSplitter
 from typing_extensions import TypeVar
 
 T = TypeVar("T")
@@ -27,8 +28,22 @@ def tag_document_order(documents: list[Document]) -> list[Document]:
         document.metadata["order"] = i
     return documents
 
+class HtmlSplitter:
+    def __init__(self):
+        self.splitter = HTMLSectionSplitter(
+            headers_to_split_on=[
+                ("h1", "Header 1"),
+                ("h2", "Header 2"),
+                ("h3", "Header 3"),
+            ]
+        )
 
-class JsonSplitter(Splitter):
+    def split_to_documents(self, to_split: str) -> list[Document]:
+        documents = self.splitter.split_text(to_split)
+        return tag_document_order(documents)
+
+
+class JsonSplitter:
     def __init__(self):
         self.splitter = RecursiveJsonSplitter(
             max_chunk_size=500,
@@ -45,6 +60,7 @@ class MarkdownSplitter:
             headers_to_split_on=[
                 ("#", "Header 1"),
                 ("##", "Header 2"),
+                ("###", "Header 3"),
             ],
             strip_headers=False,
         )
@@ -52,6 +68,9 @@ class MarkdownSplitter:
             chunk_size=300,
             chunk_overlap=25,
         )
+
+    # def split_documents(self, documents: list[Document]) -> list[Document]:
+    #     return tag_document_order(self.chunk_splitter.split_documents(documents))
 
     def split_to_documents(self, text: str) -> list[Document]:
         per_header_documents: list[Document] = self.header_splitter.split_text(text)
