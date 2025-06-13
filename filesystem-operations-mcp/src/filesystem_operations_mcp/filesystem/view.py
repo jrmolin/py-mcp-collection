@@ -19,6 +19,7 @@ logger = BASE_LOGGER.getChild("view")
 TOO_BIG_TO_SUMMARIZE_ITEMS_THRESHOLD = 300
 TOO_BIG_TO_SUMMARIZE_BYTES_THRESHOLD = 1_000_000
 TOO_BIG_TO_RETURN_BYTES_THRESHOLD = 1_000_000
+TOO_MANY_NAMES_THRESHOLD = 10
 
 
 class FileExportableField(BaseModel):
@@ -168,7 +169,8 @@ class FileExportableField(BaseModel):
         model.update(await self._apply_owner_and_group(node))
         model.update(await self._apply_read_preview(node))
 
-        return model
+        # remove null or empty values
+        return {k: v for k, v in model.items() if v not in ("", [], {}, None)}
 
 
 def caller_controlled_file_fields(
@@ -204,6 +206,7 @@ def caller_controlled_file_fields(
         return_result = {}
 
         if isinstance(result, list):
+            result = sorted(result, key=lambda x: x.file_path)
             for node in result:
                 return_result[node.file_path] = await file_fields.apply(node)
                 return_result[node.file_path].pop("file_path", None)
@@ -229,7 +232,7 @@ class DirectoryExportableField(BaseModel):
     basename: bool = Field(default=False)
     """The basename of the directory. For example, `mycoolproject`."""
 
-    files_count: bool = Field(default=True)
+    files_count: bool = Field(default=False)
     """The number of files in the directory."""
 
     directories_count: bool = Field(default=True)
@@ -240,6 +243,12 @@ class DirectoryExportableField(BaseModel):
 
     children: bool = Field(default=False)
     """The children of the directory. The response will be a list of FileEntry and DirectoryEntry objects."""
+
+    file_names: bool = Field(default=True)
+    """The first 100 names of the files in the directory. The response will be a list of strings."""
+
+    directory_names: bool = Field(default=False)
+    """The first 100 names of the directories in the directory. The response will be a list of strings."""
 
     created_at: bool = Field(default=False)
     """The creation time of the directory. For example, `2021-01-01 12:00:00`."""
@@ -258,9 +267,12 @@ class DirectoryExportableField(BaseModel):
 
         logger.info(f"Applying directory fields to {node.directory_path}")
 
-        needs_children = self.files_count or self.directories_count or self.children_count or self.children
+        needs_children = any(
+            [self.files_count, self.directories_count, self.children_count, self.children, self.file_names, self.directory_names]
+        )
         if needs_children:
             children = await node.children()
+            children = sorted(children, key=lambda x: x.name)
 
         if self.directory_path:
             model["directory_path"] = node.directory_path
@@ -274,6 +286,16 @@ class DirectoryExportableField(BaseModel):
             model["children_count"] = len(children)
         if self.children:
             model["children"] = children
+        if self.file_names:
+            file_names = [child.name for child in children if child.is_file]
+            model["file_names"] = file_names[:TOO_MANY_NAMES_THRESHOLD]
+            if len(file_names) > TOO_MANY_NAMES_THRESHOLD:
+                model["file_names_error"] = f"Only showing names for {TOO_MANY_NAMES_THRESHOLD} of {len(file_names)} files"
+        if self.directory_names:
+            directory_names = [child.name for child in children if child.is_dir]
+            model["directory_names"] = directory_names[:TOO_MANY_NAMES_THRESHOLD]
+            if len(directory_names) > TOO_MANY_NAMES_THRESHOLD:
+                model["directory_names_error"] = f"Only showing names for {TOO_MANY_NAMES_THRESHOLD} of {len(directory_names)} directories"
         if self.created_at:
             model["created_at"] = await node.created_at()
         if self.modified_at:
@@ -283,7 +305,8 @@ class DirectoryExportableField(BaseModel):
         if self.group:
             model["group"] = await node.group()
 
-        return model
+        # remove null or empty values
+        return {k: v for k, v in model.items() if v not in ("", [], {}, None)}
 
 
 def caller_controlled_directory_fields(
@@ -299,6 +322,7 @@ def caller_controlled_directory_fields(
         result = await func(*args, **kwargs)
 
         if isinstance(result, list):
+            result = sorted(result, key=lambda x: x.directory_path)
             return_result = {}
             for node in result:
                 return_result[node.directory_path] = await directory_fields.apply(node)

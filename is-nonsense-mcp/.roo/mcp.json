@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "is_nonsense_mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "./src/is_nonsense_mcp/main.py"
+      ]
+    }
+  }
+}

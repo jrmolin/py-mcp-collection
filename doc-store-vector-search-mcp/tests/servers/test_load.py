@@ -1,21 +1,15 @@
-import asyncio
-import tempfile
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 from langchain_core.documents import Document
 from syrupy.assertion import SnapshotAssertion
-from pytest_freezer import freezer
 
-from doc_store_vector_search_mcp.servers.load import DocumentKnowledgeBaseMetadata, DocumentServer
 from doc_store_vector_search_mcp.etl.store import (
-    DuckDBSettings,
-    VectorStoreManager,
-    ProjectVectorStoreManager,
     KnowledgeBaseVectorStoreManager,
 )
+from doc_store_vector_search_mcp.servers.load import DocumentServer
 
 MEATY_CONTENT_CHUNK = """
 This is a chunk of meaty content.
@@ -65,6 +59,7 @@ def dummy_project_vectorstore():
     # This can be None or a simple object, since we patch the only method used
     return object()
 
+
 @pytest.fixture(autouse=True)
 def freezer_time(freezer):
     freezer.move_to("2025-01-01 12:00:00")
@@ -76,7 +71,7 @@ async def test_load_directories_loader_splitter_combo(test_files, dummy_project_
 
     captured = []
 
-    async def fake_add_markdown_documents(self, docs: list[Document], metadata: dict[str, Any]):
+    async def fake_add_markdown_documents(self, docs: list[Document], metadata: dict[str, Any]):  # noqa: ARG001
         metadata["source"] = "test_files"
         for d in docs:
             d.metadata["source"] = "test_files"
@@ -106,7 +101,7 @@ async def test_load_webpage(dummy_project_vectorstore, snapshot: SnapshotAsserti
 
     captured = []
 
-    async def fake_add_markdown_documents(self, docs: list[Document], metadata: dict[str, Any]):
+    async def fake_add_markdown_documents(self, docs: list[Document], metadata: dict[str, Any]):  # noqa: ARG001
         metadata["source"] = "test_files"
         for d in docs:
             d.metadata["source"] = "test_files"
@@ -130,12 +125,13 @@ async def test_load_webpage(dummy_project_vectorstore, snapshot: SnapshotAsserti
         }
     )
 
+
 async def test_load_webpage_recursive(dummy_project_vectorstore, snapshot: SnapshotAssertion):
     server = DocumentServer(project_name="test_project", project_vectorstore=dummy_project_vectorstore)
 
     captured = []
 
-    async def fake_add_markdown_documents(self, docs: list[Document], metadata: dict[str, Any]):
+    async def fake_add_markdown_documents(self, docs: list[Document], metadata: dict[str, Any]):  # noqa: ARG001
         metadata["source"] = "test_files"
         for d in docs:
             d.metadata["source"] = "test_files"
