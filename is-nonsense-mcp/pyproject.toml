@@ -1,0 +1,45 @@
+[project]
+name = "is_nonsense_mcp"
+version = "0.2.1"
+description = "Is Nonsense Mcp project"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "asyncclick>=8.1.8",
+    "fastmcp>=2.3.5",
+    "mcp>=1.9.0",
+    "torch>=2.7.1",
+    "transformers>=4.52.4",
+]
+
+[tool.poetry]
+packages = [
+    { include = "is_nonsense_mcp", from = "src" }
+]
+[tool.hatch.metadata]
+allow-direct-references=true
+
+[project.scripts]
+is-nonsense-mcp = "is_nonsense_mcp.main:run_mcp"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+
+[dependency-groups]
+dev = [
+  "pytest",
+  "pytest-mock",
+  "pytest-asyncio",
+  "ruff"
+]
+lint = [
+  "ruff"
+]
+
+[build-system]
+requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+extend="../pyproject.toml"
