@@ -7,17 +7,18 @@ logger = BASE_LOGGER.getChild("gibberish")
 
 detector = pipeline("text-classification", model="madhurjindal/autonlp-Gibberish-Detector-492513457")
 
+
 class GibberishScore(BaseModel):
     text: str
     label: str
     score: float
 
+
 def detect_gibberishes(texts: list[str]) -> list[GibberishScore]:
-    results: list[dict[str, str | float]] = detector(texts) # type: ignore
+    results: list[dict[str, str | float]] = detector(texts)  # type: ignore
 
     gibberish_scores = []
     for text, result in zip(texts, results, strict=True):
-
         if "label" not in result or "score" not in result:
             msg = f"Expected a label and a score, got {result}"
             raise ValueError(msg)

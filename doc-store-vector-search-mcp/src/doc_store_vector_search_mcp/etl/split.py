@@ -12,7 +12,7 @@ from langchain_text_splitters import (
 )
 from typing_extensions import TypeVar
 
-from doc_store_vector_search_mcp.summarization.text import clean_sentences, extract_sentences, remove_horrible_sentences
+from doc_store_vector_search_mcp.summarization.text import clean_sentences, extract_sentences
 
 from .splitters.html import HTMLSemanticPreservingSplitter
 from .splitters.semantic import SemanticChunker
@@ -143,12 +143,12 @@ class SemanticSplitter:
             doc_sentences = extract_sentences(document.page_content)
             doc_sentences = clean_sentences(doc_sentences)
             doc_sentences = move_references_to_previous_sentence(doc_sentences)
-            #doc_sentences = remove_horrible_sentences(doc_sentences)
+            # doc_sentences = remove_horrible_sentences(doc_sentences)
             # doc_sentences = remove_gibberish(doc_sentences)
 
             if len(doc_sentences) == 0:
                 continue
-            
+
             chunks: list[list[str]] = self.splitter.split_sentences(doc_sentences)
             chunks = ChunkSplitter.split_and_overlap_chunks(chunks)
 

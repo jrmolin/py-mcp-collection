@@ -1,9 +1,7 @@
-from math import sqrt
 import re
+from math import sqrt
 
 import nltk
-from nltk import lm
-from nltk.lm.vocabulary import Vocabulary
 from sumy.models.dom import Sentence
 from sumy.nlp.stemmers import Stemmer
 from sumy.nlp.tokenizers import Tokenizer
@@ -15,10 +13,7 @@ from sumy.summarizers.luhn import LuhnSummarizer
 from sumy.summarizers.reduction import ReductionSummarizer
 from sumy.summarizers.text_rank import TextRankSummarizer
 from sumy.utils import get_stop_words
-from nltk.tokenize import punkt, word_tokenize
-from nltk.util import bigrams, ngrams
 from textstat import textstat
-from nltk.corpus import brown
 
 from doc_store_vector_search_mcp.logging.util import BASE_LOGGER
 
@@ -41,20 +36,44 @@ logger.info("Initializing lang model")
 nltk.download("punkt")
 logger.info("Lang model initialized")
 
-one_letter_words = [
-    "a", "i"
-]
+one_letter_words = ["a", "i"]
 
 two_letter_words = [
-    "am", "an", "as", "at", "ax", "be", "by", "do", "go", "he", "if", "in", "is", "it", "me", "my", "no", "of", "ok", "on", "or", "ox", "so", "to", "up", "us", "we"
+    "am",
+    "an",
+    "as",
+    "at",
+    "ax",
+    "be",
+    "by",
+    "do",
+    "go",
+    "he",
+    "if",
+    "in",
+    "is",
+    "it",
+    "me",
+    "my",
+    "no",
+    "of",
+    "ok",
+    "on",
+    "or",
+    "ox",
+    "so",
+    "to",
+    "up",
+    "us",
+    "we",
 ]
 
-def ideal_sentences_count(sentences: list[str]) -> int:
 
+def ideal_sentences_count(sentences: list[str]) -> int:
     # Formula: keep the information for small documents, but summarize more and more as the document gets longer
     if len(sentences) <= 2:
         return len(sentences)
-    
+
     # 4 -> 4
     # 9 -> 6
     # 16 -> 8
@@ -68,18 +87,16 @@ def ideal_sentences_count(sentences: list[str]) -> int:
     return int(sqrt(len(sentences)) * 2)
 
 
-
 def summary_to_text(summary: tuple[Sentence, ...]) -> str:
     sentences_with_endings = []
 
     for sentence in summary:
-
         sentence_length = len(sentence._text)
         sentence_reading_ease = textstat.flesch_reading_ease(sentence._text)
 
         if sentence_length > 200 and sentence_reading_ease < -100:
-           logger.warning(f"Skipping sentence because it is very long and has a low flesch reading ease: {sentence._text[:200]}...")
-           continue
+            logger.warning(f"Skipping sentence because it is very long and has a low flesch reading ease: {sentence._text[:200]}...")
+            continue
 
         if sentence._text.endswith("."):
             sentences_with_endings.append(sentence._text)
@@ -88,8 +105,10 @@ def summary_to_text(summary: tuple[Sentence, ...]) -> str:
 
     return "\n".join(sentences_with_endings)
 
+
 def get_tokenizer(language: str) -> Tokenizer:
     return Tokenizer(language)
+
 
 def get_luhn_summarizer(language: str) -> tuple[LuhnSummarizer, Tokenizer]:
     stemmer = Stemmer(language)
@@ -117,6 +136,7 @@ def strip_code_blocks(document: str) -> str:
 def strip_non_az_09_punctuation(document: str) -> str:
     return re.sub(r"[^a-zA-Z0-9\s]+", "", document)
 
+
 def strip_short_words(document: str) -> str:
     words = document.split()
     keep_words = []
@@ -131,14 +151,17 @@ def strip_short_words(document: str) -> str:
 
     return " ".join(keep_words)
 
+
 def strip_unwanted(document: str) -> str:
     return strip_code_blocks(strip_short_words(strip_long_non_words(strip_non_az_09_punctuation(document))))
+
 
 def extract_sentences(document: str) -> list[str]:
     tokenizer = get_tokenizer("english")
     sentences = tokenizer.to_sentences(document)
 
     return list(sentences)
+
 
 def remove_horrible_sentences(sentences: list[str]) -> list[str]:
     new_sentences = []
@@ -155,6 +178,7 @@ def remove_horrible_sentences(sentences: list[str]) -> list[str]:
 
     return new_sentences
 
+
 def clean_sentences(sentences: list[str]) -> list[str]:
     new_sentences = []
 
@@ -170,12 +194,13 @@ def clean_sentences(sentences: list[str]) -> list[str]:
         new_sentence = new_sentence.rstrip().rstrip(".").rstrip()
 
         # If the last char is a-zA-Z0-9, add a period
-        if new_sentence[-1].isalnum() or new_sentence[-1] in  ")]":
+        if new_sentence[-1].isalnum() or new_sentence[-1] in ")]":
             new_sentence += "."
 
         new_sentences.append(new_sentence)
 
     return new_sentences
+
 
 def clean_text_embeddings(document: str) -> str:
     tokenizer = get_tokenizer("english")
@@ -184,14 +209,14 @@ def clean_text_embeddings(document: str) -> str:
 
     new_sentences = []
     for sentence in sentences:
-        #new_sentences.append(strip_unwanted(sentence))
+        # new_sentences.append(strip_unwanted(sentence))
 
         sentence_length = len(sentence)
         sentence_reading_ease = textstat.flesch_reading_ease(sentence)
 
         if sentence_length > 200 and sentence_reading_ease < -100:
-           logger.warning(f"Skipping sentence because it is very long and has a low flesch reading ease: {sentence[:200]}...")
-           continue
+            logger.warning(f"Skipping sentence because it is very long and has a low flesch reading ease: {sentence[:200]}...")
+            continue
 
         if sentence.endswith("."):
             new_sentences.append(sentence)
@@ -199,6 +224,7 @@ def clean_text_embeddings(document: str) -> str:
             new_sentences.append(sentence + ".")
 
     return "\n".join(new_sentences)
+
 
 def summarize_text(document: str) -> str:
     summarizer, tokenizer = get_luhn_summarizer("english")

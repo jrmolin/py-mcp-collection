@@ -1,18 +1,15 @@
 """Experimental **text splitter** based on semantic similarity."""
 
-import copy
-import re
-from typing import Any, Dict, Iterable, List, Literal, Optional, Sequence, Tuple, cast
+from typing import Literal, cast
 
 import numpy as np
 from langchain_community.utils.math import (
     cosine_similarity,
 )
-from langchain_core.documents import BaseDocumentTransformer, Document
 from langchain_core.embeddings import Embeddings
 
 
-def combine_sentences(sentences: List[dict], buffer_size: int = 1) -> List[dict]:
+def combine_sentences(sentences: list[dict], buffer_size: int = 1) -> list[dict]:
     """Combine sentences based on buffer size.
 
     Args:
@@ -53,7 +50,7 @@ def combine_sentences(sentences: List[dict], buffer_size: int = 1) -> List[dict]
     return sentences
 
 
-def calculate_cosine_distances(sentences: List[dict]) -> Tuple[List[float], List[dict]]:
+def calculate_cosine_distances(sentences: list[dict]) -> tuple[list[float], list[dict]]:
     """Calculate cosine distances between sentences.
 
     Args:
@@ -86,7 +83,7 @@ def calculate_cosine_distances(sentences: List[dict]) -> Tuple[List[float], List
 
 
 BreakpointThresholdType = Literal["percentile", "standard_deviation", "interquartile", "gradient"]
-BREAKPOINT_DEFAULTS: Dict[BreakpointThresholdType, float] = {
+BREAKPOINT_DEFAULTS: dict[BreakpointThresholdType, float] = {
     "percentile": 95,
     "standard_deviation": 3,
     "interquartile": 1.5,
@@ -112,8 +109,8 @@ class SemanticChunker:
         buffer_size: int = 1,
         add_start_index: bool = False,
         breakpoint_threshold_type: BreakpointThresholdType = "percentile",
-        breakpoint_threshold_amount: Optional[float] = None,
-        number_of_chunks: Optional[int] = None,
+        breakpoint_threshold_amount: float | None = None,
+        number_of_chunks: int | None = None,
         sentence_split_regex: str = r"(?<=[.?!])\s+",
     ):
         self._add_start_index = add_start_index
@@ -127,33 +124,32 @@ class SemanticChunker:
         else:
             self.breakpoint_threshold_amount = breakpoint_threshold_amount
 
-    def _calculate_breakpoint_threshold(self, distances: List[float]) -> Tuple[float, List[float]]:
+    def _calculate_breakpoint_threshold(self, distances: list[float]) -> tuple[float, list[float]]:
         if self.breakpoint_threshold_type == "percentile":
             return cast(
-                float,
+                "float",
                 np.percentile(distances, self.breakpoint_threshold_amount),
             ), distances
-        elif self.breakpoint_threshold_type == "standard_deviation":
+        if self.breakpoint_threshold_type == "standard_deviation":
             return cast(
-                float,
+                "float",
                 np.mean(distances) + self.breakpoint_threshold_amount * np.std(distances),
             ), distances
-        elif self.breakpoint_threshold_type == "interquartile":
+        if self.breakpoint_threshold_type == "interquartile":
             q1, q3 = np.percentile(distances, [25, 75])
             iqr = q3 - q1
 
             return np.mean(distances) + self.breakpoint_threshold_amount * iqr, distances  # type: ignore
-        elif self.breakpoint_threshold_type == "gradient":
-            # Calculate the threshold based on the distribution of gradient of distance array. # noqa: E501
-            distance_gradient = np.gradient(distances, range(0, len(distances)))
+        if self.breakpoint_threshold_type == "gradient":
+            # Calculate the threshold based on the distribution of gradient of distance array.
+            distance_gradient = np.gradient(distances, range(len(distances)))
             return cast(
-                float,
+                "float",
                 np.percentile(distance_gradient, self.breakpoint_threshold_amount),
             ), distance_gradient
-        else:
-            raise ValueError(f"Got unexpected `breakpoint_threshold_type`: {self.breakpoint_threshold_type}")
+        raise ValueError(f"Got unexpected `breakpoint_threshold_type`: {self.breakpoint_threshold_type}")
 
-    def _threshold_from_clusters(self, distances: List[float]) -> float:
+    def _threshold_from_clusters(self, distances: list[float]) -> float:
         """
         Calculate the threshold based on the number of chunks.
         Inverse of percentile method.
@@ -173,9 +169,9 @@ class SemanticChunker:
 
         y = min(max(y, 0), 100)
 
-        return cast(float, np.percentile(distances, y))
+        return cast("float", np.percentile(distances, y))
 
-    def _calculate_sentence_distances(self, single_sentences_list: List[str]) -> Tuple[List[float], List[dict]]:
+    def _calculate_sentence_distances(self, single_sentences_list: list[str]) -> tuple[list[float], list[dict]]:
         """Split text into multiple components."""
 
         _sentences = [{"sentence": x, "index": i} for i, x in enumerate(single_sentences_list)]
@@ -220,7 +216,7 @@ class SemanticChunker:
             # Slice the sentence_dicts from the current start index to the end index
             group = sentences[start_index : end_index + 1]
 
-            new_chunk = [d["sentence"] for d in group] # type: ignore
+            new_chunk = [d["sentence"] for d in group]  # type: ignore
 
             chunks.append(new_chunk)
 
@@ -229,6 +225,6 @@ class SemanticChunker:
 
         # The last group, if any sentences remain
         if start_index < len(sentences):
-            new_chunk = [d["sentence"] for d in sentences[start_index:]] # type: ignore
+            new_chunk = [d["sentence"] for d in sentences[start_index:]]  # type: ignore
             chunks.append(new_chunk)
         return chunks

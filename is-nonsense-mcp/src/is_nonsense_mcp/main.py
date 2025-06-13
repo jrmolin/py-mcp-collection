@@ -5,10 +5,10 @@ import asyncclick as click
 from fastmcp import Context, FastMCP
 from fastmcp.contrib.mcp_mixin.mcp_mixin import MCPMixin, mcp_tool
 from fastmcp.utilities.logging import get_logger
+from huggingface_hub import try_to_load_from_cache
 from pydantic import BaseModel
 from transformers.pipelines import pipeline
 from transformers.pipelines.base import Pipeline
-from huggingface_hub import try_to_load_from_cache
 
 logger = get_logger("is-nonsense-mcp")
 

@@ -1,6 +1,6 @@
 [project]
 name = "doc_store_vector_search_mcp"
-version = "0.2.1"
+version = "0.2.2"
 description = "An MCP Server for managing and searching document stores using vector embeddings."
 readme = "README.md"
 requires-python = ">=3.12"

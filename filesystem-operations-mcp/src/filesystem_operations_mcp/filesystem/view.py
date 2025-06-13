@@ -309,7 +309,6 @@ class DirectoryExportableField(BaseModel):
         return {k: v for k, v in model.items() if v not in ("", [], {}, None)}
 
 
-
 def caller_controlled_directory_fields(
     func: Callable[..., Awaitable[DirectoryEntry | list[DirectoryEntry]]],
 ) -> Callable[..., Awaitable[dict[str, Any]]]:

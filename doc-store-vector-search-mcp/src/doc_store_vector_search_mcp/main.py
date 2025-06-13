@@ -7,10 +7,9 @@ from fastmcp.utilities.logging import configure_logging
 from langchain_community.vectorstores.duckdb import DuckDB
 
 from doc_store_vector_search_mcp.etl.store import DuckDBSettings, ProjectVectorStoreManager, VectorStoreManager
+from doc_store_vector_search_mcp.logging.util import BASE_LOGGER
 from doc_store_vector_search_mcp.servers.load import DocumentServer
 from doc_store_vector_search_mcp.servers.search import SearchServer
-
-from doc_store_vector_search_mcp.logging.util import BASE_LOGGER
 
 logger = BASE_LOGGER.getChild("main")
 
@@ -55,12 +54,10 @@ async def cli(mcp_transport: Literal["stdio", "sse", "streamable-http"]):
     #     knowledge_base="pydantic",
     # )
 
-
     # print(await vector_store_manager.search_documents(
     #     query="What is a field validator and how do I use it as a decorator?",
     #     documents=10,
     # ))
-
 
     logger.info("Running FastMCP")
     await mcp.run_async(transport=mcp_transport)

@@ -1,19 +1,14 @@
-import logging
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
-from typing import Any
-import uuid
-from html_to_markdown import markdownify
+
 from fastmcp.contrib.mcp_mixin.mcp_mixin import MCPMixin, mcp_tool
+from html_to_markdown import markdownify
 from langchain_core.documents import Document
 from pydantic import BaseModel, Field, HttpUrl, field_serializer
 
 from doc_store_vector_search_mcp.etl.load import DirectoryLoader, RecursiveWebLoader, WebPageLoader
-from doc_store_vector_search_mcp.etl.split import HtmlSplitter, MarkdownSplitter
+from doc_store_vector_search_mcp.etl.split import HtmlSplitter, MarkdownSplitter, SemanticSplitter
 from doc_store_vector_search_mcp.etl.store import KnowledgeBaseVectorStoreManager, ProjectVectorStoreManager
-from doc_store_vector_search_mcp.summarization.text import clean_text_embeddings, summarize_text, strip_unwanted
-from doc_store_vector_search_mcp.etl.split import SemanticSplitter
-
 from doc_store_vector_search_mcp.logging.util import BASE_LOGGER
 
 logger = BASE_LOGGER.getChild("load")
@@ -52,12 +47,7 @@ class DocumentMetadata(DocumentKnowledgeBaseMetadata):
 
     @classmethod
     def from_document(cls, kb_metadata: DocumentKnowledgeBaseMetadata, target: str, fetched: datetime) -> "DocumentMetadata":
-        return cls(
-            knowledge_base=kb_metadata.knowledge_base,
-            project=kb_metadata.project,
-            target=target,
-            fetched=fetched
-        )
+        return cls(knowledge_base=kb_metadata.knowledge_base, project=kb_metadata.project, target=target, fetched=fetched)
 
 
 class DocumentServer(MCPMixin):
@@ -118,10 +108,13 @@ class DocumentServer(MCPMixin):
                 chunk_count += len(split_documents)
 
                 logger.info(f"Adding {len(split_documents)} chunks to knowledge base {knowledge_base} in project {self.project_name}")
-                await knowledge_base_vectorstore.add_markdown_documents(split_documents, {
-                    **document_metadata.model_dump(),
-                    **document.metadata,
-                })
+                await knowledge_base_vectorstore.add_markdown_documents(
+                    split_documents,
+                    {
+                        **document_metadata.model_dump(),
+                        **document.metadata,
+                    },
+                )
 
         load_summary = LoadSummary.from_start_load(start_load, source_documents, document_count)
         logger.info(f"Load summary: {load_summary}")
@@ -192,9 +185,12 @@ class DocumentServer(MCPMixin):
                     continue
 
                 logger.info(f"Adding {len(prepared_documents)} chunks to knowledge base {knowledge_base} in project {self.project_name}")
-                await knowledge_base_vectorstore.add_markdown_documents(prepared_documents, {
-                    **document_metadata.model_dump(),
-                    **raw_html_document.metadata,
-                })
+                await knowledge_base_vectorstore.add_markdown_documents(
+                    prepared_documents,
+                    {
+                        **document_metadata.model_dump(),
+                        **raw_html_document.metadata,
+                    },
+                )
 
         return LoadSummary.from_start_load(start_load, source_documents, document_count)

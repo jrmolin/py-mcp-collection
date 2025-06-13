@@ -1,6 +1,6 @@
+import uuid
 from collections.abc import AsyncGenerator
 from typing import Any
-import uuid
 
 from langchain_community.document_loaders import DirectoryLoader as LangchainDirectoryLoader
 from langchain_community.document_loaders import RecursiveUrlLoader as LangchainRecursiveUrlLoader
@@ -14,7 +14,6 @@ from doc_store_vector_search_mcp.logging.util import BASE_LOGGER
 type LoaderTypes = WebPageLoader | SiteMapLoader | RecursiveWebLoader | DirectoryLoader | JSONJQLoader
 
 logger = BASE_LOGGER.getChild("load")
-
 
 
 class WebPageLoader:
@@ -56,7 +55,7 @@ class RecursiveWebLoader:
         # 3. .css + query string but not another slash, i.e. _static/pygments.css?v=03e43079
         logger.info(f"Recursively loading url: {url}")
 
-        loader = LangchainRecursiveUrlLoader(url, use_async=True,check_response_status=True, **kwargs)
+        loader = LangchainRecursiveUrlLoader(url, use_async=True, check_response_status=True, **kwargs)
 
         async for document in loader.alazy_load():
             content_type = document.metadata.get("content_type", "")

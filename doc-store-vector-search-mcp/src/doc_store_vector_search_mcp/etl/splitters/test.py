@@ -1,5 +1,5 @@
+
 from doc_store_vector_search_mcp.etl.splitters.html import HTMLSemanticPreservingSplitter
-from langchain_core.documents import Document
 
 body = """
 <body>

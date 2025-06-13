@@ -80,6 +80,7 @@ class SearchResult(BaseModel):
     kb_id: str
     score: float
 
+
 # class CodeEmbedding(Embeddings):
 #     def __init__(self):
 #         self.device = "cpu"
@@ -101,6 +102,7 @@ class SearchResult(BaseModel):
 #     def embed_query(self, text: str) -> list[float]:
 #         return self.embed(text)
 
+
 class VectorStoreManager[T: VectorStoreTypes, S: VectorStoreSettings]:
     def __init__(self, project_name: str, kb_id: str, code_settings: S, document_settings: S, vector_store_class: type[T]):
         self.project_name = project_name
@@ -110,9 +112,7 @@ class VectorStoreManager[T: VectorStoreTypes, S: VectorStoreSettings]:
         self.document_vector_store: T = vector_store_class(embedding=self.document_embedding, connection=document_settings.connect())  # type: ignore
         document_redundant_filter = EmbeddingsRedundantFilter(embeddings=self.document_embedding)
         document_relevant_filter = EmbeddingsFilter(embeddings=self.document_embedding, similarity_threshold=0.10)
-        document_pipeline_compressor = DocumentCompressorPipeline(
-            transformers=[document_redundant_filter, document_relevant_filter]
-        )
+        document_pipeline_compressor = DocumentCompressorPipeline(transformers=[document_redundant_filter, document_relevant_filter])
 
         self.document_retriever = ContextualCompressionRetriever(
             base_compressor=document_pipeline_compressor,
@@ -124,9 +124,7 @@ class VectorStoreManager[T: VectorStoreTypes, S: VectorStoreSettings]:
         self.code_vector_store: T = vector_store_class(embedding=self.code_embedding, connection=code_settings.connect())  # type: ignore
         code_redundant_filter = EmbeddingsRedundantFilter(embeddings=self.code_embedding)
         code_relevant_filter = EmbeddingsFilter(embeddings=self.code_embedding, similarity_threshold=0.10)
-        code_pipeline_compressor = DocumentCompressorPipeline(
-            transformers=[code_redundant_filter, code_relevant_filter]
-        )
+        code_pipeline_compressor = DocumentCompressorPipeline(transformers=[code_redundant_filter, code_relevant_filter])
 
         self.code_retriever = ContextualCompressionRetriever(
             base_compressor=code_pipeline_compressor,
@@ -147,7 +145,7 @@ class VectorStoreManager[T: VectorStoreTypes, S: VectorStoreSettings]:
             else:
                 break
 
-        return first[len(longest_common_substring):] + second
+        return first[len(longest_common_substring) :] + second
 
     async def remove_adjacent_results(self, documents: list[Document]) -> list[Document]:
         """
@@ -167,7 +165,9 @@ class VectorStoreManager[T: VectorStoreTypes, S: VectorStoreSettings]:
                 continue
 
             # we've seen this document before
-            previous_documents = [document for document in new_documents if document.metadata["document_uuid"] == document.metadata["document_uuid"]]
+            previous_documents = [
+                document for document in new_documents if document.metadata["document_uuid"] == document.metadata["document_uuid"]
+            ]
 
             previous_document_orders = [document.metadata["order"] for document in previous_documents]
             previous_document_orders.extend([order - 1 for order in previous_document_orders])
@@ -213,11 +213,13 @@ class VectorStoreManager[T: VectorStoreTypes, S: VectorStoreSettings]:
         document_uuid = document.metadata["document_uuid"]
 
         related_documents = self.document_vector_store._table.query(  # type: ignore
-            virtual_table_name="related_documents", sql_query=f"""
+            virtual_table_name="related_documents",
+            sql_query=f"""
         SELECT *
         FROM related_documents
         WHERE CAST(metadata AS JSON)->>'$.document_uuid' = '{document_uuid}'
-        """).fetchall()  # noqa: S608
+        """,
+        ).fetchall()
 
         chunk_order = document.metadata["order"]
 
@@ -272,7 +274,6 @@ class VectorStoreManager[T: VectorStoreTypes, S: VectorStoreSettings]:
         return result_list
 
     async def format_search_result(self, result: Document) -> SearchResult:
-
         previous_chunk, next_chunk = await self.get_adjacent_chunk_bodies(result)
         return SearchResult(
             before_context=previous_chunk,
@@ -286,7 +287,7 @@ class VectorStoreManager[T: VectorStoreTypes, S: VectorStoreSettings]:
 
     def prepare_document_for_embedding(self, document: Document) -> Document:
         """Takes a document with delayed replacements and prepares it for embedding.
-        Put the original body of the document into the metadata as "chunk_body", and 
+        Put the original body of the document into the metadata as "chunk_body", and
         the cleaned version of the document into the page_content for embedding.
         """
         preserved_elements = document.metadata.pop("delayed_replacements", {})

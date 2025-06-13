@@ -1,26 +1,14 @@
 from __future__ import annotations
 
-import copy
-import pathlib
 import re
-from io import StringIO
+from collections.abc import Callable, Sequence
 from typing import (
     Any,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
     TypedDict,
-    cast,
 )
 
 from bs4 import Comment
-import requests
 from langchain_core.documents import BaseDocumentTransformer, Document
-
 from langchain_text_splitters.character import RecursiveCharacterTextSplitter
 
 
@@ -30,7 +18,7 @@ class ElementType(TypedDict):
     url: str
     xpath: str
     content: str
-    metadata: Dict[str, str]
+    metadata: dict[str, str]
 
 
 class HTMLSemanticPreservingSplitter(BaseDocumentTransformer):
@@ -105,28 +93,28 @@ class HTMLSemanticPreservingSplitter(BaseDocumentTransformer):
                 preserve_images=True,
                 custom_handlers={"iframe": custom_iframe_extractor}
             )
-    """  # noqa: E501, D214
+    """
 
     def __init__(
         self,
-        headers_to_split_on: List[Tuple[str, str]],
+        headers_to_split_on: list[tuple[str, str]],
         *,
         max_chunk_size: int = 1000,
         chunk_overlap: int = 0,
-        separators: Optional[List[str]] = None,
-        elements_to_preserve: Optional[List[str]] = None,
-        child_elements_to_preserve: Optional[List[str]] = None,
+        separators: list[str] | None = None,
+        elements_to_preserve: list[str] | None = None,
+        child_elements_to_preserve: list[str] | None = None,
         preserve_links: bool = False,
         preserve_images: bool = False,
         preserve_videos: bool = False,
         preserve_audio: bool = False,
-        custom_handlers: Optional[Dict[str, Callable[[Any], str]]] = None,
+        custom_handlers: dict[str, Callable[[Any], str]] | None = None,
         stopword_removal: bool = False,
         stopword_lang: str = "english",
         normalize_text: bool = False,
-        external_metadata: Optional[Dict[str, str]] = None,
-        allowlist_tags: Optional[List[str]] = None,
-        denylist_tags: Optional[List[str]] = None,
+        external_metadata: dict[str, str] | None = None,
+        allowlist_tags: list[str] | None = None,
+        denylist_tags: list[str] | None = None,
         preserve_parent_metadata: bool = False,
     ):
         """Initialize splitter."""
@@ -136,10 +124,7 @@ class HTMLSemanticPreservingSplitter(BaseDocumentTransformer):
             self._BeautifulSoup = BeautifulSoup
             self._Tag = Tag
         except ImportError:
-            raise ImportError(
-                "Could not import BeautifulSoup. "
-                "Please install it with 'pip install bs4'."
-            )
+            raise ImportError("Could not import BeautifulSoup. Please install it with 'pip install bs4'.")
 
         self._headers_to_split_on = sorted(headers_to_split_on)
         self._max_chunk_size = max_chunk_size
@@ -157,16 +142,10 @@ class HTMLSemanticPreservingSplitter(BaseDocumentTransformer):
         self._allowlist_tags = allowlist_tags
         self._preserve_parent_metadata = preserve_parent_metadata
         if allowlist_tags:
-            self._allowlist_tags = list(
-                set(allowlist_tags + [header[0] for header in headers_to_split_on])
-            )
+            self._allowlist_tags = list(set(allowlist_tags + [header[0] for header in headers_to_split_on]))
         self._denylist_tags = denylist_tags
         if denylist_tags:
-            self._denylist_tags = [
-                tag
-                for tag in denylist_tags
-                if tag not in [header[0] for header in headers_to_split_on]
-            ]
+            self._denylist_tags = [tag for tag in denylist_tags if tag not in [header[0] for header in headers_to_split_on]]
         if separators:
             self._recursive_splitter = RecursiveCharacterTextSplitter(
                 separators=separators,
@@ -174,9 +153,7 @@ class HTMLSemanticPreservingSplitter(BaseDocumentTransformer):
                 chunk_overlap=chunk_overlap,
             )
         else:
-            self._recursive_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=max_chunk_size, chunk_overlap=chunk_overlap
-            )
+            self._recursive_splitter = RecursiveCharacterTextSplitter(chunk_size=max_chunk_size, chunk_overlap=chunk_overlap)
 
         if self._stopword_removal:
             try:
@@ -186,11 +163,9 @@ class HTMLSemanticPreservingSplitter(BaseDocumentTransformer):
                 nltk.download("stopwords")
                 self._stopwords = set(stopwords.words(self._stopword_lang))
             except ImportError:
-                raise ImportError(
-                    "Could not import nltk. Please install it with 'pip install nltk'."
-                )
+                raise ImportError("Could not import nltk. Please install it with 'pip install nltk'.")
 
-    def split_text(self, text: str) -> List[Document]:
+    def split_text(self, text: str) -> list[Document]:
         """Splits the provided HTML text into smaller chunks based on the configuration.
 
         Args:
@@ -211,9 +186,7 @@ class HTMLSemanticPreservingSplitter(BaseDocumentTransformer):
 
         return self._process_html(soup)
 
-    def transform_documents(
-        self, documents: Sequence[Document], **kwargs: Any
-    ) -> List[Document]:
+    def transform_documents(self, documents: Sequence[Document], **kwargs: Any) -> list[Document]:
         """Transform sequence of documents by splitting them."""
         transformed = []
         for doc in documents:
@@ -306,13 +279,11 @@ class HTMLSemanticPreservingSplitter(BaseDocumentTransformer):
             text = re.sub(r"\s+", " ", text).strip()
 
         if self._stopword_removal:
-            text = " ".join(
-                [word for word in text.split() if word not in self._stopwords]
-            )
+            text = " ".join([word for word in text.split() if word not in self._stopwords])
 
         return text
 
-    def _process_html(self, soup: Any) -> List[Document]:
+    def _process_html(self, soup: Any) -> list[Document]:
         """Processes the HTML content using BeautifulSoup and splits it using headers.
 
         Args:
@@ -321,10 +292,10 @@ class HTMLSemanticPreservingSplitter(BaseDocumentTransformer):
         Returns:
             List[Document]: A list of Document objects containing the split content.
         """
-        documents: List[Document] = []
-        current_headers: Dict[str, str] = {}
-        current_content: List[str] = []
-        preserved_elements: Dict[str, str] = {}
+        documents: list[Document] = []
+        current_headers: dict[str, str] = {}
+        current_content: list[str] = []
+        preserved_elements: dict[str, str] = {}
         placeholder_count: int = 0
 
         def _get_element_text(element: Any) -> str:
@@ -343,8 +314,8 @@ class HTMLSemanticPreservingSplitter(BaseDocumentTransformer):
 
             element_text = element.get_text()
 
-            #if "Notice the use of " in element_text:
-                #print(element_text)
+            # if "Notice the use of " in element_text:
+            # print(element_text)
 
             # CUSTOM CHANGE TO LIBRARY TO NOT REPLACE DELAYED ELEMENTS
             if element.name in self._child_elements_to_preserve:
@@ -373,13 +344,13 @@ class HTMLSemanticPreservingSplitter(BaseDocumentTransformer):
         elements = soup.find_all(recursive=False)
 
         def _process_element(
-            element: List[Any],
-            documents: List[Document],
-            current_headers: Dict[str, str],
-            current_content: List[str],
-            preserved_elements: Dict[str, str],
+            element: list[Any],
+            documents: list[Document],
+            current_headers: dict[str, str],
+            current_content: list[str],
+            preserved_elements: dict[str, str],
             placeholder_count: int,
-        ) -> Tuple[List[Document], Dict[str, str], List[str], Dict[str, str], int]:
+        ) -> tuple[list[Document], dict[str, str], list[str], dict[str, str], int]:
             for elem in element:
                 if elem.name.lower() in ["html", "body", "div", "main"]:
                     children = elem.find_all(recursive=False)
@@ -411,9 +382,7 @@ class HTMLSemanticPreservingSplitter(BaseDocumentTransformer):
                         current_content.clear()
                         preserved_elements.clear()
                     header_name = elem.get_text(strip=True)
-                    current_headers = {
-                        dict(self._headers_to_split_on)[elem.name]: header_name
-                    }
+                    current_headers = {dict(self._headers_to_split_on)[elem.name]: header_name}
                 elif elem.name in self._elements_to_preserve:
                     placeholder = f"PRESERVED_{placeholder_count}"
                     preserved_elements[placeholder] = _get_element_text(elem)
@@ -460,9 +429,7 @@ class HTMLSemanticPreservingSplitter(BaseDocumentTransformer):
 
         return documents
 
-    def _create_documents(
-        self, headers: dict, content: str, preserved_elements: dict
-    ) -> List[Document]:
+    def _create_documents(self, headers: dict, content: str, preserved_elements: dict) -> list[Document]:
         """Creates Document objects from the provided headers, content, and elements.
 
         Args:
@@ -479,17 +446,12 @@ class HTMLSemanticPreservingSplitter(BaseDocumentTransformer):
         metadata = {**headers, **self._external_metadata}
 
         if len(content) <= self._max_chunk_size:
-            page_content, delayed_replacements = self._reinsert_preserved_elements(
-                content, preserved_elements
-            )
+            page_content, delayed_replacements = self._reinsert_preserved_elements(content, preserved_elements)
             metadata["delayed_replacements"] = delayed_replacements
             return [Document(page_content=page_content, metadata=metadata)]
-        else:
-            return self._further_split_chunk(content, metadata, preserved_elements)
+        return self._further_split_chunk(content, metadata, preserved_elements)
 
-    def _further_split_chunk(
-        self, content: str, metadata: dict, preserved_elements: dict
-    ) -> List[Document]:
+    def _further_split_chunk(self, content: str, metadata: dict, preserved_elements: dict) -> list[Document]:
         """Further splits the content into smaller chunks.
 
         Args:
@@ -505,9 +467,7 @@ class HTMLSemanticPreservingSplitter(BaseDocumentTransformer):
         result = []
 
         for split in splits:
-            split_with_preserved, delayed_replacements = self._reinsert_preserved_elements(
-                split, preserved_elements
-            )
+            split_with_preserved, delayed_replacements = self._reinsert_preserved_elements(split, preserved_elements)
             # CUSTOM CHANGE TO LIBRARY TO STORE PRESERVED ELEMENTS
             metadata["delayed_replacements"] = delayed_replacements
             if split_with_preserved.strip():
@@ -520,9 +480,7 @@ class HTMLSemanticPreservingSplitter(BaseDocumentTransformer):
 
         return result
 
-    def _reinsert_preserved_elements(
-        self, content: str, preserved_elements: dict
-    ) -> tuple[str, dict[str, str]]:
+    def _reinsert_preserved_elements(self, content: str, preserved_elements: dict) -> tuple[str, dict[str, str]]:
         """Reinserts preserved elements into the content into their original positions.
 
         Args:
