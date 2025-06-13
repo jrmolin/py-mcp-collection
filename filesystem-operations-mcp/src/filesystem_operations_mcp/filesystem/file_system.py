@@ -82,6 +82,7 @@ class FileSystem:
 
         child_dirs: list[DirectoryEntry] = [child for child in children if child.is_dir]  # type: ignore
 
+
         if skip_empty:
             child_dirs = [child for child in child_dirs if not await child.is_empty()]
 
