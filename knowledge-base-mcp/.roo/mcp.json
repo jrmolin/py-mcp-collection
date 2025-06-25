@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "knowledge_base_mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "./src/knowledge_base_mcp/main.py"
+      ]
+    }
+  }
+}

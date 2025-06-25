@@ -1,0 +1,264 @@
+from collections import defaultdict
+from typing import Annotated
+
+from fastmcp.contrib.mcp_mixin.mcp_mixin import MCPMixin, mcp_tool
+from llama_index.core.base.base_query_engine import BaseQueryEngine
+from llama_index.core.bridge.pydantic import Field
+from llama_index.core.indices.vector_store import VectorStoreIndex
+from llama_index.core.llms import MockLLM
+from llama_index.core.query_engine.retriever_query_engine import RetrieverQueryEngine
+from llama_index.core.response_synthesizers.no_text import NoText
+from llama_index.core.schema import NodeWithScore
+from llama_index.core.vector_stores.types import FilterCondition, MetadataFilter, MetadataFilters, VectorStoreQuery
+from pydantic import BaseModel, RootModel
+
+from knowledge_base_mcp.llama_index.post_processors.DuplicateNodePostprocessor import DuplicateNodePostprocessor
+from knowledge_base_mcp.llama_index.post_processors.VectorPrevNextNodePostprocessor import VectorPrevNextNodePostprocessor
+from knowledge_base_mcp.query_pipelines.retriever import get_reranker
+
+SearchQuery = Annotated[
+    str,
+    Field(
+        description="The plain language question to ask the Knowledge Base",
+        examples=["What is the capital of France?", "Why did the French Revolution happen?"],
+        min_length=1,
+        max_length=1000,
+    ),
+]
+
+KnowledgeBases = Annotated[
+    list[str],
+    Field(
+        description="The knowledge bases to search",
+        min_length=1,
+        max_length=100,
+    ),
+]
+
+
+class TitleResult(BaseModel):
+    """A result from a search query"""
+
+    title: str = Field(description="The title of the result", exclude=True)
+    source: str = Field(description="The source of the result")
+    headings: dict[str, list[str]] = Field(description="The results of the search by heading")
+
+    @classmethod
+    def from_nodes(cls, nodes: list[NodeWithScore]) -> dict[str, "TitleResult"]:
+        """Convert a list of nodes with the same title to a search response"""
+        results: dict[str, TitleResult] = {}
+
+        nodes_by_title: dict[str, list[NodeWithScore]] = defaultdict(list)
+
+        for node in nodes:
+            title = node.node.metadata.get("title", "<no title>")
+            nodes_by_title[title].append(node)
+
+        for title, these_nodes in nodes_by_title.items():
+            by_heading: dict[str, list[str]] = defaultdict(list)
+
+            for node in these_nodes:
+                heading = node.node.metadata.get("headings", "<no heading>")
+                by_heading[heading].append(node.text.strip())
+
+            results[title] = TitleResult(title=title, source=these_nodes[0].node.metadata.get("source", "<no source>"), headings=by_heading)
+
+        return results
+
+
+class KnowledgeBaseResult(BaseModel):
+    """A result from a search query"""
+
+    name: str = Field(description="The name of the knowledge base", exclude=True)
+    documents: dict[str, TitleResult] = Field(description="The results of the search by document")
+
+    @classmethod
+    def from_nodes(cls, nodes: list[NodeWithScore]) -> dict[str, "KnowledgeBaseResult"]:
+        """Convert a list of nodes to a search response"""
+
+        results: dict[str, KnowledgeBaseResult] = {}
+
+        nodes_by_knowledge_base: dict[str, list[NodeWithScore]] = defaultdict(list)
+
+        for node in nodes:
+            knowledge_base = node.node.metadata.get("knowledge_base", "<no knowledge base>")
+            nodes_by_knowledge_base[knowledge_base].append(node)
+
+        for knowledge_base, kb_nodes in nodes_by_knowledge_base.items():
+            by_title: dict[str, TitleResult] = TitleResult.from_nodes(kb_nodes)
+
+            results[knowledge_base] = KnowledgeBaseResult(name=knowledge_base, documents=by_title)
+
+        return results
+
+
+class KnowledgeBaseSummary(RootModel):
+    """A high level summary of relevant documents across all knowledge bases"""
+
+    root: dict[str, int] = Field(default_factory=dict, description="The number of documents in each knowledge base")
+
+    @classmethod
+    def from_nodes(cls, nodes: list[NodeWithScore]) -> "KnowledgeBaseSummary":
+        """Convert a list of nodes to a summary"""
+        results: dict[str, int] = {}
+
+        for node in nodes:
+            knowledge_base = node.node.metadata.get("knowledge_base", "<no knowledge base>")
+            results[knowledge_base] = results.get(knowledge_base, 0) + 1
+
+        return cls(root=results)
+
+
+class TreeSearchResponse(BaseModel):
+    """A response to a search query"""
+
+    query: str = Field(description="The query that was used to search the knowledge base")
+    knowledge_bases: dict[str, KnowledgeBaseResult] = Field(description="The knowledge bases that had results")
+
+    @classmethod
+    def from_nodes(cls, query: str, nodes: list[NodeWithScore]) -> "TreeSearchResponse":
+        """Convert a list of nodes to a search response"""
+
+        results = KnowledgeBaseResult.from_nodes(nodes)
+
+        return cls(query=query, knowledge_bases=results)
+
+
+class SearchResponseWithSummary(BaseModel):
+    """A response to a search query with a summary"""
+
+    query: str = Field(description="The query that was used to search the knowledge base")
+    summary: KnowledgeBaseSummary = Field(description="The summary of the search")
+    results: TreeSearchResponse = Field(description="The results of the search")
+
+
+# class SearchResult(BaseModel):
+#     """A result from a search query"""
+
+#     title: str = Field(description="The title of the result")
+#     source: str = Field(description="The source of the result")
+#     heading: str | None = Field(description="The heading of the result")
+#     text: str = Field(description="The text of the result")
+
+#     @model_serializer
+#     def serialize(self) -> dict:
+#         d = {
+#             "title": self.title,
+#             "source": self.source,
+#             "heading": self.heading,
+#             "text": self.text,
+#         }
+
+#         return {k: v for k, v in d.items() if v is not None}
+
+#     @computed_field(return_type=int)
+#     def size(self) -> int:
+#         """The size of the result"""
+#         return self._size()
+
+#     def _size(self) -> int:
+#         """The size of the result"""
+#         return len(self.text)
+
+
+class SearchServer(MCPMixin):
+    vector_store_index: VectorStoreIndex
+    query_engine: RetrieverQueryEngine
+
+    def __init__(self, vector_store_index: VectorStoreIndex, reranker_model: str):
+        self.vector_store_index = vector_store_index
+
+        self.duplicate_node_postprocessor = DuplicateNodePostprocessor()
+
+        self.pre_rerank_expander = VectorPrevNextNodePostprocessor(
+            vector_store=vector_store_index.vector_store,
+            num_nodes=3,
+            mode="both",
+        )
+
+        self.result_count = 3
+        self.reranker = get_reranker(reranker_model, self.result_count)
+
+        self.post_rerank_expander = VectorPrevNextNodePostprocessor(
+            vector_store=vector_store_index.vector_store,
+            num_nodes=1,
+            mode="next",
+        )
+
+        self.synthesizer = NoText(llm=MockLLM())
+
+    def _get_kb_filters(self, knowledge_bases: list[str]) -> MetadataFilters:
+        """Get a filters for a specific knowledge base"""
+        return MetadataFilters(
+            condition=FilterCondition.OR, filters=[MetadataFilter(key="knowledge_base", value=kb) for kb in knowledge_bases]
+        )
+
+    def _get_kb_summary_engine(self, knowledge_bases: list[str]) -> BaseQueryEngine:
+        """Get a query engine for a specific knowledge base"""
+        filters = self._get_kb_filters(knowledge_bases)
+        retriever = self.vector_store_index.as_retriever(
+            similarity_top_k=100000,
+            filters=filters,
+        )
+        return RetrieverQueryEngine(
+            retriever=retriever,
+            response_synthesizer=self.synthesizer,
+        )
+
+    def _get_kb_query_engine(self, knowledge_bases: list[str] | None = None) -> BaseQueryEngine:
+        """Get a query engine for a specific knowledge base"""
+
+        filters = self._get_kb_filters(knowledge_bases) if knowledge_bases else None
+
+        retriever = self.vector_store_index.as_retriever(
+            similarity_top_k=50,
+            filters=filters,
+        )
+
+        return RetrieverQueryEngine(
+            retriever=retriever,
+            node_postprocessors=[
+                self.pre_rerank_expander,
+                self.duplicate_node_postprocessor,
+                self.reranker,
+                self.post_rerank_expander,
+                self.duplicate_node_postprocessor,
+            ],
+            response_synthesizer=self.synthesizer,
+        )
+
+    async def _get_summary(self, query: str, knowledge_bases: list[str] | None = None) -> KnowledgeBaseSummary:
+        """Identify result counts across selected knowledge bases"""
+        response = await self._get_kb_query_engine(knowledge_bases).aquery(query)
+
+        return KnowledgeBaseSummary.from_nodes(response.source_nodes)
+
+    @mcp_tool()
+    async def query(self, query: str) -> SearchResponseWithSummary:
+        """Query all knowledge bases with a question."""
+        response = await self._get_kb_query_engine().aquery(query)
+
+        summary = await self._get_summary(query)
+
+        return SearchResponseWithSummary(
+            query=query, summary=summary, results=TreeSearchResponse.from_nodes(query=query, nodes=response.source_nodes)
+        )
+
+    @mcp_tool()
+    async def query_knowledge_bases(self, query: SearchQuery, knowledge_bases: KnowledgeBases) -> TreeSearchResponse:
+        """Query specific knowledge bases with a question."""
+        response = await self._get_kb_query_engine(knowledge_bases).aquery(query)
+
+        return TreeSearchResponse.from_nodes(query=query, nodes=response.source_nodes)
+
+    @mcp_tool()
+    async def query_vector_store(self, metadata_key: str, metadata_value: str):
+        """Get the reference document information"""
+        vector_store_query = VectorStoreQuery(
+            filters=MetadataFilters(
+                filters=[
+                    MetadataFilter(key=metadata_key, value=metadata_value),
+                ],
+            ),
+        )
+        return self.vector_store_index.vector_store.query(query=vector_store_query)

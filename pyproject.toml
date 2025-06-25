@@ -45,6 +45,7 @@ line-length = 140
     "S101", # Ignore asserts
     "DTZ005", # Ignore datetime.UTC
     "PLR2004", # Ignore magic values
+    "E501", # Ignore line length
     
 ]
 "**/references/*" = ["ALL"]
