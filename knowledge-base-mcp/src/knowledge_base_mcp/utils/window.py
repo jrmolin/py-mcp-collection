@@ -1,6 +1,39 @@
 from collections.abc import Sequence, Sized
 from typing import Self, override
 
+# Window iterator example
+# # data: [1, 2, 3, 4, 5]
+
+# # First window: (1), 2, 3, 4, 5
+# # look returns 1
+# # peek_right returns 2
+# # grow_right() and then look returns 1, 2
+# # Second Window: (3), 4, 5
+# # look returns 3
+# # peek_right returns 4
+# # grow_right() and then look returns 3, 4
+
+# # Get a new window from the iterator
+# for window in PeekableWindow[BaseNode](items=nodes):
+
+#     # Get the first node in the window
+#     node = window.look_one()
+
+#     # Keep peeking to the right until we break
+#     while peek_node := window.peek_right():
+
+#         # Stop peeking, note: the window has not changed
+#         if some_condition:
+#             break
+
+#         # Go through another iteration to peek another node before growing the window
+#         if peek_another_node:
+#             continue
+#         # ...
+
+#         # Grow the window to what we're peeking
+#         window.grow_to_peek()
+
 
 class Window[N](Sized):
     """A window over items in a sequence. Iterating over a window will slide the window to wherever

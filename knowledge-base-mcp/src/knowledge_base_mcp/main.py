@@ -11,8 +11,10 @@ from llama_index.core.ingestion import IngestionPipeline
 from llama_index.embeddings.fastembed import FastEmbedEmbedding
 from pydantic import BaseModel, ConfigDict
 
+from knowledge_base_mcp.llama_index.transformations.large_node_warning import LargeNodeWarning
 from knowledge_base_mcp.servers.documentation import DocumentationServer
 from knowledge_base_mcp.utils.logging import BASE_LOGGER
+from knowledge_base_mcp.utils.models import get_model_max_tokens
 from knowledge_base_mcp.vector_stores.duckdb import EnhancedDuckDBVectorStore
 from knowledge_base_mcp.vector_stores.elasticsearch import EnhancedElasticsearchStore
 from knowledge_base_mcp.vendored.huggingface import HuggingFaceEmbedding
@@ -51,7 +53,17 @@ class CliContext(BaseModel):
             msg = "Vector store must be set"
             raise ValueError(msg)
 
-        return IngestionPipeline(name="Vector Store Ingestion", transformations=[], vector_store=self.vector_store)
+        if self.embed_model is None:
+            msg = "Embed model must be set"
+            raise ValueError(msg)
+
+        max_tokens = get_model_max_tokens(self.embed_model)
+
+        large_node_warning = LargeNodeWarning(max_text_size=max_tokens * 4)
+
+        return IngestionPipeline(
+            name="Vector Store Ingestion", transformations=[large_node_warning], vector_store=self.vector_store, disable_cache=True
+        )
 
 
 DEFAULT_EMBEDDINGS_BATCH_SIZE = 48
@@ -159,6 +171,7 @@ async def run(ctx: click.Context):
     )
 
     mcp.add_tool(Tool.from_function(documentation_server.load_website))
+    mcp.add_tool(Tool.from_function(documentation_server.load_directory))
     mcp.add_tool(Tool.from_function(documentation_server.query))
     mcp.add_tool(Tool.from_function(documentation_server.query_knowledge_bases))
     mcp.add_tool(Tool.from_function(documentation_server.get_knowledge_bases))

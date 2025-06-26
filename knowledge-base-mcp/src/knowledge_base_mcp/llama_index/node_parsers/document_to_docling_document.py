@@ -12,6 +12,9 @@ from llama_index.core.schema import BaseNode, Document, MediaResource, MetadataM
 from llama_index.core.utils import get_tqdm_iterable
 from pydantic import ConfigDict, Field, PrivateAttr
 
+from knowledge_base_mcp.utils.logging import BASE_LOGGER
+
+logger = BASE_LOGGER.getChild(__name__)
 
 class DocumentToDoclingDocumentNodeParser(NodeParser):
     """
@@ -50,15 +53,28 @@ class DocumentToDoclingDocumentNodeParser(NodeParser):
     ) -> list[BaseNode]:
         nodes_with_progress: Iterable[BaseNode] = get_tqdm_iterable(items=nodes, show_progress=show_progress, desc="Parsing nodes")
 
+        new_nodes = []
+
         for original_node in nodes_with_progress:
             node_content = original_node.get_content(metadata_mode=MetadataMode.NONE)
 
+            name: str = "unknown"
+
+            if url := original_node.metadata.get("url"):
+                name = url
+            elif file_name := original_node.metadata.get("file_name"):
+                name = file_name
+
             document_stream = DocumentStream(
-                name=original_node.metadata.get("title", "unknown"),
+                name=name,
                 stream=BytesIO(node_content.encode("utf-8")),
             )
 
-            converted_result = self._document_converter.convert(document_stream)
+            try:
+                converted_result = self._document_converter.convert(document_stream)
+            except Exception:
+                logger.exception(f"An error occured converting the document: {original_node.metadata}")
+                continue
 
             text: str
             mimetype: str | None = None
@@ -95,5 +111,6 @@ class DocumentToDoclingDocumentNodeParser(NodeParser):
             #     relationships=relationships,
             #     text_resource=MediaResource(text=text, mimetype=mimetype),
             # )
+            new_nodes.append(original_node)
 
-        return list(nodes)
+        return new_nodes

@@ -1,9 +1,11 @@
+from re import Pattern
 from typing import Annotated
 
 from llama_index.core.base.base_query_engine import BaseQueryEngine
 from llama_index.core.base.base_retriever import BaseRetriever
 from llama_index.core.base.embeddings.base import BaseEmbedding
 from llama_index.core.indices.vector_store import VectorStoreIndex
+from llama_index.core.readers.file.base import SimpleDirectoryReader
 from llama_index.core.vector_stores.types import (
     FilterCondition,
     MetadataFilter,
@@ -19,6 +21,7 @@ from knowledge_base_mcp.llama_index.ingestion_pipelines.batching import (
 )
 from knowledge_base_mcp.llama_index.node_parsers.semantic_merger import SemanticMergerNodeParser
 from knowledge_base_mcp.llama_index.readers.async_web import RecursiveAsyncWebReader
+from knowledge_base_mcp.llama_index.transformations.docling_subsequent_code_block_or_table import DoclingSubsequentCodeBlockOrTable
 from knowledge_base_mcp.llama_index.transformations.metadata_trimmer import MetadataTrimmer
 from knowledge_base_mcp.pipelines.docling import docling_pipeline_factory
 from knowledge_base_mcp.pipelines.retrieval import retriever_query_engine, summary_query_engine
@@ -31,7 +34,7 @@ logger = BASE_LOGGER.getChild(__name__)
 
 
 KNOWLEDGE_BASE_DESCRIPTION = "The name of the Knowledge Base to create to store this webpage."
-KNOWLEDGE_BASE_EXAMPLES = ["Python 3.12 Documentation"]
+KNOWLEDGE_BASE_EXAMPLES = ["Python Language - 3.12", "Python Library - Pydantic - 2.11", "Python Library - FastAPI - 0.115"]
 NewKnowledgeBaseName = Annotated[str, Field(description=KNOWLEDGE_BASE_DESCRIPTION, examples=KNOWLEDGE_BASE_EXAMPLES)]
 
 CRAWL_URLS_DESCRIPTION = """
@@ -44,7 +47,7 @@ CrawlUrls = Annotated[list[str], Field(description=CRAWL_URLS_DESCRIPTION, examp
 
 MAX_PAGES_DESCRIPTION = "The maximum number of pages to crawl."
 MAX_PAGES_EXAMPLES = [1000]
-MaxPages = Annotated[int, Field(default=1000, description=MAX_PAGES_DESCRIPTION, examples=MAX_PAGES_EXAMPLES, ge=1, le=10000)]
+MaxPages = Annotated[int, Field(description=MAX_PAGES_DESCRIPTION, examples=MAX_PAGES_EXAMPLES, ge=1, le=10000)]
 
 RECURSE_DESCRIPTION = "Crawl the webpage recursively. By default, only child pages of the provided URLs will be crawled."
 Recurse = Annotated[bool, Field(description=RECURSE_DESCRIPTION)]
@@ -53,6 +56,32 @@ BACKGROUND_DESCRIPTION = "Run the crawl in the background. If false, wait for th
 Background = Annotated[bool, Field(description=BACKGROUND_DESCRIPTION)]
 
 MINIMUM_NODE_BATCH_SIZE = 48
+
+URL_EXCLUSIONS_DESCRIPTION = "The URLs to exclude from the crawl."
+URL_EXCLUSIONS_EXAMPLES = ["https://www.python.org/docs/3.12/library/typing.html"]
+URL_EXCLUSIONS_DEFAULTS = ["/changelog", "/releasenotes", "/release-notes", "/releases"]
+URLExclusions = Annotated[
+    list[str | Pattern],
+    Field(default_factory=lambda: URL_EXCLUSIONS_DEFAULTS.copy(), description=URL_EXCLUSIONS_DESCRIPTION, examples=URL_EXCLUSIONS_EXAMPLES),
+]
+
+DIRECTORY_INCLUDE_EXTENSIONS_DESCRIPTION = "The file extensions to include in the knowledge base."
+DIRECTORY_INCLUDE_EXTENSIONS_EXAMPLES = ["md", "txt", "py", "ipynb"]
+DirectoryIncludeExtensions = Annotated[
+    list[str],
+    Field(
+        description=DIRECTORY_INCLUDE_EXTENSIONS_DESCRIPTION, examples=DIRECTORY_INCLUDE_EXTENSIONS_EXAMPLES, min_length=1, max_length=100
+    ),
+]
+
+DIRECTORY_RECURSIVE_DESCRIPTION = "Whether to recursively include files in the knowledge base."
+DIRECTORY_RECURSIVE_EXAMPLES = [True]
+DirectoryRecursive = Annotated[bool, Field(description=DIRECTORY_RECURSIVE_DESCRIPTION, examples=DIRECTORY_RECURSIVE_EXAMPLES)]
+
+DIRECTORY_DESCRIPTION = "The directory to load into the knowledge base."
+DIRECTORY_EXAMPLES = ["."]
+Directory = Annotated[str, Field(description=DIRECTORY_DESCRIPTION, examples=DIRECTORY_EXAMPLES)]
+
 
 SearchQuery = Annotated[
     str,
@@ -113,12 +142,25 @@ class DocumentationServer(BaseModel):
             filters=filters,
         )
 
-    def new_vector_store_pipeline(self) -> QueuingPipelineGroup:
+    def new_push_to_vector_store_pipeline(self, extra_pipelines: list[IngestionPipeline] | None) -> QueuingPipelineGroup:
         metadata_exclusions = IngestionPipeline(
             name="Documentation Metadata Exclusions",
             transformations=[
                 MetadataTrimmer(
-                    exclude_metadata_keys=["parent_headings", "heading", "url", "title", "knowledge_base"],
+                    exclude_metadata_keys=[
+                        "parent_headings",
+                        "heading",
+                        "url",
+                        "title",
+                        "knowledge_base",
+                        "docling_item_label",
+                        "file_name",
+                        "file_path",
+                        "file_type",
+                        "file_size",
+                        "creation_date",
+                        "last_modified_date",
+                    ],
                 )
             ],
             disable_cache=True,
@@ -129,11 +171,11 @@ class DocumentationServer(BaseModel):
             transformations=[
                 SemanticMergerNodeParser(
                     embed_model=self.embed_model,
-                    metadata_matching=["parent_headings", "heading", "url", "title", "knowledge_base"],
+                    metadata_matching=["parent_headings", "heading", "url", "title", "knowledge_base", "docling_item_label"],
                 ),
                 SemanticMergerNodeParser(
                     embed_model=self.embed_model,
-                    metadata_matching=["parent_headings", "url", "title", "knowledge_base"],
+                    metadata_matching=["parent_headings", "url", "title", "knowledge_base", "docling_item_label"],
                 ),
             ],
             disable_cache=True,
@@ -145,6 +187,7 @@ class DocumentationServer(BaseModel):
                 self.embeddings_pipeline,
                 semantic_merging_pipeline,
                 metadata_exclusions,
+                *(extra_pipelines or []),
                 self.vector_store_pipeline,
             ],
             batch_size=MINIMUM_NODE_BATCH_SIZE,
@@ -237,12 +280,21 @@ class DocumentationServer(BaseModel):
 
     #     logger.info(f"Done loading {total_nodes} nodes from {urls}")
 
-    async def load_website(self, knowledge_base: NewKnowledgeBaseName, seed_urls: CrawlUrls, max_pages: MaxPages) -> int:
+    async def load_website(
+        self,
+        knowledge_base: NewKnowledgeBaseName,
+        seed_urls: CrawlUrls,
+        url_exclusions: URLExclusions | None,
+        max_pages: MaxPages = 1000,
+    ) -> int:
         """Create a new knowledge base from a website using seed URLs. If the knowledge base already exists, it will be replaced.
 
         Returns:
             The number of nodes loaded into the knowledge base.
         """
+        if url_exclusions is None:
+            url_exclusions = []
+
         try:
             self.remove_knowledge_base(knowledge_base)
         except Exception as e:
@@ -250,7 +302,13 @@ class DocumentationServer(BaseModel):
 
         logger.info(f"Creating new knowledge base {knowledge_base} from {seed_urls} with max {max_pages} pages")
 
-        reader = LazyAsyncReaderConfig(reader=RecursiveAsyncWebReader(seed_urls=seed_urls, max_requests_per_crawl=max_pages))
+        reader = LazyAsyncReaderConfig(
+            reader=RecursiveAsyncWebReader(
+                seed_urls=seed_urls,
+                max_requests_per_crawl=max_pages,
+                exclude_url_patterns=url_exclusions,
+            )
+        )
 
         count = await self._run_web_pipeline(
             reader=reader,
@@ -261,8 +319,60 @@ class DocumentationServer(BaseModel):
 
         return count
 
+    async def load_directory(
+        self,
+        knowledge_base: NewKnowledgeBaseName,
+        directory: Directory,
+        include_extensions: DirectoryIncludeExtensions | None = None,
+        recursive: DirectoryRecursive = True,
+    ) -> int:
+        """Create a new knowledge base from a directory."""
+
+        if include_extensions is None:
+            include_extensions = [".md", ".txt"]
+
+        extra_pipelines = [
+            IngestionPipeline(
+                name="Docling Subsequent Code Block or Table",
+                transformations=[DoclingSubsequentCodeBlockOrTable(metadata_matching=["parent_headings", "heading", "knowledge_base"])],
+                disable_cache=True,
+            )
+        ]
+
+        reader = SimpleDirectoryReader(input_dir=directory, required_exts=include_extensions, recursive=recursive)
+
+        vector_store_pipeline = self.new_push_to_vector_store_pipeline(extra_pipelines=extra_pipelines)
+        docs_ingest_pipeline = self.new_docs_ingest_pipeline()
+
+        async with vector_store_pipeline.start() as input_queue:
+            documents = await reader.aload_data(num_workers=2)
+
+            for document in documents:
+                file_path = document.metadata.get("file_path")
+                logger.info(f"Processing: {file_path} ")
+                nodes = await docs_ingest_pipeline.arun(documents=[document])
+
+                for node in nodes:
+                    node.metadata["knowledge_base"] = knowledge_base
+                    node.metadata["source"] = file_path
+
+                await input_queue.put(nodes)
+
+        docs_ingest_pipeline.print_total_times()
+        vector_store_pipeline.print_total_times()
+
+        return vector_store_pipeline.stats.output_nodes
+
     async def _run_web_pipeline(self, reader: LazyAsyncReaderConfig, knowledge_base: str) -> int:
-        vector_store_pipeline = self.new_vector_store_pipeline()
+        extra_pipelines = [
+            IngestionPipeline(
+                name="Docling Subsequent Code Block or Table",
+                transformations=[DoclingSubsequentCodeBlockOrTable(metadata_matching=["parent_headings", "heading", "knowledge_base"])],
+                disable_cache=True,
+            )
+        ]
+
+        vector_store_pipeline = self.new_push_to_vector_store_pipeline(extra_pipelines=extra_pipelines)
         docs_ingest_pipeline = self.new_docs_ingest_pipeline()
 
         async with vector_store_pipeline.start() as input_queue:

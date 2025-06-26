@@ -171,11 +171,12 @@ class SemanticMergerNodeParser(NodeParser):
                 if not all(node_metadata.get(key) == peek_node.metadata.get(key) for key in self.metadata_matching):
                     break
 
-                # Make sure the nodes are similar to either the previous node or the mean of the previous nodes
-                # previous_node_similarity =
-                # mean_node_similarity =
+                #Make sure the nodes are similar to either the previous node or the mean of the previous nodes
+                #previous_node_similarity = self._node_similarity(peek_node, similar_nodes[-1])
+                #mean_node_similarity = self._node_embeddings_similarity(peek_node, self._combine_embeddings(nodes=similar_nodes))
+
                 # print("--------------------------------")
-                # print(f"Node: {node.get_content()[:100]}")
+                # print(f"Node: {node.node_id}")
                 # print(f"Peek node: {peek_node.get_content()[:100]}")
                 # print(f"Previous node similarity: {previous_node_similarity}")
                 # print(f"Mean node similarity: {mean_node_similarity}")
@@ -185,11 +186,7 @@ class SemanticMergerNodeParser(NodeParser):
                     # Check for similarity to our previous similar node
                     self._node_similarity(peek_node, similar_nodes[-1]) < self.merge_similarity_threshold
                     # Check for similarity to the mean of our previous similar nodes
-                    and self._node_embeddings_similarity(
-                        peek_node,
-                        self._combine_embeddings(nodes=similar_nodes),
-                    )
-                    < self.merge_similarity_threshold
+                    and self._node_embeddings_similarity(peek_node, self._combine_embeddings(nodes=similar_nodes)) < self.merge_similarity_threshold
                 ):
                     continue
 

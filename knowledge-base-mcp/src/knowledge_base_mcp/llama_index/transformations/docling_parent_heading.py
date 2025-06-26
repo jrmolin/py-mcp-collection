@@ -19,15 +19,20 @@ class DoclingParentHeading(TransformComponent):
             if "headings" not in node.metadata:
                 continue
 
-            parent_headings = node.metadata["headings"][:-1]
-            if len(parent_headings) > 0:
-                node.metadata[self.parent_heading_key] = parent_headings
+            headings: list[str] = node.metadata["headings"]
 
-            current_heading = node.metadata["headings"][-1]
+            headings = [heading.split("\n")[0] for heading in headings]
+
+            for i, heading in enumerate(headings):
+                headings[i] = "#" * (i + 1) + " " + heading
+
+            parent_headings = headings[:-1]
+            if len(parent_headings) > 0:
+                node.metadata[self.parent_heading_key] = "\n".join(parent_headings)
+
+            current_heading = headings[-1]
             if current_heading:
-                heading_depth = len(node.metadata["headings"])
-                heading = "#" * heading_depth + " " + current_heading
-                node.metadata[self.heading_key] = heading
+                node.metadata[self.heading_key] = current_heading
 
             node.metadata.pop("headings", None)
 

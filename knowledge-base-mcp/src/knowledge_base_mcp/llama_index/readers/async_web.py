@@ -415,9 +415,6 @@ class RecursiveAsyncWebReader(AsyncWebReader):
         """Post init."""
         self._work_to_yield = AsyncQueue(maxsize=self.max_workers_per_crawl * 2)
 
-        for url in self.urls:
-            self._enqueue_url(url=url, force=True)
-
     @cached_property
     def _parsed_seed_urls(self) -> list[Url]:
         """Parse the seed URLs and return the parsed URLs with their path segments."""
@@ -456,8 +453,14 @@ class RecursiveAsyncWebReader(AsyncWebReader):
         """Determine if a URL should be crawled."""
         include = False
 
+        url = parsed_url.url
+
         for pattern in self.include_url_patterns:
-            if match(pattern, parsed_url.url):
+            if isinstance(pattern, str) and pattern in url:
+                include = True
+                break
+
+            if isinstance(pattern, Pattern) and match(pattern, url):
                 include = True
                 break
 
@@ -467,7 +470,11 @@ class RecursiveAsyncWebReader(AsyncWebReader):
         exclude = False
 
         for pattern in self.exclude_url_patterns:
-            if match(pattern, parsed_url.url):
+            if isinstance(pattern, str) and pattern in url:
+                exclude = True
+                break
+
+            if isinstance(pattern, Pattern) and match(pattern, url):
                 exclude = True
                 break
 
@@ -511,6 +518,9 @@ class RecursiveAsyncWebReader(AsyncWebReader):
         self._urls_skipped.clear()
         self._failed_requests.clear()
         self._finished_requests.clear()
+
+        for url in self.urls:
+            self._enqueue_url(url=url, force=True)
 
         start_crawl = TrackStartCrawl(urls=self.urls)
 
