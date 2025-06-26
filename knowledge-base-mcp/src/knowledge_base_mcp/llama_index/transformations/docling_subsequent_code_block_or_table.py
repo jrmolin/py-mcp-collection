@@ -1,4 +1,4 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 from llama_index.core.schema import (
     BaseNode,
@@ -16,23 +16,19 @@ CODE_BLOCK_LABEL = "code"
 TABLE_BLOCK_LABEL = "table"
 TEXT_LABEL = "text"
 
+
 def check_metadata_matching(nodes: list[BaseNode], metadata_matching: list[str]) -> bool:
     """Checks if the node's metadata matches the metadata matching."""
     reference_node = nodes[0]
 
     return all(all(node.metadata.get(key) == reference_node.metadata.get(key) for key in metadata_matching) for node in nodes)
 
+
 def analyze_window(nodes: Sequence[BaseNode]) -> tuple[list[BaseNode], list[BaseNode], list[BaseNode], list[BaseNode]]:
     """Analyzes a window of nodes and returns a dictionary of node types."""
-    text_nodes: list[BaseNode] = [
-        node for node in nodes if node.metadata.get("docling_item_label") == TEXT_LABEL
-    ]
-    code_nodes: list[BaseNode] = [
-        node for node in nodes if node.metadata.get("docling_item_label") == CODE_BLOCK_LABEL
-    ]
-    table_nodes: list[BaseNode] = [
-        node for node in nodes if node.metadata.get("docling_item_label") == TABLE_BLOCK_LABEL
-    ]
+    text_nodes: list[BaseNode] = [node for node in nodes if node.metadata.get("docling_item_label") == TEXT_LABEL]
+    code_nodes: list[BaseNode] = [node for node in nodes if node.metadata.get("docling_item_label") == CODE_BLOCK_LABEL]
+    table_nodes: list[BaseNode] = [node for node in nodes if node.metadata.get("docling_item_label") == TABLE_BLOCK_LABEL]
     other_nodes: list[BaseNode] = [
         node for node in nodes if node.metadata.get("docling_item_label") not in [TEXT_LABEL, CODE_BLOCK_LABEL, TABLE_BLOCK_LABEL]
     ]
@@ -49,11 +45,9 @@ class DoclingSubsequentCodeBlockOrTable(TransformComponent):
         new_nodes: list[BaseNode] = []
 
         for window in PeekableWindow[BaseNode](items=nodes):
-
             reference_node = window.look_one()
 
             while peek_node := window.peek_right():
-
                 if reference_node.metadata.get("heading") == "### model_extra":
                     pass
 
@@ -96,8 +90,6 @@ class DoclingSubsequentCodeBlockOrTable(TransformComponent):
                 text_node.excluded_embed_metadata_keys.append("example_table")
 
             new_nodes.append(text_node)
-
-
 
             # node_label = node.metadata.get("docling_item_label")
 

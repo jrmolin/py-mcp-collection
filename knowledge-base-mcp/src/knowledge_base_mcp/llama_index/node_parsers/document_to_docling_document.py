@@ -16,6 +16,7 @@ from knowledge_base_mcp.utils.logging import BASE_LOGGER
 
 logger = BASE_LOGGER.getChild(__name__)
 
+
 class DocumentToDoclingDocumentNodeParser(NodeParser):
     """
     Document to Docling document node parser.

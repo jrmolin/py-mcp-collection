@@ -20,11 +20,9 @@ class DoclingLargeItemRemoval(TransformComponent):
     """The maximum text size to allow for a node."""
 
     def __call__(self, nodes, **kwargs):  # noqa: ARG002
-
         nodes_to_keep = []
 
         for node in nodes:
-
             label = node.metadata.get("docling_item_label")
             if label is None or label not in self.types_to_remove:
                 nodes_to_keep.append(node)
@@ -34,7 +32,9 @@ class DoclingLargeItemRemoval(TransformComponent):
             content_size = len(content)
 
             if content_size > self.max_text_size:
-                logger.warning(f"Removing very large {label} node {node.id_} -- text size of {content_size} > {self.max_text_size}: {content[:100]}...")
+                logger.warning(
+                    f"Removing very large {label} node {node.id_} -- text size of {content_size} > {self.max_text_size}: {content[:100]}..."
+                )
                 continue
 
             node.excluded_embed_metadata_keys.append("docling_item_label")

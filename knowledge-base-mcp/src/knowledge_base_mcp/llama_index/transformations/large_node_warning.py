@@ -18,7 +18,6 @@ class LargeNodeWarning(TransformComponent):
     """The maximum text size to allow for a node."""
 
     def __call__(self, nodes, **kwargs):  # noqa: ARG002
-
         for node in nodes:
             content = node.get_content(metadata_mode=MetadataMode.EMBED)
             content_size = len(content)

@@ -7,10 +7,10 @@ from llama_index.node_parser.docling import DoclingNodeParser
 
 from knowledge_base_mcp.llama_index.ingestion_pipelines.batching import PipelineGroup
 from knowledge_base_mcp.llama_index.node_parsers.document_to_docling_document import DocumentToDoclingDocumentNodeParser
+from knowledge_base_mcp.llama_index.transformations.docling_large_item_removal import DoclingLargeItemRemoval
 from knowledge_base_mcp.llama_index.transformations.docling_parent_heading import DoclingParentHeading
 from knowledge_base_mcp.llama_index.transformations.docling_tagging import DoclingTagging
 from knowledge_base_mcp.llama_index.transformations.metadata_trimmer import MetadataTrimmer
-from knowledge_base_mcp.llama_index.transformations.docling_large_item_removal import DoclingLargeItemRemoval
 
 MAX_TOKENS_BUFFER = 0.8
 

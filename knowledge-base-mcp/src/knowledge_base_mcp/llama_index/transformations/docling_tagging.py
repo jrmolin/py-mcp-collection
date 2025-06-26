@@ -1,7 +1,7 @@
 from llama_index.core.schema import (
     TransformComponent,
 )
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict
 
 from knowledge_base_mcp.utils.logging import BASE_LOGGER
 
