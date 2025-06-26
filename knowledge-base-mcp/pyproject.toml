@@ -1,6 +1,6 @@
 [project]
 name = "knowledge_base_mcp"
-version = "0.3.0"
+version = "0.3.1"
 description = "Knowledge Base MCP"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -14,7 +14,6 @@ dependencies = [
     "llama-index-embeddings-huggingface>=0.5.4",
     "llama-index-node-parser-docling>=0.3.2",
     "llama-index-readers-docling>=0.3.3",
-    "llama-index-readers-web>=0.4.2",
     "llama-index-vector-stores-duckdb>=0.4.0",
     "llama-index-vector-stores-elasticsearch>=0.4.3",
     "mcp>=1.9.0",

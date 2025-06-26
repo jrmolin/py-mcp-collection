@@ -32,11 +32,11 @@ class MetadataTrimmer(TransformComponent):
             if self.remove_metadata_in_relationships:
                 self._remove_metadata_from_relationships(node)
 
-            self._add_metadata_exclusions(node)
-
             self._rename_metadata_keys(node)
 
             self._flatten_list_metadata(node)
+
+            self._add_metadata_exclusions(node)
 
         return nodes
 
@@ -60,19 +60,19 @@ class MetadataTrimmer(TransformComponent):
 
     def _add_metadata_exclusions(self, node: BaseNode) -> None:
         for key in self.exclude_metadata_keys:
-            if key not in node.metadata:
-                continue
+            # if key not in node.metadata:
+            #     continue
             node.excluded_embed_metadata_keys.append(key)
             node.excluded_llm_metadata_keys.append(key)
 
         for key in self.exclude_embed_metadata_keys:
-            if key not in node.metadata:
-                continue
+            # if key not in node.metadata:
+            #     continue
             node.excluded_embed_metadata_keys.append(key)
 
         for key in self.exclude_llm_metadata_keys:
-            if key not in node.metadata:
-                continue
+            # if key not in node.metadata:
+            #     continue
             node.excluded_llm_metadata_keys.append(key)
 
     def _flatten_list_metadata(self, node: BaseNode) -> None:

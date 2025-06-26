@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from llama_index.core.schema import NodeWithScore
+from llama_index.core.schema import MetadataMode, NodeWithScore
 from pydantic import BaseModel, Field, RootModel
 
 
@@ -27,7 +27,10 @@ class TitleResult(BaseModel):
 
             for node in these_nodes:
                 heading = node.node.metadata.get("heading", "<no heading>")
-                by_heading[heading].append(node.text.strip())
+
+                node_text = node.get_content(metadata_mode=MetadataMode.LLM).strip()
+
+                by_heading[heading].append(node_text)
 
             results[title] = TitleResult(title=title, source=these_nodes[0].node.metadata.get("source", "<no source>"), headings=by_heading)
 
