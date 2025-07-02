@@ -2,7 +2,9 @@
     "python.testing.pytestArgs": [
         "tests"
     ],
-    "cursorpyright.analysis.typeCheckingMode": "standard",
     "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
+    "python.testing.pytestEnabled": true,
+    "cursorpyright.analysis.inlayHints.variableTypes": true,
+    "python.analysis.typeCheckingMode": "recommended",
+    "cursorpyright.analysis.typeCheckingMode": "recommended"
 }

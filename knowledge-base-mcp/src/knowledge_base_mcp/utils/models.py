@@ -1,7 +1,27 @@
-from llama_index.core.embeddings import BaseEmbedding
+from typing import ClassVar
+
+from pydantic import BaseModel
+from pydantic.config import ConfigDict
 
 
-def get_model_max_tokens(model: BaseEmbedding, default: int = 256) -> int:
-    model_as_dict = model.to_dict()
+class BaseKBModel(BaseModel):
+    """A pydantic base model for a knowledge base project."""
 
-    return model_as_dict.get("max_length", default)
+    model_config: ClassVar[ConfigDict] = ConfigDict(
+        strict=True,
+        frozen=True,
+        use_attribute_docstrings=True,
+        extra="forbid",
+    )
+
+
+class BaseKBArbitraryModel(BaseModel):
+    """A pydantic base model for a knowledge base project."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(
+        strict=False,
+        frozen=False,
+        use_attribute_docstrings=True,
+        extra="allow",
+        arbitrary_types_allowed=True,
+    )

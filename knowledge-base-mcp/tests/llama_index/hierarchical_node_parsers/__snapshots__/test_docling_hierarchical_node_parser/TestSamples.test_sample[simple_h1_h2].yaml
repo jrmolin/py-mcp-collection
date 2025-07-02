@@ -1,0 +1,107 @@
+- node_id: '0'
+  node_type: RootNode
+  content_length: 141
+  content: |-
+    # A document with an h1 heading
+
+    Some text under the first h1 heading
+
+    ## A document with an h2 heading
+
+    Some text under the first h2 heading
+  metadata: {}
+  relationships:
+    children:
+    - '1'
+- node_id: '1'
+  node_type: GroupNode
+  content_length: 141
+  content: |-
+    # A document with an h1 heading
+
+    Some text under the first h1 heading
+
+    ## A document with an h2 heading
+
+    Some text under the first h2 heading
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/0'
+    headings:
+    - '# A document with an h1 heading'
+  relationships:
+    children:
+    - '2'
+    - '3'
+    - '4'
+    parent: '0'
+- node_id: '2'
+  node_type: Node
+  content_length: 31
+  content: '# A document with an h1 heading'
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/0'
+    headings:
+    - '# A document with an h1 heading'
+  relationships:
+    next: '3'
+    parent: '1'
+- node_id: '3'
+  node_type: Node
+  content_length: 36
+  content: Some text under the first h1 heading
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/1'
+    headings:
+    - '# A document with an h1 heading'
+  relationships:
+    next: '4'
+    parent: '1'
+    previous: '2'
+- node_id: '4'
+  node_type: GroupNode
+  content_length: 70
+  content: |-
+    ## A document with an h2 heading
+
+    Some text under the first h2 heading
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/2'
+    headings:
+    - '# A document with an h1 heading'
+    - '## A document with an h2 heading'
+  relationships:
+    children:
+    - '5'
+    - '6'
+    parent: '1'
+    previous: '3'
+- node_id: '5'
+  node_type: Node
+  content_length: 32
+  content: '## A document with an h2 heading'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/2'
+    headings:
+    - '# A document with an h1 heading'
+    - '## A document with an h2 heading'
+  relationships:
+    next: '6'
+    parent: '4'
+- node_id: '6'
+  node_type: Node
+  content_length: 36
+  content: Some text under the first h2 heading
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/3'
+    headings:
+    - '# A document with an h1 heading'
+    - '## A document with an h2 heading'
+  relationships:
+    parent: '4'
+    previous: '5'

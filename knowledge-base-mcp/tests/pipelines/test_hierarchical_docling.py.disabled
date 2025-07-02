@@ -1,0 +1,114 @@
+import json
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any
+
+from llama_index.core.schema import BaseNode, Document, MetadataMode
+from syrupy.assertion import SnapshotAssertion
+
+from knowledge_base_mcp.llama_index.hierarchical_node_parsers.docling_hierarchical_node_parser import DoclingHierarchicalNodeParser
+from tests.conftest import get_sample_simple_markdown_document, leaf_nodes_have_siblings, no_isolated_nodes
+
+if TYPE_CHECKING:
+    from llama_index.core.ingestion import IngestionPipeline
+
+    from knowledge_base_mcp.llama_index.ingestion_pipelines.batching import PipelineGroup
+
+
+def test_init() -> None:
+    pipeline = docling_documentation_pipeline_factory()
+    assert pipeline is not None
+    assert len(pipeline.pipelines) > 2
+
+
+def serialize_nodes_for_snapshot(nodes: Sequence[BaseNode]) -> list[dict[str, Any]]:  # noqa: PLR0912
+    serialized_nodes = []
+    guid_to_friendly_id = {}
+    for i, node in enumerate(nodes):
+        # Check if it's a GUID or a string
+        if len(node.node_id) == 36:
+            guid_to_friendly_id[node.node_id] = i
+        else:
+            guid_to_friendly_id[node.node_id] = node.node_id
+
+    for node in nodes:
+        content = node.get_content()
+        llm_content = node.get_content(metadata_mode=MetadataMode.LLM)
+        embed_content = node.get_content(metadata_mode=MetadataMode.EMBED)
+        serialized_node = {
+            "node_id": guid_to_friendly_id[node.node_id],
+            "relationships": {},
+            "node_type": node.__class__.__name__,
+            "content_length": len(content),
+            "content": content[:1000] + "...",
+        }
+
+        if llm_content != content:
+            serialized_node["llm_content_length"] = len(llm_content)
+            serialized_node["llm_content"] = llm_content[:100] + "..."
+
+        if embed_content != content:
+            serialized_node["embed_content_length"] = len(embed_content)
+            serialized_node["embed_content"] = embed_content[:100] + "..."
+
+        serialized_node["is_isolated"] = node.parent_node is None and node.child_nodes is None
+        serialized_node["has_siblings"] = node.next_node is not None or node.prev_node is not None
+        serialized_node["has_embeddings"] = node.embedding is not None
+
+        relationships = {}
+        if node.parent_node:
+            relationships["parent_node_id"] = guid_to_friendly_id[node.parent_node.node_id]
+        if node.prev_node:
+            relationships["prev_node_id"] = guid_to_friendly_id[node.prev_node.node_id]
+        if node.next_node:
+            relationships["next_node_id"] = guid_to_friendly_id[node.next_node.node_id]
+        if node.child_nodes:
+            relationships["child_node_ids"] = [guid_to_friendly_id[child_node.node_id] for child_node in node.child_nodes]
+
+        serialized_node["relationships"] = relationships
+
+        slim_metadata = {}
+        for key, value in node.metadata.items():
+            dumped_value = json.dumps(value)
+            if len(dumped_value) > 100:
+                slim_metadata[key] = dumped_value[:100] + "..."
+            else:
+                slim_metadata[key] = dumped_value
+        serialized_node["metadata"] = slim_metadata
+
+        # strip none values
+        serialized_node = {k: v for k, v in serialized_node.items() if v is not None or v in ({}, [])}
+
+        serialized_nodes.append(serialized_node)
+
+    return serialized_nodes
+
+
+async def test_simple_document(snapshot: SnapshotAssertion) -> None:
+    document: Document = get_sample_simple_markdown_document()
+
+    pipeline_group: PipelineGroup = docling_documentation_pipeline_factory()
+
+    nodes: Sequence[BaseNode] = await pipeline_group.arun(
+        documents=[document],
+    )
+    assert len(nodes) > 0
+
+    assert no_isolated_nodes(nodes), "Nodes should not be isolated"
+    assert leaf_nodes_have_siblings(nodes), "Leaf nodes should have siblings"
+
+    assert serialize_nodes_for_snapshot(nodes) == snapshot
+
+
+async def test_simple_document_with_pipeline_steps(snapshot: SnapshotAssertion) -> None:
+    document: Document = get_sample_simple_markdown_document()
+
+    pipeline_steps: Sequence[IngestionPipeline] = docling_documentation_pipeline_steps()
+
+    nodes: Sequence[BaseNode] = [document]
+    for i, pipeline in enumerate(pipeline_steps):
+        nodes = await pipeline.arun(
+            nodes=nodes,
+        )
+
+        snapshot_name = f"{i}_{pipeline.name}"
+        assert serialize_nodes_for_snapshot(nodes) == snapshot(name=snapshot_name)

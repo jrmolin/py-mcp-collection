@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from llama_index.core.schema import (
     TransformComponent,
 )
@@ -11,7 +13,7 @@ logger = BASE_LOGGER.getChild(__name__)
 class DoclingLargeItemRemoval(TransformComponent):
     """Removes large items from the node metadata."""
 
-    model_config = ConfigDict(use_attribute_docstrings=True, arbitrary_types_allowed=True)
+    model_config: ClassVar[ConfigDict] = ConfigDict(use_attribute_docstrings=True, arbitrary_types_allowed=True)
 
     types_to_remove: list[str] = Field(default=["table", "code"])
     """The types to remove."""

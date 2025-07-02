@@ -1,0 +1,56 @@
+- node_id: '0'
+  node_type: RootNode
+  content_length: 108
+  content: |-
+    # A document that is good for testing
+
+    # A document with an h1 heading
+
+    Some text under the first h1 heading
+  metadata: {}
+  relationships:
+    children:
+    - '1'
+    - '2'
+    - '3'
+  members:
+  - node_id: '1'
+    node_type: Node
+    content_length: 37
+    content: '# A document that is good for testing'
+    metadata:
+      docling_label: title
+      docling_ref: '#/texts/0'
+      headings:
+      - '# A document that is good for testing'
+    relationships:
+      next: '2'
+      parent: '0'
+    members: []
+  - node_id: '2'
+    node_type: Node
+    content_length: 31
+    content: '# A document with an h1 heading'
+    metadata:
+      docling_label: title
+      docling_ref: '#/texts/1'
+      headings:
+      - '# A document with an h1 heading'
+    relationships:
+      next: '3'
+      parent: '0'
+      previous: '1'
+    members: []
+  - node_id: '3'
+    node_type: Node
+    content_length: 36
+    content: Some text under the first h1 heading
+    metadata:
+      docling_label: text
+      docling_ref: '#/texts/2'
+      headings:
+      - '# A document with an h1 heading'
+    relationships:
+      parent: '0'
+      previous: '2'
+    members: []

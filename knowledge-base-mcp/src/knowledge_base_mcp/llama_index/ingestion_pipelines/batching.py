@@ -24,7 +24,7 @@ logger = BASE_LOGGER.getChild(__name__)
 class LazyAsyncReaderConfig(ReaderConfig):
     async def aread(self) -> AsyncIterator[Document]:
         """Read the data lazily."""
-        iterable: AsyncIterable[Document] = self.reader.alazy_load_data()  # type: ignore
+        iterable: AsyncIterable[Document] = self.reader.alazy_load_data()  # pyright: ignore[reportAssignmentType]
 
         async for item in iterable:
             read_timer = Timer(name="read")
@@ -43,10 +43,14 @@ class PipelineGroup(BaseModel):
 
     _total_times: dict[str, list[float]] = PrivateAttr(default_factory=lambda: defaultdict(list))
 
+    def _log_info(self, msg: str) -> None:
+        """Log information about the pipeline group."""
+        logger.info(msg=f"{self.name}: {msg}")
+
     def print_total_times(self):
         """Print the total times for each pipeline."""
         for name, times in self._total_times.items():
-            logger.info(f"Group {self.name}: {name} took {sum(times)}s")
+            self._log_info(msg=f"{name} took {sum(times)}s")
 
     def _record_times(self, timer_group: TimerGroup):
         """Record the times for each pipeline."""
@@ -76,11 +80,16 @@ class PipelineGroup(BaseModel):
         new_nodes = [*nodes, *documents]
 
         for i, pipeline in enumerate(self.pipelines):
-            timer_group.start_timer(name=f"Step {i + 1}: {pipeline.name}")
+            _ = timer_group.start_timer(name=f"Step {i + 1}: {pipeline.name}")
+            self._log_info(msg=f"Running step {i + 1}: {pipeline.name} with {len(new_nodes)} nodes")
+
+            if len(new_nodes) == 0:
+                self._log_info(msg=f"{pipeline.name} has no nodes to process, skipping remaining steps")
+                break
 
             new_nodes = await pipeline.arun(nodes=new_nodes, in_place=in_place)
 
-            timer_group.stop_timer()
+            _ = timer_group.stop_timer()
 
         self._record_times(timer_group)
 

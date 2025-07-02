@@ -1,0 +1,431 @@
+from collections.abc import Iterator, Sequence
+from functools import cached_property
+from logging import Logger
+from typing import Any, ClassVar, Literal, override
+
+from llama_index.core.base.embeddings.base import BaseEmbedding, Embedding, mean_agg
+from llama_index.core.bridge.pydantic import ConfigDict, Field, SerializeAsAny
+from llama_index.core.schema import BaseNode, MetadataMode, NodeRelationship
+
+from knowledge_base_mcp.llama_index.hierarchical_node_parsers.hierarchical_node_parser import HierarchicalNodeParser
+from knowledge_base_mcp.utils.logging import BASE_LOGGER
+
+logger: Logger = BASE_LOGGER.getChild(suffix=__name__)
+
+
+class NextNodeIterator(Iterator[BaseNode]):
+    """Iterator that returns the next node in the sequence."""
+
+    nodes_by_id: dict[str, BaseNode]
+    popped_nodes: set[str]
+
+    def __init__(self, nodes: Sequence[BaseNode]):
+        self.nodes_by_id = {node.node_id: node for node in nodes}
+        self.popped_nodes = set()
+
+    @override
+    def __next__(self) -> BaseNode:
+        # Get the first entry in nodes_by_id
+        if not self.nodes_by_id:
+            raise StopIteration
+
+        _, node = next(iter(self.nodes_by_id.items()))
+
+        self.pop_node(node=node)
+
+        return node
+
+    def next_node(self, node: BaseNode) -> BaseNode | None:
+        """Pop the next node for a node from the iterator."""
+
+        if node.next_node is None:
+            return None
+
+        next_node_id = node.next_node.node_id
+
+        if next_node_id not in self.nodes_by_id:
+            if next_node_id not in self.popped_nodes:
+                logger.error(msg=f"Next node {next_node_id} not found in nodes_by_id: {node}")
+            else:
+                logger.error(msg=f"Next node {next_node_id} was already popped from the iterator: {node}")
+            return None
+
+        return self.nodes_by_id[next_node_id]
+
+    def pop_node(self, node: BaseNode) -> None:
+        """Pop the next node for a node from the iterator."""
+
+        self.popped_nodes.add(node.node_id)
+
+        del self.nodes_by_id[node.node_id]
+
+
+class LeafSemanticMergerNodeParser(HierarchicalNodeParser):
+    """Semantic node parser.
+
+    Merges nodes together, with each merged node being a group of semantically related nodes."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(arbitrary_types_allowed=True, use_attribute_docstrings=True)
+
+    embed_model: SerializeAsAny[BaseEmbedding] = Field(...)
+    """The embedding model to use to for semantic comparison"""
+
+    # TODO: Implement tokenizer-based token counting
+    # tokenizer: Tokenizer = Field(
+    #     default=None,
+    #     description="The tokenizer to use to count tokens. If None, the tokenizer will be retrieved from the embed_model.",
+    # )
+
+    max_token_count: int | None = Field(default=None)
+    """The maximum number of tokens to allow in a merged node.
+        If None, the limit is retrieved from the embed_model.
+        If the embed_model does not have a max_tokens limit, the default is 256."""
+
+    estimate_token_count: bool = Field(default=True)
+    """If True, the token count of the accumulated nodes will be estimated by dividing
+    the character count by 4. This is significantly faster than calculating the token count
+    for each node."""
+
+    embedding_strategy: Literal["average", "max", "recalculate"] = Field(default="average")
+
+    merge_similarity_threshold: float = Field(default=0.60)
+    """The percentile of cosine dissimilarity that must be exceeded between a
+    node and the next node to form a node.  The smaller this
+    number is, the more nodes will be generated"""
+
+    max_dissimilar_nodes: int = Field(default=3)
+    """The number of dissimilar nodes in a row before starting a new node. For example
+    if this is 3, and we have 3 dissimilar nodes in a row, we will start a new node."""
+
+    @override
+    def model_post_init(self, __context: Any) -> None:  # pyright: ignore[reportAny]
+        if self.max_token_count is not None:
+            return
+
+        model_as_dict = self.embed_model.to_dict()
+
+        if "max_tokens" in model_as_dict:
+            self.max_token_count = model_as_dict["max_tokens"]
+            return
+
+        self.max_token_count = 256
+
+    @classmethod
+    @override
+    def class_name(cls) -> str:
+        return "LeafSemanticMerger"
+
+    @override
+    def _parse_nodes(
+        self,
+        nodes: Sequence[BaseNode],
+        show_progress: bool = False,
+        **kwargs: Any,  # pyright: ignore[reportAny]
+    ) -> list[BaseNode]:
+        """Asynchronously parse document into nodes."""
+
+        related_node_iterator: NextNodeIterator = NextNodeIterator(nodes=nodes)
+
+        all_nodes: list[BaseNode] = []
+
+        for node in related_node_iterator:
+            if node.child_nodes is not None:
+                all_nodes.append(node)
+                continue
+
+            if len(node.get_content(metadata_mode=MetadataMode.NONE)) > self.collapse_max_size:
+                all_nodes.append(node)
+                continue
+
+            nodes_to_merge: list[BaseNode] = [node]
+
+            dissimilar_nodes: list[BaseNode] = []
+            similar_nodes_embeddings: list[Embedding] = [node.get_embedding()]
+
+            # Let's see if we can merge this node with the next node
+            next_node = node
+
+            while next_node := related_node_iterator.next_node(node=next_node):
+                if next_node.child_nodes is not None:
+                    break
+
+                # Make sure we don't have too many dissimilar nodes in a row
+                dissimilar_node_count: int = len(nodes_to_merge) - len(similar_nodes_embeddings)
+                if dissimilar_node_count > self.max_dissimilar_nodes:
+                    break
+
+                # Make sure we don't have too many tokens in the window
+                candidate_token_count: int = self._count_nodes_tokens(nodes=nodes_to_merge) + self._count_node_tokens(node=next_node)
+                if candidate_token_count > self._max_token_count:
+                    break
+
+                # Check for similarity to our previous similar node
+                # print("--------------------------------")
+                # print(f"Node: {node.node_id}")
+                # print(f"Next node: {next_node.node_id}")
+                # print("--------------")
+
+                similarity_to_previous_node: float = self._node_embeddings_similarity(
+                    embedding=similar_nodes_embeddings[-1],
+                    node=next_node,
+                )
+
+                # print(f"Similarity to previous node: {similarity_to_previous_node}")
+
+                if similarity_to_previous_node < self.merge_similarity_threshold:
+                    similarity_to_mean_of_similar_nodes: float = self._node_embeddings_similarity(
+                        embedding=self._combine_embeddings(embeddings=similar_nodes_embeddings),
+                        node=next_node,
+                    )
+
+                    # print(f"Similarity to mean of similar nodes: {similarity_to_mean_of_similar_nodes}")
+
+                    if similarity_to_mean_of_similar_nodes < self.merge_similarity_threshold:
+                        dissimilar_nodes.append(next_node)
+                        continue
+
+                # print("--------------------------------")
+
+                # Add the next node to the nodes to merge
+                related_node_iterator.pop_node(node=next_node)
+
+                nodes_to_merge.extend(dissimilar_nodes)
+                dissimilar_nodes.clear()
+
+                nodes_to_merge.append(next_node)
+                similar_nodes_embeddings.append(next_node.get_embedding())
+
+            if len(nodes_to_merge) == 1:
+                all_nodes.append(node)
+                continue
+
+            new_node = self._merge_nodes(nodes=nodes_to_merge, use_embeddings=similar_nodes_embeddings)
+
+            all_nodes.append(new_node)
+
+        return all_nodes
+
+        # all_nodes: list[BaseNode] = []
+        # nodes_by_id: dict[str, BaseNode] = {node.node_id: node for node in nodes}
+        # nodes_by_parent: dict[str, list[BaseNode]] = defaultdict(list)
+
+        # isolated_nodes: list[BaseNode] = []
+
+        # for node in nodes:
+        #     if node.child_nodes is None:
+        #         if node.parent_node is None:
+        #             isolated_nodes.append(node)
+        #             continue
+
+        #         nodes_by_parent[node.parent_node.node_id].append(node)
+        #         continue
+
+        #     # We won't do anything with non-leaf nodes
+        #     all_nodes.append(node)
+
+        # for parent_node_id, child_nodes in nodes_by_parent.items():
+        #     parent_node: BaseNode = nodes_by_id[parent_node_id]
+
+        #     new_child_nodes: Sequence[BaseNode] = self._group_nodes_semantically(nodes=child_nodes)
+
+        #     all_nodes.append(parent_node)
+        #     all_nodes.extend(new_child_nodes)
+
+        # all_nodes.extend(self._group_nodes_semantically(nodes=isolated_nodes))
+
+        # return list(all_nodes)
+
+    @override
+    async def _aparse_nodes(
+        self,
+        nodes: Sequence[BaseNode],
+        show_progress: bool = False,
+        **kwargs: Any,  # pyright: ignore[reportAny]
+    ) -> list[BaseNode]:
+        """Asynchronously parse document into nodes."""
+
+        all_nodes: Sequence[BaseNode] = self._parse_nodes(nodes=nodes, show_progress=show_progress, **kwargs)
+
+        if self.embedding_strategy == "recalculate":
+            nodes_with_missing_embeddings = [node for node in all_nodes if node.embedding is None]
+
+            await self._arecalculate_embeddings(nodes_with_missing_embeddings)
+
+        return list(all_nodes)
+
+    # def _group_nodes_semantically(self, nodes: Sequence[BaseNode]) -> Sequence[BaseNode]:
+    #     """Takes a list of candidate nodes, which have already been evaluated that they match our merging conditions (metadata keys)
+    #     and merges them together into a series of semantically related nodes.
+
+    #     We do this by:
+    #     1. Calculating the cosine similarity between each node and the next node
+    #     2. If the similarity is greater than the threshold, we add the nodes to the accumulated nodes list
+    #        a. If the token count of the accumulated nodes is greater than the threshold, we build a merged node.
+    #     3. If the similarity is less than the threshold, we add the nodes to the dissimilar nodes list
+    #        a. If the number of dissimilar nodes is greater than the threshold count, we build a merged node
+    #        without the dissimilar nodes and start accumulating nodes again
+    #     4. We repeat this process until we have no more nodes to process
+
+    #     Args:
+    #         nodes (list[BaseNode]): The nodes to merge
+
+    #     Returns:
+    #         list[BaseNode]: The merged nodes
+    #     """
+    #     new_nodes: list[BaseNode] = []
+
+    #     peekable_iterator: PeekableIterator[BaseNode] = PeekableIterator[BaseNode](items=nodes)
+
+    #     for node in peekable_iterator:
+    #         similar_nodes: list[BaseNode] = [node]
+    #         nodes_to_merge: list[BaseNode] = [node]
+
+    #         window_token_count: int = self._count_text_tokens(text=node.get_content(metadata_mode=MetadataMode.EMBED))
+
+    #         while peek_node := peekable_iterator.peek():
+    #             peeked_nodes: list[BaseNode] = peekable_iterator.repeek()
+
+    #             # Not a leaf node!
+    #             if peek_node.child_nodes is not None:
+    #                 break
+
+    #             # Make sure we don't have too many dissimilar nodes in a row
+    #             if len(peeked_nodes) > self.max_dissimilar_nodes:
+    #                 break
+
+    #             # Make sure we don't have too many tokens in the window
+    #             if window_token_count + self._count_nodes_tokens(nodes=peeked_nodes) > self._max_token_count:
+    #                 break
+
+    #             # print("--------------------------------")
+    #             # print(f"Node: {node.node_id}")
+    #             # print(f"Peek node: {peek_node.get_content()[:100]}")
+    #             # print(f"Previous node similarity: {previous_node_similarity}")
+    #             # print(f"Mean node similarity: {mean_node_similarity}")
+    #             # print("--------------------------------")
+
+    #             if (
+    #                 # Check for similarity to our previous similar node
+    #                 self._node_similarity(node=peek_node, other_node=similar_nodes[-1]) < self.merge_similarity_threshold
+    #                 # Check for similarity to the mean of our previous similar nodes
+    #                 and self._node_embeddings_similarity(node=peek_node, embedding=self._combine_embeddings(nodes=similar_nodes))
+    #                 < self.merge_similarity_threshold
+    #             ):
+    #                 continue
+
+    #             similar_nodes.append(peek_node)
+    #             nodes_to_merge.append(peek_node)
+
+    #             # We have found a similar node! Grow the window to include the new node and any in between nodes.
+    #             window_token_count += self._count_nodes_tokens(nodes=peeked_nodes)
+    #             _ = peekable_iterator.commit_to_peek()
+
+    #         new_node = self._merge_nodes(nodes=nodes_to_merge, use_embeddings=[node.get_embedding() for node in nodes_to_merge])
+
+    #         new_nodes.append(new_node)
+
+    #     return new_nodes
+
+    # # def _score_above_threshold(self, *scores: float) -> bool:
+    # #     """Check if any scores are above a threshold."""
+    # #     return any(score > self.merge_similarity_threshold for score in scores)
+
+    def _node_similarity(self, node: BaseNode, other_node: BaseNode) -> float:
+        """Calculate the similarity between two nodes."""
+
+        return self.embed_model.similarity(node.get_embedding(), other_node.get_embedding())
+
+    def _node_embeddings_similarity(self, node: BaseNode, embedding: Embedding) -> float:
+        """Calculate the similarity between two nodes."""
+
+        return self.embed_model.similarity(node.get_embedding(), embedding)
+
+    def _merge_nodes(self, nodes: Sequence[BaseNode], use_embeddings: list[Embedding]) -> BaseNode:
+        """Merge nodes together into a common node. Inlining any embeddable metadata that is not common to all nodes."""
+
+        reference_node = nodes[0]
+
+        if len(nodes) == 1:
+            return reference_node
+
+        all_content: list[str] = [self._get_embeddable_content(node=node) for node in nodes]
+
+        reference_node.set_content(value="\n\n".join(all_content))
+
+        reference_node.embedding = self._combine_embeddings(embeddings=use_embeddings)
+
+        if reference_node.prev_node:
+            del reference_node.relationships[NodeRelationship.PREVIOUS]
+
+        if reference_node.next_node:
+            del reference_node.relationships[NodeRelationship.NEXT]
+
+        if new_prev_node := nodes[0].prev_node:
+            reference_node.relationships[NodeRelationship.PREVIOUS] = new_prev_node
+
+        if new_next_node := nodes[-1].next_node:
+            reference_node.relationships[NodeRelationship.NEXT] = new_next_node
+
+        return reference_node
+
+    def _count_nodes_tokens(self, nodes: Sequence[BaseNode]) -> int:
+        """Count the number of tokens in a node."""
+        return sum(self._count_node_tokens(node=node) for node in nodes)
+
+    def _count_node_tokens(self, node: BaseNode) -> int:
+        """Count the number of tokens in a node."""
+        embeddable_content = self._get_embeddable_content(node=node)
+
+        return self._count_text_tokens(text=embeddable_content)
+
+    def _count_text_tokens(self, text: str) -> int:
+        """Count the number of tokens in a text."""
+
+        if self.estimate_token_count:
+            return len(text) // 4
+
+        msg = "Non-estimated token counting is not implemented yet"
+        raise NotImplementedError(msg)
+
+    def _get_embeddable_content(self, node: BaseNode) -> str:
+        """Get the embeddable content of a node."""
+        return node.get_content(metadata_mode=MetadataMode.NONE)
+
+    @cached_property
+    def _max_token_count(self) -> int:
+        """Get the maximum number of tokens to allow in a merged node."""
+        if self.max_token_count is not None:
+            return self.max_token_count
+
+        model_as_dict: dict[str, Any] = self.embed_model.to_dict()
+
+        if "max_tokens" in model_as_dict and isinstance(model_as_dict["max_tokens"], int):
+            return model_as_dict["max_tokens"]
+
+        return 256
+
+    def _combine_embeddings(self, embeddings: list[Embedding] | None = None, nodes: Sequence[BaseNode] | None = None) -> Embedding:
+        """Combine a list of embeddings into a single embedding."""
+
+        all_embeddings: list[Embedding] = []
+
+        if embeddings is not None:
+            all_embeddings.extend(embeddings)
+
+        if nodes is not None:
+            all_embeddings.extend([node.get_embedding() for node in nodes])
+
+        if self.embedding_strategy == "average":
+            return mean_agg(all_embeddings)
+
+        return [max(embedding) for embedding in zip(*all_embeddings, strict=True)]
+
+    async def _arecalculate_embeddings(self, nodes: Sequence[BaseNode]) -> None:
+        """Recalculate the embeddings for a list of nodes."""
+
+        _ = await self.embed_model.acall(nodes=nodes)
+
+    def _recalculate_embeddings(self, nodes: Sequence[BaseNode]) -> None:
+        """Recalculate the embeddings for a list of nodes."""
+
+        _ = self.embed_model(nodes=nodes)

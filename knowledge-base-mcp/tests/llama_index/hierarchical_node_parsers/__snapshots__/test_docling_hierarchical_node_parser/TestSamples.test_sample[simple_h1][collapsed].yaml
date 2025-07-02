@@ -1,0 +1,36 @@
+- node_id: '0'
+  node_type: RootNode
+  content_length: 69
+  content: |-
+    # A document with an h1 heading
+
+    Some text under the first h1 heading
+  metadata: {}
+  relationships:
+    children:
+    - '1'
+    - '2'
+- node_id: '1'
+  node_type: Node
+  content_length: 31
+  content: '# A document with an h1 heading'
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/0'
+    headings:
+    - '# A document with an h1 heading'
+  relationships:
+    next: '2'
+    parent: '0'
+- node_id: '2'
+  node_type: Node
+  content_length: 36
+  content: Some text under the first h1 heading
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/1'
+    headings:
+    - '# A document with an h1 heading'
+  relationships:
+    parent: '0'
+    previous: '1'
