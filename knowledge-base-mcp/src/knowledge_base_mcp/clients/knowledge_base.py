@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from llama_index.core.indices.vector_store import VectorIndexRetriever, VectorStoreIndex
 from llama_index.core.ingestion.pipeline import DocstoreStrategy, IngestionPipeline
-from llama_index.core.schema import BaseNode, Document
+from llama_index.core.schema import BaseNode, RelatedNodeInfo
 from llama_index.core.storage.docstore.keyval_docstore import KVDocumentStore
 from llama_index.core.storage.kvstore.types import BaseKVStore
 from llama_index.core.vector_stores.types import FilterCondition, MetadataFilter, MetadataFilters
@@ -14,6 +14,7 @@ from knowledge_base_mcp.llama_index.ingestion_pipelines.batching import Pipeline
 from knowledge_base_mcp.llama_index.transformations.large_node_detector import LargeNodeDetector
 from knowledge_base_mcp.llama_index.transformations.leaf_embeddings import LeafNodeEmbedding
 from knowledge_base_mcp.llama_index.transformations.metadata import AddMetadata, ExcludeMetadata, FlattenMetadata
+from knowledge_base_mcp.llama_index.transformations.write_to_docstore import WriteToDocstore
 from knowledge_base_mcp.stores.vector_stores.base import EnhancedBaseVectorStore
 from knowledge_base_mcp.utils.logging import BASE_LOGGER
 from knowledge_base_mcp.utils.models import BaseKBArbitraryModel
@@ -117,12 +118,11 @@ class KnowledgeBaseClient(BaseKBArbitraryModel):
         logger.info(msg=f"Deleting {len(vector_store_nodes)} nodes from docstore for {knowledge_base}")
         [await self.vector_store_index.docstore.adelete_document(doc_id=node.node_id, raise_error=False) for node in vector_store_nodes]
 
-        # TODO: Switch back to adelete_nodes after https://github.com/run-llama/llama_index/pull/19281
         logger.info(msg=f"Deleting {len(vector_store_nodes)} nodes from vector store for {knowledge_base}")
-        self.vector_store_index.delete_nodes(node_ids=[node.node_id for node in vector_store_nodes], delete_from_docstore=False)
+        await self.vector_store_index.adelete_nodes(node_ids=[node.node_id for node in vector_store_nodes], delete_from_docstore=False)
 
-        logger.info(msg=f"Cleaning hash store for {knowledge_base}")
-        await self.clean_knowledge_base_hash_store()
+        # logger.info(msg=f"Cleaning hash store for {knowledge_base}")
+        # await self.clean_knowledge_base_hash_store()
 
     async def delete_all_knowledge_bases(self) -> None:
         """Remove all knowledge bases from the vector store."""
@@ -164,47 +164,77 @@ class KnowledgeBaseClient(BaseKBArbitraryModel):
 
         return await self.vector_store.metadata_agg(key="knowledge_base")
 
-    async def new_knowledge_base(self, knowledge_base: str, pre_pipelines: Sequence[IngestionPipeline] | None = None) -> PipelineGroup:
-        """Create a new knowledge base."""
+    async def get_document(self, knowledge_base: str, title: str) -> BaseNode:
+        """Get a document from the knowledge base."""
+
+        filters = MetadataFilters(
+            condition=FilterCondition.AND,
+            filters=[MetadataFilter(key="knowledge_base", value=knowledge_base), MetadataFilter(key="title", value=title)],
+        )
+
+        nodes = self.vector_store.get_nodes(filters=filters)
+
+        if len(nodes) == 0:
+            msg = f"No document found in {knowledge_base} with title {title}"
+            raise ValueError(msg)
+
+        first_result: BaseNode = nodes[0]
+
+        if first_result.source_node is None:
+            msg = f"Source node not missing for document matching title {title} in {knowledge_base}"
+            raise ValueError(msg)
+
+        source_node: RelatedNodeInfo = first_result.source_node
+
+        document: BaseNode | None = self.docstore.get_document(doc_id=source_node.node_id)
+
+        if document is None:
+            msg = f"No document found for {source_node.node_id}"
+            raise ValueError(msg)
+
+        return document
+
+    async def new_knowledge_base(
+        self,
+        knowledge_base: str,
+        pre_vector_store_pipelines: Sequence[IngestionPipeline] | None = None,
+        pre_document_store_pipelines: Sequence[IngestionPipeline] | None = None,
+    ) -> tuple[PipelineGroup, PipelineGroup]:
+        """Create a new knowledge base. Returns two pipeline groups, one for storing nodes and one for storing documents."""
 
         await self.delete_knowledge_base(knowledge_base)
 
-        return PipelineGroup(
-            name=f"Ingesting data into Knowledge Base {knowledge_base}",
+        vector_store_pipeline: PipelineGroup = PipelineGroup(
+            name=f"Ingesting Vectors into Knowledge Base {knowledge_base}",
             pipelines=[
-                *(pre_pipelines or []),
+                *(pre_vector_store_pipelines or []),
                 self._tag_nodes_for_kb(knowledge_base),
-                self._prepare_for_kb,
+                self._cleanup_for_kb,
+                self._embeddings_for_kb,
+                self._semantic_merger_for_kb,
                 self._store_in_kb,
             ],
         )
 
-    async def add_documents_to_knowledge_base(self, knowledge_base: str, documents: Sequence[Document]) -> None:
-        """Add documents, use ingestion pipelines to add nodes to a knowledge base."""
+        document_store_pipeline: PipelineGroup = PipelineGroup(
+            name=f"Ingesting Documents into Knowledge Base {knowledge_base}",
+            pipelines=[
+                *(pre_document_store_pipelines or []),
+                self._tag_nodes_for_kb(knowledge_base),
+                self._cleanup_for_kb,
+                self._store_in_docstore,
+            ],
+        )
 
-        for document in documents:
-            document.metadata["knowledge_base"] = knowledge_base
-
-        await self.docstore.async_add_documents(docs=documents)
+        return vector_store_pipeline, document_store_pipeline
 
     def _tag_nodes_for_kb(self, knowledge_base: str) -> IngestionPipeline:
         """Tag nodes for the vector store."""
 
         return IngestionPipeline(
-            name=f"Tag for KB {knowledge_base}",
-            transformations=[AddMetadata(metadata={"knowledge_base": knowledge_base})],
-            # TODO https://github.com/run-llama/llama_index/issues/19277
-            disable_cache=True,
-        )
-
-    @cached_property
-    def _prepare_for_kb(self) -> IngestionPipeline:
-        """Prepare nodes for the vector store."""
-
-        return IngestionPipeline(
-            name="Prepare for KB",
+            name="Tag knowledge_base",
             transformations=[
-                FlattenMetadata(include_related_nodes=True),
+                AddMetadata(metadata={"knowledge_base": knowledge_base}),
                 ExcludeMetadata(embed_keys=["knowledge_base"], llm_keys=["knowledge_base"]),
             ],
             # TODO https://github.com/run-llama/llama_index/issues/19277
@@ -212,22 +242,58 @@ class KnowledgeBaseClient(BaseKBArbitraryModel):
         )
 
     @cached_property
+    def _cleanup_for_kb(self) -> IngestionPipeline:
+        """Cleanup nodes for the vector store."""
+
+        return IngestionPipeline(
+            name="Flatten metadata",
+            transformations=[
+                FlattenMetadata(include_related_nodes=True),
+            ],
+            # TODO https://github.com/run-llama/llama_index/issues/19277
+            disable_cache=True,
+        )
+
+    @cached_property
+    def _store_in_docstore(self) -> IngestionPipeline:
+        """Write documents and nodes to the doc store."""
+
+        write_to_docstore: WriteToDocstore = WriteToDocstore(docstore=self.docstore, embed_model=self.vector_store_index._embed_model)  # pyright: ignore[reportPrivateUsage]
+
+        return IngestionPipeline(
+            name="Push to docstore",
+            transformations=[
+                write_to_docstore,
+            ],
+        )
+
+    @cached_property
+    def _embeddings_for_kb(self) -> IngestionPipeline:
+        """Embed nodes for the vector store."""
+        
+        return IngestionPipeline(
+            name="Embeddings",
+            transformations=[
+                LargeNodeDetector.from_embed_model(embed_model=self.vector_store_index._embed_model, node_type="leaf"),  # pyright: ignore[reportPrivateUsage]
+                LeafNodeEmbedding(embed_model=self.vector_store_index._embed_model)],  # pyright: ignore[reportPrivateUsage]
+        )
+
+    @cached_property
+    def _semantic_merger_for_kb(self) -> IngestionPipeline:
+        """Merge nodes for the vector store."""
+        
+        return IngestionPipeline(
+            name="Semantic Merging",
+            transformations=[LeafSemanticMergerNodeParser(embed_model=self.vector_store_index._embed_model)],  # pyright: ignore[reportPrivateUsage]
+        )
+
+    @cached_property
     def _store_in_kb(self) -> IngestionPipeline:
         """Create a new knowledge base."""
 
-        semantic_merger_node_parser: LeafSemanticMergerNodeParser = LeafSemanticMergerNodeParser(
-            embed_model=self.vector_store_index._embed_model,  # pyright: ignore[reportPrivateUsage]
-        )
-
         return IngestionPipeline(
-            name="Store in KB",
-            transformations=[
-                LargeNodeDetector.from_embed_model(embed_model=self.vector_store_index._embed_model, node_type="leaf"),  # pyright: ignore[reportPrivateUsage]
-                LeafNodeEmbedding(
-                    embed_model=self.vector_store_index._embed_model,  # pyright: ignore[reportPrivateUsage]
-                ),
-                semantic_merger_node_parser,
-            ],
+            name="Push to Vector Store",
+            transformations=[],
             vector_store=self.vector_store_index.vector_store,
             docstore=self.vector_store_index.docstore,
             docstore_strategy=DocstoreStrategy.DUPLICATES_ONLY,

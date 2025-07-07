@@ -146,14 +146,14 @@ class RootNode(GroupNode):
 class HierarchicalNodeParser(NodeParser, ABC):
     """Base interface for node parser."""
 
-    collapse_nodes: bool = Field(default=False)
-    """Whether to collapse nodes."""
+    # collapse_nodes: bool = Field(default=False)
+    # """Whether to collapse nodes."""
 
-    collapse_max_size: int = Field(default=1024)
-    """The maximum size of a leaf node in characters when collapsing."""
+    # collapse_max_size: int = Field(default=1024)
+    # """The maximum size of a leaf node in characters when collapsing."""
 
-    collapse_min_size: int = Field(default=256)
-    """The minimum size of a leaf node in characters when collapsing."""
+    # collapse_min_size: int = Field(default=256)
+    # """The minimum size of a leaf node in characters when collapsing."""
 
     @override
     def _postprocess_parsed_nodes(
@@ -165,10 +165,10 @@ class HierarchicalNodeParser(NodeParser, ABC):
 
         all_nodes: list[BaseNode] = nodes.copy()
 
-        if self.collapse_nodes:
-            self._collapse_all_nodes_in_place(all_nodes=all_nodes)
+        # if self.collapse_nodes:
+        #    self._collapse_all_nodes_in_place(all_nodes=all_nodes)
 
-            # all_nodes = self._perform_group_small_child_collapsing(all_nodes=all_nodes)
+        # all_nodes = self._perform_group_small_child_collapsing(all_nodes=all_nodes)
 
         # Clean-up all node relationships
         nodes_by_parent_id: dict[str, list[BaseNode]] = defaultdict(list)
@@ -202,27 +202,39 @@ class HierarchicalNodeParser(NodeParser, ABC):
 
         return all_nodes
 
-    def _collapse_all_nodes_in_place(self, all_nodes: list[BaseNode]) -> None:
-        """Perform root node collapsing.
+    def _establish_sibling_relationships(self, sibling_nodes: Sequence[BaseNode]) -> None:
+        """Establish the sibling relationships for the sibling nodes."""
+        reset_prev_next_relationships(sibling_nodes=sibling_nodes)
 
-        Returns a tuple of the new nodes and the nodes that were merged."""
-        root_nodes: list[GroupNode] = [node for node in all_nodes if isinstance(node, GroupNode) and node.is_root()]
+    def _establish_parent_child_relationships(self, parent: BaseNode, child_nodes: Sequence[BaseNode]) -> None:
+        """Establish the parent/child relationships for the child nodes."""
 
-        # Collapse nodes to eliminate groups
-        for root_node in root_nodes:
-            descendant_nodes: Sequence[BaseNode] = root_node.descendant_nodes()
+        for child_node in child_nodes:
+            child_node.relationships[NodeRelationship.PARENT] = parent.as_related_node_info()
 
-            for descendant_node in descendant_nodes:
-                all_nodes.remove(descendant_node)
+        parent.relationships[NodeRelationship.CHILD] = [child_node.as_related_node_info() for child_node in child_nodes]
 
-            collapsed_root_node: BaseNode = root_node.collapse(max_group_size=self.collapse_max_size, min_group_size=self.collapse_min_size)
+    # def _collapse_all_nodes_in_place(self, all_nodes: list[BaseNode]) -> None:
+    #     """Perform root node collapsing.
 
-            if isinstance(collapsed_root_node, GroupNode):
-                new_descendant_nodes: Sequence[BaseNode] = collapsed_root_node.descendant_nodes()
+    #     Returns a tuple of the new nodes and the nodes that were merged."""
+    #     root_nodes: list[GroupNode] = [node for node in all_nodes if isinstance(node, GroupNode) and node.is_root()]
 
-                all_nodes.extend(new_descendant_nodes)
-            else:
-                all_nodes.append(collapsed_root_node)
+    #     # Collapse nodes to eliminate groups
+    #     for root_node in root_nodes:
+    #         descendant_nodes: Sequence[BaseNode] = root_node.descendant_nodes()
+
+    #         for descendant_node in descendant_nodes:
+    #             all_nodes.remove(descendant_node)
+
+    #         collapsed_root_node: BaseNode = root_node.collapse(max_group_size=self.collapse_max_size, min_group_size=self.collapse_min_size)
+
+    #         if isinstance(collapsed_root_node, GroupNode):
+    #             new_descendant_nodes: Sequence[BaseNode] = collapsed_root_node.descendant_nodes()
+
+    #             all_nodes.extend(new_descendant_nodes)
+    #         else:
+    #             all_nodes.append(collapsed_root_node)
 
     # def _perform_group_small_child_collapsing(self, all_nodes: list[BaseNode]) -> list[BaseNode]:
     #     """Perform group small child collapsing.

@@ -23,7 +23,7 @@
             "request": "launch",
             "module": "knowledge_base_mcp.main",
             "cwd": "${workspaceFolder}",
-            "justMyCode": false,
+            "justMyCode": True,
             "args": [
                 "duckdb",
                 "persistent",

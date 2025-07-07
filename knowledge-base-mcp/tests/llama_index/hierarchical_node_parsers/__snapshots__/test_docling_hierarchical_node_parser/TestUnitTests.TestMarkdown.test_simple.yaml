@@ -1,0 +1,40 @@
+- node_id: '0'
+  node_depth: 0
+  node_type: Node
+  content_length: 37
+  content: '# A document that is good for testing'
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/0'
+    headings:
+    - '# A document that is good for testing'
+  is_isolated: true
+  relationships:
+    next: '1'
+- node_id: '1'
+  node_depth: 0
+  node_type: Node
+  content_length: 31
+  content: '# A document with an h1 heading'
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/1'
+    headings:
+    - '# A document with an h1 heading'
+  is_isolated: true
+  relationships:
+    next: '2'
+    previous: '0'
+- node_id: '2'
+  node_depth: 0
+  node_type: Node
+  content_length: 36
+  content: Some text under the first h1 heading
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/2'
+    headings:
+    - '# A document with an h1 heading'
+  is_isolated: true
+  relationships:
+    previous: '1'

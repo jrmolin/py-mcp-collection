@@ -1,0 +1,101 @@
+- node_id: '0'
+  node_depth: 0
+  node_type: Node
+  content_length: 9
+  content: '# PyCharm'
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/0'
+    headings:
+    - '# PyCharm'
+  is_isolated: true
+  relationships: {}
+- node_id: '1'
+  node_depth: 0
+  node_type: Node
+  content_length: 311
+  content: |-
+    While pydantic will work well with any IDE out of the box, a
+    PyCharm plugin
+    offering improved pydantic integration is available on the JetBrains Plugins Repository for PyCharm.
+    You can install the plugin for free from the plugin marketplace
+    (PyCharm's Preferences -> Plugin -> Marketplace -> search "pydantic").
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/1'
+    headings:
+    - '# PyCharm'
+  is_isolated: true
+  relationships: {}
+- node_id: '2'
+  node_depth: 0
+  node_type: Node
+  content_length: 53
+  content: 'The plugin currently supports the following features:'
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/2'
+    headings:
+    - '# PyCharm'
+  is_isolated: true
+  relationships: {}
+- node_id: '3'
+  node_depth: 0
+  node_type: Node
+  content_length: 394
+  content: |-
+    - For pydantic.BaseModel.__init__ :
+    For pydantic.BaseModel.__init__:
+        - Inspection
+        - Autocompletion
+        - Type-checking
+    - For fields of pydantic.BaseModel :
+    For fields of pydantic.BaseModel:
+        - Refactor-renaming fields updates __init__ calls, and affects sub- and super-classes
+        - Refactor-renaming __init__ keyword arguments updates field names, and affects sub- and super-classes
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/0'
+    headings:
+    - '# PyCharm'
+  is_isolated: true
+  relationships: {}
+- node_id: '4'
+  node_depth: 0
+  node_type: Node
+  content_length: 80
+  content: |-
+    More information can be found on the
+    official plugin page
+    and Github repository.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/12'
+    headings:
+    - '# PyCharm'
+  is_isolated: true
+  relationships: {}
+- node_id: '5'
+  node_depth: 0
+  node_type: Node
+  content_length: 25
+  content: Thanks for your feedback!
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/13'
+    headings:
+    - '# PyCharm'
+  is_isolated: true
+  relationships: {}
+- node_id: '6'
+  node_depth: 0
+  node_type: Node
+  content_length: 25
+  content: Thanks for your feedback!
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/14'
+    headings:
+    - '# PyCharm'
+  is_isolated: true
+  relationships: {}

@@ -1,0 +1,1322 @@
+- node_id: '76'
+  node_depth: 0
+  node_type: Node
+  content_length: 35
+  content: '# How to contribute elastic-crawler'
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/0'
+    headings:
+    - '# How to contribute elastic-crawler'
+  is_isolated: true
+  relationships:
+    next: '77'
+- node_id: '77'
+  node_depth: 0
+  node_type: Node
+  content_length: 342
+  content: "The `elastic-crawler` repository is a free and open project, and we love\
+    \ to receive contributions from our community \u2014 you! There are many ways\
+    \ to contribute, from writing tutorials or blog posts, improving the documentation,\
+    \ submitting bug reports and feature requests or writing code which can be incorporated\
+    \ into `elastic-crawler` itself."
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/0'
+    headings:
+    - '# How to contribute elastic-crawler'
+  is_isolated: true
+  relationships:
+    next: '78'
+    previous: '76'
+- node_id: '78'
+  node_depth: 0
+  node_type: Node
+  content_length: 244
+  content: "If you want to be rewarded for your contributions, sign up for the Elastic\
+    \ Contributor Program . Each time you make a valid contribution, you\u2019ll earn\
+    \ points that increase your chances of winning prizes and being recognized as\
+    \ a top contributor."
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/1'
+    headings:
+    - '# How to contribute elastic-crawler'
+  is_isolated: true
+  relationships:
+    next: '79'
+    previous: '77'
+- node_id: '79'
+  node_depth: 0
+  node_type: Node
+  content_length: 598
+  content: |-
+    - Reporting issues
+    - Getting help
+    Types of contribution
+        - Enhancements
+    Contribution Checklist
+        - Acceptance criteria
+        - Correct code organization
+        - Log verbosity
+        - Linting
+        - Testing
+        - Backport labels
+    Pull request etiquette
+        - Why do we use a pull request workflow?
+        What constitutes a good PR?
+            - Ensure there is a solid title and summary
+            - Be explicit about the PR status
+            - Keep your branch up-to-date
+            - Keep it small
+    Reviewing Pull Requests
+        - Keep the flow going
+        - We are all reviewers
+        - Don't add to the PR as a reviewer
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/2'
+    headings:
+    - '# How to contribute elastic-crawler'
+  is_isolated: true
+  relationships:
+    next: '80'
+    previous: '78'
+- node_id: '80'
+  node_depth: 0
+  node_type: Node
+  content_length: 19
+  content: '## Reporting issues'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/33'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Reporting issues'
+  is_isolated: true
+  relationships:
+    next: '81'
+    previous: '79'
+- node_id: '81'
+  node_depth: 0
+  node_type: Node
+  content_length: 63
+  content: If something is not working as expected, please open an issue .
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/8'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Reporting issues'
+  is_isolated: true
+  relationships:
+    next: '82'
+    previous: '80'
+- node_id: '82'
+  node_depth: 0
+  node_type: Node
+  content_length: 15
+  content: '## Getting help'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/37'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Getting help'
+  is_isolated: true
+  relationships:
+    next: '83'
+    previous: '81'
+- node_id: '83'
+  node_depth: 0
+  node_type: Node
+  content_length: 326
+  content: The Ingestion team at Elastic maintains this repository and is happy to
+    help. Try posting your question to the Elastic discuss forums . Be sure to mention
+    that you're using the Elastic Crawler and any errors/issues you are encountering.
+    You can also find us in the `#search-enterprise` channel of the Elastic Community
+    Slack .
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/9'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Getting help'
+  is_isolated: true
+  relationships:
+    next: '84'
+    previous: '82'
+- node_id: '84'
+  node_depth: 0
+  node_type: Node
+  content_length: 24
+  content: '## Types of contribution'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/48'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Types of contribution'
+  is_isolated: true
+  relationships:
+    next: '85'
+    previous: '83'
+- node_id: '85'
+  node_depth: 0
+  node_type: Node
+  content_length: 16
+  content: '### Enhancements'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/49'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Types of contribution'
+    - '### Enhancements'
+  is_isolated: true
+  relationships:
+    next: '86'
+    previous: '84'
+- node_id: '86'
+  node_depth: 0
+  node_type: Node
+  content_length: 62
+  content: 'Enhancements that can be done after your initial contribution:'
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/50'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Types of contribution'
+    - '### Enhancements'
+  is_isolated: true
+  relationships:
+    next: '87'
+    previous: '85'
+- node_id: '87'
+  node_depth: 0
+  node_type: Node
+  content_length: 216
+  content: |-
+    1. Ensure the backend meets performance requirements we might request (memory usage, how fast it syncs 10k docs, etc.)
+    2. Update the README for the Elastic Crawler
+    3. Small functional improvements for Elastic Crawler
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/10'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Types of contribution'
+    - '### Enhancements'
+  is_isolated: true
+  relationships:
+    next: '88'
+    previous: '86'
+- node_id: '88'
+  node_depth: 0
+  node_type: Node
+  content_length: 111
+  content: "\u2139\uFE0F Use-case specific customizations (as opposed to generic enhancements)\
+    \ will not be accepted as contributions."
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/54'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Types of contribution'
+    - '### Enhancements'
+  is_isolated: true
+  relationships:
+    next: '89'
+    previous: '87'
+- node_id: '89'
+  node_depth: 0
+  node_type: Node
+  content_length: 25
+  content: '## Contribution Checklist'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/55'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+  is_isolated: true
+  relationships:
+    next: '90'
+    previous: '88'
+- node_id: '90'
+  node_depth: 0
+  node_type: Node
+  content_length: 23
+  content: '### Acceptance criteria'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/56'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+    - '### Acceptance criteria'
+  is_isolated: true
+  relationships:
+    next: '91'
+    previous: '89'
+- node_id: '91'
+  node_depth: 0
+  node_type: Node
+  content_length: 226
+  content: All patch changes should have a corresponding GitHub issue filed within
+    the repository. If you need changes that are complex, or you are not sure about
+    how to do something, reach out to the Ingestion team and/or file an issue.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/11'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+    - '### Acceptance criteria'
+  is_isolated: true
+  relationships:
+    next: '92'
+    previous: '90'
+- node_id: '92'
+  node_depth: 0
+  node_type: Node
+  content_length: 34
+  content: '### Correct code/file organization'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/61'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+    - '### Correct code/file organization'
+  is_isolated: true
+  relationships:
+    next: '93'
+    previous: '91'
+- node_id: '93'
+  node_depth: 0
+  node_type: Node
+  content_length: 452
+  content: Any contribution should follow established patterns of code organization
+    within the repository. For example, a new concrete extension of `CrawlResult`
+    should live in lib/crawler/data/crawl_result , and its tests should live in lib/crawler/data/crawl_result
+    . If that new data source is named `FooResult` the file and spec file should be
+    `foo_result.rb` and `foo_result_spec.rb` , respectively. It should also inherit
+    any `Base` class within the module.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/12'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+    - '### Correct code/file organization'
+  is_isolated: true
+  relationships:
+    next: '94'
+    previous: '92'
+- node_id: '94'
+  node_depth: 0
+  node_type: Node
+  content_length: 56
+  content: If you are unsure of where a file/class should go - ask.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/80'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+    - '### Correct code/file organization'
+  is_isolated: true
+  relationships:
+    next: '95'
+    previous: '93'
+- node_id: '95'
+  node_depth: 0
+  node_type: Node
+  content_length: 17
+  content: '### Log verbosity'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/81'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+    - '### Log verbosity'
+  is_isolated: true
+  relationships:
+    next: '96'
+    previous: '94'
+- node_id: '96'
+  node_depth: 0
+  node_type: Node
+  content_length: 164
+  content: Logging is important to get insights on what's happening in the service.
+    However, we should be careful not to pile up logs that are not adding value in
+    our systems.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/13'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+    - '### Log verbosity'
+  is_isolated: true
+  relationships:
+    next: '97'
+    previous: '95'
+- node_id: '97'
+  node_depth: 0
+  node_type: Node
+  content_length: 25
+  content: 'A few tips per log level:'
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/84'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+    - '### Log verbosity'
+  is_isolated: true
+  relationships:
+    next: '98'
+    previous: '96'
+- node_id: '98'
+  node_depth: 0
+  node_type: Node
+  content_length: 541
+  content: |-
+    - CRITICAL (50) -- anything that stops the service, if you want to add more details on why.
+    - ERROR (40) -- all Python exceptions will use that level, but you can call it specifically to add details
+    - WARNING (30) -- any unexpected behavior that the system knows how to handle, but that should be notified (network retries, deprecation)
+    - INFO (20) -- normal operations feedback. These should not be verbose so we don't pile logs overtime for nothing.
+    - DEBUG (10) -- like info but with as many details as possible
+    - NOTSET (0) -- never used
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/14'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+    - '### Log verbosity'
+  is_isolated: true
+  relationships:
+    next: '99'
+    previous: '97'
+- node_id: '99'
+  node_depth: 0
+  node_type: Node
+  content_length: 11
+  content: '### Linting'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/91'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+    - '### Linting'
+  is_isolated: true
+  relationships:
+    next: '100'
+    previous: '98'
+- node_id: '100'
+  node_depth: 0
+  node_type: Node
+  content_length: 269
+  content: Code style is important in shared codebases, as it helps ensure that everyone
+    can read and understand code that they didn't write. In order to enforce code
+    style, our CI jobs apply a linter (rubocop), and will fail to build (and block
+    merging of) non-compliant changes.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/15'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+    - '### Linting'
+  is_isolated: true
+  relationships:
+    next: '101'
+    previous: '99'
+- node_id: '101'
+  node_depth: 0
+  node_type: Node
+  content_length: 123
+  content: You can run the linter locally with `./script/bundle exec rubocop` to ensure
+    that your changes do not introduce any issues.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/16'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+    - '### Linting'
+  is_isolated: true
+  relationships:
+    next: '102'
+    previous: '100'
+- node_id: '102'
+  node_depth: 0
+  node_type: Node
+  content_length: 11
+  content: '### Testing'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/97'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+    - '### Testing'
+  is_isolated: true
+  relationships:
+    next: '103'
+    previous: '101'
+- node_id: '103'
+  node_depth: 0
+  node_type: Node
+  content_length: 294
+  content: Tests not only verify and demonstrate that a new feature does what it is
+    supposed to, but they also protect the codebase from unintentional future regressions.
+    For this reason, it is important to both add tests when contributing new code,
+    and to ensure that all tests (old and new) are passing.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/17'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+    - '### Testing'
+  is_isolated: true
+  relationships:
+    next: '104'
+    previous: '102'
+- node_id: '104'
+  node_depth: 0
+  node_type: Node
+  content_length: 66
+  content: Our goal is to maintain 92% test coverage for the Elastic Crawler.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/100'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+    - '### Testing'
+  is_isolated: true
+  relationships:
+    next: '105'
+    previous: '103'
+- node_id: '105'
+  node_depth: 0
+  node_type: Node
+  content_length: 72
+  content: You can run the tests locally with `./script/bundle rspec <file-path>`
+    .
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/18'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+    - '### Testing'
+  is_isolated: true
+  relationships:
+    next: '106'
+    previous: '104'
+- node_id: '106'
+  node_depth: 0
+  node_type: Node
+  content_length: 74
+  content: 'Be sure to read about our unit tests and integration tests . # TODO: check'
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/19'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+    - '### Testing'
+  is_isolated: true
+  relationships:
+    next: '107'
+    previous: '105'
+- node_id: '107'
+  node_depth: 0
+  node_type: Node
+  content_length: 19
+  content: '### Backport labels'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/109'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+    - '### Backport labels'
+  is_isolated: true
+  relationships:
+    next: '108'
+    previous: '106'
+- node_id: '108'
+  node_depth: 0
+  node_type: Node
+  content_length: 106
+  content: Make sure to include the appropriate backport labels, if your PR needs
+    to be backported to a past version.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/110'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Contribution Checklist'
+    - '### Backport labels'
+  is_isolated: true
+  relationships:
+    next: '109'
+    previous: '107'
+- node_id: '109'
+  node_depth: 0
+  node_type: Node
+  content_length: 25
+  content: '## Pull Request Etiquette'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/111'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+  is_isolated: true
+  relationships:
+    next: '110'
+    previous: '108'
+- node_id: '110'
+  node_depth: 0
+  node_type: Node
+  content_length: 86
+  content: '*this is copied and adapted from https://gist.github.com/mikepea/863f63d6e37281e329f8*'
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/112'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+  is_isolated: true
+  relationships:
+    next: '111'
+    previous: '109'
+- node_id: '111'
+  node_depth: 0
+  node_type: Node
+  content_length: 42
+  content: '### Why do we use a Pull Request workflow?'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/113'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### Why do we use a Pull Request workflow?'
+  is_isolated: true
+  relationships:
+    next: '112'
+    previous: '110'
+- node_id: '112'
+  node_depth: 0
+  node_type: Node
+  content_length: 242
+  content: PRs are a great way of sharing information, and can help us be aware of
+    the changes that are occurring in our codebase. They are also an excellent way
+    of getting peer review on the work that we do, without the cost of working in
+    direct pairs.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/20'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### Why do we use a Pull Request workflow?'
+  is_isolated: true
+  relationships:
+    next: '113'
+    previous: '111'
+- node_id: '113'
+  node_depth: 0
+  node_type: Node
+  content_length: 79
+  content: '**Ultimately though, the primary reason we use PRs is to encourage quality
+    in**'
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/118'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### Why do we use a Pull Request workflow?'
+  is_isolated: true
+  relationships:
+    next: '114'
+    previous: '112'
+- node_id: '114'
+  node_depth: 0
+  node_type: Node
+  content_length: 54
+  content: '**the commits that are made to our code repositories**'
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/119'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### Why do we use a Pull Request workflow?'
+  is_isolated: true
+  relationships:
+    next: '115'
+    previous: '113'
+- node_id: '115'
+  node_depth: 0
+  node_type: Node
+  content_length: 221
+  content: Done well, the commits (and their attached messages) contained within tell
+    a story to people examining the code at a later date. If we are not careful to
+    ensure the quality of these commits, we silently lose this ability.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/21'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### Why do we use a Pull Request workflow?'
+  is_isolated: true
+  relationships:
+    next: '116'
+    previous: '114'
+- node_id: '116'
+  node_depth: 0
+  node_type: Node
+  content_length: 73
+  content: '**Poor quality code can be refactored. A terrible commit lasts forever.**'
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/123'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### Why do we use a Pull Request workflow?'
+  is_isolated: true
+  relationships:
+    next: '117'
+    previous: '115'
+- node_id: '117'
+  node_depth: 0
+  node_type: Node
+  content_length: 31
+  content: '### What constitutes a good PR?'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/124'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### What constitutes a good PR?'
+  is_isolated: true
+  relationships:
+    next: '118'
+    previous: '116'
+- node_id: '118'
+  node_depth: 0
+  node_type: Node
+  content_length: 58
+  content: 'A good quality PR will have the following characteristics:'
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/125'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### What constitutes a good PR?'
+  is_isolated: true
+  relationships:
+    next: '119'
+    previous: '117'
+- node_id: '119'
+  node_depth: 0
+  node_type: Node
+  content_length: 519
+  content: |-
+    - It will be a complete piece of work that adds value in some way.
+    - It will have a title that reflects the work within, and a summary that helps to understand the context of the change.
+    - There will be well written commit messages, with well crafted commits that tell the story of the development of this work.
+    - Ideally it will be small and easy to understand. Single commit PRs are usually easy to submit, review, and merge.
+    - The code contained within will meet the best practises set by the team wherever possible.
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/22'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### What constitutes a good PR?'
+  is_isolated: true
+  relationships:
+    next: '120'
+    previous: '118'
+- node_id: '120'
+  node_depth: 0
+  node_type: Node
+  content_length: 108
+  content: A PR does not end at submission though. A code change is not made until
+    it is merged and used in production.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/131'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### What constitutes a good PR?'
+  is_isolated: true
+  relationships:
+    next: '121'
+    previous: '119'
+- node_id: '121'
+  node_depth: 0
+  node_type: Node
+  content_length: 81
+  content: A good PR should be able to flow through a peer review system easily and
+    quickly.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/132'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### What constitutes a good PR?'
+  is_isolated: true
+  relationships:
+    next: '122'
+    previous: '120'
+- node_id: '122'
+  node_depth: 0
+  node_type: Node
+  content_length: 46
+  content: '#### Ensure there is a solid title and summary'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/133'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### What constitutes a good PR?'
+    - '#### Ensure there is a solid title and summary'
+  is_isolated: true
+  relationships:
+    next: '123'
+    previous: '121'
+- node_id: '123'
+  node_depth: 0
+  node_type: Node
+  content_length: 232
+  content: PRs are a Github workflow tool, so it's important to understand that the
+    PR title, summary and eventual discussion are not as trackable as the the commit
+    history. If we ever move away from Github, we'll likely lose this information.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/23'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### What constitutes a good PR?'
+    - '#### Ensure there is a solid title and summary'
+  is_isolated: true
+  relationships:
+    next: '124'
+    previous: '122'
+- node_id: '124'
+  node_depth: 0
+  node_type: Node
+  content_length: 103
+  content: That said however, they are a very useful aid in ensuring that PRs are
+    handled quickly and effectively.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/24'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### What constitutes a good PR?'
+    - '#### Ensure there is a solid title and summary'
+  is_isolated: true
+  relationships:
+    next: '125'
+    previous: '123'
+- node_id: '125'
+  node_depth: 0
+  node_type: Node
+  content_length: 325
+  content: Ensure that your PR title is scannable. People will read through the list
+    of PRs attached to a repo, and must be able to distinguish between them based
+    on title. Include a story/issue reference if possible, so the reviewer can get
+    any extra context. Include a reference to the subsystem affected, if this is a
+    large codebase.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/25'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### What constitutes a good PR?'
+    - '#### Ensure there is a solid title and summary'
+  is_isolated: true
+  relationships:
+    next: '126'
+    previous: '124'
+- node_id: '126'
+  node_depth: 0
+  node_type: Node
+  content_length: 36
+  content: '#### Be explicit about the PR status'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/144'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### What constitutes a good PR?'
+    - '#### Be explicit about the PR status'
+  is_isolated: true
+  relationships:
+    next: '127'
+    previous: '125'
+- node_id: '127'
+  node_depth: 0
+  node_type: Node
+  content_length: 163
+  content: If your PR is not fully ready yet for reviews, convert it to a `draft`
+    so people don't waste time reviewing unfinished code, and don't assign anyone
+    as a reviewer.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/26'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### What constitutes a good PR?'
+    - '#### Be explicit about the PR status'
+  is_isolated: true
+  relationships:
+    next: '128'
+    previous: '126'
+- node_id: '128'
+  node_depth: 0
+  node_type: Node
+  content_length: 89
+  content: Use the proper labels to help people understand your intention with the
+    PR and its scope.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/27'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### What constitutes a good PR?'
+    - '#### Be explicit about the PR status'
+  is_isolated: true
+  relationships:
+    next: '129'
+    previous: '127'
+- node_id: '129'
+  node_depth: 0
+  node_type: Node
+  content_length: 32
+  content: '#### Keep your branch up-to-date'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/151'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### What constitutes a good PR?'
+    - '#### Keep your branch up-to-date'
+  is_isolated: true
+  relationships:
+    next: '130'
+    previous: '128'
+- node_id: '130'
+  node_depth: 0
+  node_type: Node
+  content_length: 210
+  content: Unless there is a good reason not to rebase - typically because more than
+    one person has been working on the branch - it is often a good idea to rebase
+    your branch with the latest `main` to make reviews easier.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/28'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### What constitutes a good PR?'
+    - '#### Keep your branch up-to-date'
+  is_isolated: true
+  relationships:
+    next: '131'
+    previous: '129'
+- node_id: '131'
+  node_depth: 0
+  node_type: Node
+  content_length: 18
+  content: '#### Keep it small'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/157'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### What constitutes a good PR?'
+    - '#### Keep it small'
+  is_isolated: true
+  relationships:
+    next: '132'
+    previous: '130'
+- node_id: '132'
+  node_depth: 0
+  node_type: Node
+  content_length: 228
+  content: Try to only fix one issue or add one feature within the pull request. The
+    larger it is, the more complex it is to review and the more likely it will be
+    delayed. Remember that reviewing PRs is taking time from someone else's day.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/29'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### What constitutes a good PR?'
+    - '#### Keep it small'
+  is_isolated: true
+  relationships:
+    next: '133'
+    previous: '131'
+- node_id: '133'
+  node_depth: 0
+  node_type: Node
+  content_length: 230
+  content: If you must submit a large PR, try to at least make someone else aware
+    of this fact, and arrange for their time to review and get the PR merged. It's
+    not fair to the team to dump large pieces of work on their laps without warning.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/30'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### What constitutes a good PR?'
+    - '#### Keep it small'
+  is_isolated: true
+  relationships:
+    next: '134'
+    previous: '132'
+- node_id: '134'
+  node_depth: 0
+  node_type: Node
+  content_length: 70
+  content: If you can rebase up a large PR into multiple smaller PRs, then do so.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/164'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Pull Request Etiquette'
+    - '### What constitutes a good PR?'
+    - '#### Keep it small'
+  is_isolated: true
+  relationships:
+    next: '135'
+    previous: '133'
+- node_id: '135'
+  node_depth: 0
+  node_type: Node
+  content_length: 26
+  content: '## Reviewing Pull Requests'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/165'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Reviewing Pull Requests'
+  is_isolated: true
+  relationships:
+    next: '136'
+    previous: '134'
+- node_id: '136'
+  node_depth: 0
+  node_type: Node
+  content_length: 42
+  content: 'It''s a reviewers responsibility to ensure:'
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/166'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Reviewing Pull Requests'
+  is_isolated: true
+  relationships:
+    next: '137'
+    previous: '135'
+- node_id: '137'
+  node_depth: 0
+  node_type: Node
+  content_length: 201
+  content: |-
+    - Commit history is excellent
+    - Good changes are propagated quickly
+    - Code review is performed
+    - They understand what is being changed, from the perspective of someone examining the code in the future.
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/31'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Reviewing Pull Requests'
+  is_isolated: true
+  relationships:
+    next: '138'
+    previous: '136'
+- node_id: '138'
+  node_depth: 0
+  node_type: Node
+  content_length: 23
+  content: '### Keep the flow going'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/171'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Reviewing Pull Requests'
+    - '### Keep the flow going'
+  is_isolated: true
+  relationships:
+    next: '139'
+    previous: '137'
+- node_id: '139'
+  node_depth: 0
+  node_type: Node
+  content_length: 200
+  content: Pull Requests are the fundamental unit of how we progress change. If PRs
+    are getting clogged up in the system, either unreviewed or unmanaged, they are
+    preventing a piece of work from being completed.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/32'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Reviewing Pull Requests'
+    - '### Keep the flow going'
+  is_isolated: true
+  relationships:
+    next: '140'
+    previous: '138'
+- node_id: '140'
+  node_depth: 0
+  node_type: Node
+  content_length: 217
+  content: As PRs clog up in the system, merges become more difficult, as other features
+    and fixes are applied to the same codebase. This in turn slows them down further,
+    and often completely blocks progress on a given codebase.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/33'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Reviewing Pull Requests'
+    - '### Keep the flow going'
+  is_isolated: true
+  relationships:
+    next: '141'
+    previous: '139'
+- node_id: '141'
+  node_depth: 0
+  node_type: Node
+  content_length: 297
+  content: There is a balance between flow and ensuring the quality of our PRs. As
+    a reviewer you should make a call as to whether a code quality issue is sufficient
+    enough to block the PR whilst the code is improved. Possibly it is more prudent
+    to simply flag that the code needs rework, and raise an issue.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/34'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Reviewing Pull Requests'
+    - '### Keep the flow going'
+  is_isolated: true
+  relationships:
+    next: '142'
+    previous: '140'
+- node_id: '142'
+  node_depth: 0
+  node_type: Node
+  content_length: 70
+  content: Any quality issue that will obviously result in a bug should be fixed.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/182'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Reviewing Pull Requests'
+    - '### Keep the flow going'
+  is_isolated: true
+  relationships:
+    next: '143'
+    previous: '141'
+- node_id: '143'
+  node_depth: 0
+  node_type: Node
+  content_length: 24
+  content: '### We are all reviewers'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/183'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Reviewing Pull Requests'
+    - '### We are all reviewers'
+  is_isolated: true
+  relationships:
+    next: '144'
+    previous: '142'
+- node_id: '144'
+  node_depth: 0
+  node_type: Node
+  content_length: 247
+  content: To make sure PRs flow through the system speedily, we must scale the PR
+    review process. It is not sufficient (or fair!) to expect one or two people to
+    review all PRs to our code. For starters, it creates a blocker every time those
+    people are busy.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/35'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Reviewing Pull Requests'
+    - '### We are all reviewers'
+  is_isolated: true
+  relationships:
+    next: '145'
+    previous: '143'
+- node_id: '145'
+  node_depth: 0
+  node_type: Node
+  content_length: 101
+  content: Hopefully with the above guidelines, we can all start sharing the responsibility
+    of being a reviewer.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/188'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Reviewing Pull Requests'
+    - '### We are all reviewers'
+  is_isolated: true
+  relationships:
+    next: '146'
+    previous: '144'
+- node_id: '146'
+  node_depth: 0
+  node_type: Node
+  content_length: 268
+  content: 'NB: With this in mind - if you are the first to comment on a PR, you are
+    that PRs reviewer. If you feel that you can no longer be responsible for the subsequent
+    merge or closure of the PR, then flag this up in the PR conversation, so someone
+    else can take up the role.'
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/36'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Reviewing Pull Requests'
+    - '### We are all reviewers'
+  is_isolated: true
+  relationships:
+    next: '147'
+    previous: '145'
+- node_id: '147'
+  node_depth: 0
+  node_type: Node
+  content_length: 105
+  content: There's no reason why multiple people cannot comment on a PR and review
+    it, and this is to be encouraged.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/37'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Reviewing Pull Requests'
+    - '### We are all reviewers'
+  is_isolated: true
+  relationships:
+    next: '148'
+    previous: '146'
+- node_id: '148'
+  node_depth: 0
+  node_type: Node
+  content_length: 37
+  content: '### Don''t add to the PR as a reviewer'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/195'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Reviewing Pull Requests'
+    - '### Don''t add to the PR as a reviewer'
+  is_isolated: true
+  relationships:
+    next: '149'
+    previous: '147'
+- node_id: '149'
+  node_depth: 0
+  node_type: Node
+  content_length: 152
+  content: It's sometimes tempting to fix a bug in a PR yourself, or to rework a section
+    to meet coding standards, or just to make a feature better fit your needs.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/38'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Reviewing Pull Requests'
+    - '### Don''t add to the PR as a reviewer'
+  is_isolated: true
+  relationships:
+    next: '150'
+    previous: '148'
+- node_id: '150'
+  node_depth: 0
+  node_type: Node
+  content_length: 113
+  content: If you do this, you are no longer the reviewer of the PR. You are a collaborator,
+    and so should not merge the PR.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/39'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Reviewing Pull Requests'
+    - '### Don''t add to the PR as a reviewer'
+  is_isolated: true
+  relationships:
+    next: '151'
+    previous: '149'
+- node_id: '151'
+  node_depth: 0
+  node_type: Node
+  content_length: 295
+  content: It is of course possible to find a new reviewer, but generally change will
+    be speedier if you require the original submitter to fix the code themselves.
+    Alternatively, if the original PR is 'good enough', raise the changes you'd like
+    to see as separate stories/issues, and rework in your own PR.
+  metadata:
+    docling_label: inline
+    docling_ref: '#/groups/40'
+    headings:
+    - '# How to contribute elastic-crawler'
+    - '## Reviewing Pull Requests'
+    - '### Don''t add to the PR as a reviewer'
+  is_isolated: true
+  relationships:
+    previous: '150'

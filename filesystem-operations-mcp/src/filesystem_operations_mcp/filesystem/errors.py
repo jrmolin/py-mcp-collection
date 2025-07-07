@@ -8,6 +8,7 @@ class FilesystemServerError(Exception):
 
     def __init__(self, msg: str):
         self.msg = msg
+        super().__init__(msg)
 
     def __str__(self) -> str:
         return self.msg
@@ -37,36 +38,36 @@ class FilesystemServerTooBigToSummarizeError(FilesystemServerError):
 class DirectoryNotFoundError(FilesystemServerError):
     """An exception for when a directory does not exist."""
 
-    def __init__(self, directory_path: str):
-        super().__init__(f"Directory {directory_path} does not exist.")
+    def __init__(self, path: Path):
+        super().__init__(f"Directory {path} does not exist.")
 
 
 class DirectoryNotEmptyError(FilesystemServerError):
     """An exception for when a directory is not empty."""
 
-    def __init__(self, directory_path: str):
-        super().__init__(f"Directory {directory_path} is not empty.")
+    def __init__(self, path: Path):
+        super().__init__(f"Directory {path} is not empty.")
 
 
 class DirectoryAlreadyExistsError(FilesystemServerError):
     """An exception for when a directory already exists."""
 
-    def __init__(self, directory_path: str):
-        super().__init__(f"Directory {directory_path} already exists.")
+    def __init__(self, path: Path):
+        super().__init__(f"Directory {path} already exists.")
 
 
 class FileAlreadyExistsError(FilesystemServerError):
     """An exception for when a file already exists."""
 
-    def __init__(self, file_path: str):
-        super().__init__(f"File {file_path} already exists.")
+    def __init__(self, path: Path):
+        super().__init__(f"File {path} already exists.")
 
 
 class FileIsNotTextError(FilesystemServerError):
     """An exception for when a file is not text."""
 
-    def __init__(self, file_path: str):
-        super().__init__(f"File {file_path} is not text.")
+    def __init__(self, path: Path):
+        super().__init__(f"File {path} is not text.")
 
 
 class FilePatchDoesNotMatchError(FilesystemServerError):

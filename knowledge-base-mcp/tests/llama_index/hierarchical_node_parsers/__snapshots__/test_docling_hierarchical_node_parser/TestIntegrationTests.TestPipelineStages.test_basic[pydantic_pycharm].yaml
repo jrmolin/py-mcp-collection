@@ -1,0 +1,176 @@
+- node_id: '0'
+  node_depth: 0
+  node_type: Node
+  content_length: 920
+  content: |-
+    # PyCharm
+
+    While pydantic will work well with any IDE out of the box, a
+    PyCharm plugin
+    offering improved pydantic integration is available on the JetBrains Plugins Repository for PyCharm.
+    You can install the plugin for free from the plugin marketplace
+    (PyCharm's Preferences -> Plugin -> Marketplace -> search "pydantic").
+
+    The plugin currently supports the following features:
+
+    - For pydantic.BaseModel.__init__ :
+    For pydantic.BaseModel.__init__:
+        - Inspection
+        - Autocompletion
+        - Type-checking
+    - For fields of pydantic.BaseModel :
+    For fields of pydantic.BaseModel:
+        - Refactor-renaming fields updates __init__ calls, and affects sub- and super-classes
+        - Refactor-renaming __init__ keyword arguments updates field names, and affects sub- and super-classes
+
+    More information can be found on the
+    official plugin page
+    and Github repository.
+
+    Thanks for your feedback!
+
+    Thanks for your feedback!
+
+    Made with
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/133'
+    headings:
+    - '# PyCharm'
+  relationships:
+    children:
+    - '1'
+    - '2'
+    - '3'
+    - '4'
+    - '5'
+    - '6'
+    - '7'
+    - '8'
+- node_id: '1'
+  node_depth: 1
+  node_type: Node
+  content_length: 9
+  content: '# PyCharm'
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/133'
+    headings:
+    - '# PyCharm'
+  relationships:
+    next: '2'
+    parent: '0'
+- node_id: '2'
+  node_depth: 1
+  node_type: Node
+  content_length: 311
+  content: |-
+    While pydantic will work well with any IDE out of the box, a
+    PyCharm plugin
+    offering improved pydantic integration is available on the JetBrains Plugins Repository for PyCharm.
+    You can install the plugin for free from the plugin marketplace
+    (PyCharm's Preferences -> Plugin -> Marketplace -> search "pydantic").
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/134'
+    headings:
+    - '# PyCharm'
+  relationships:
+    next: '3'
+    parent: '0'
+    previous: '1'
+- node_id: '3'
+  node_depth: 1
+  node_type: Node
+  content_length: 53
+  content: 'The plugin currently supports the following features:'
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/135'
+    headings:
+    - '# PyCharm'
+  relationships:
+    next: '4'
+    parent: '0'
+    previous: '2'
+- node_id: '4'
+  node_depth: 1
+  node_type: Node
+  content_length: 394
+  content: |-
+    - For pydantic.BaseModel.__init__ :
+    For pydantic.BaseModel.__init__:
+        - Inspection
+        - Autocompletion
+        - Type-checking
+    - For fields of pydantic.BaseModel :
+    For fields of pydantic.BaseModel:
+        - Refactor-renaming fields updates __init__ calls, and affects sub- and super-classes
+        - Refactor-renaming __init__ keyword arguments updates field names, and affects sub- and super-classes
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/18'
+    headings:
+    - '# PyCharm'
+  relationships:
+    next: '5'
+    parent: '0'
+    previous: '3'
+- node_id: '5'
+  node_depth: 1
+  node_type: Node
+  content_length: 80
+  content: |-
+    More information can be found on the
+    official plugin page
+    and Github repository.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/145'
+    headings:
+    - '# PyCharm'
+  relationships:
+    next: '6'
+    parent: '0'
+    previous: '4'
+- node_id: '6'
+  node_depth: 1
+  node_type: Node
+  content_length: 25
+  content: Thanks for your feedback!
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/146'
+    headings:
+    - '# PyCharm'
+  relationships:
+    next: '7'
+    parent: '0'
+    previous: '5'
+- node_id: '7'
+  node_depth: 1
+  node_type: Node
+  content_length: 25
+  content: Thanks for your feedback!
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/147'
+    headings:
+    - '# PyCharm'
+  relationships:
+    next: '8'
+    parent: '0'
+    previous: '6'
+- node_id: '8'
+  node_depth: 1
+  node_type: Node
+  content_length: 9
+  content: Made with
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/148'
+    headings:
+    - '# PyCharm'
+  relationships:
+    parent: '0'
+    previous: '7'

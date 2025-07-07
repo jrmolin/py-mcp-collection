@@ -1,15 +1,14 @@
 from collections.abc import Sequence
 
 import pytest
-from llama_index.core.schema import BaseNode, Document, MediaResource, NodeRelationship, RelatedNodeInfo, TextNode
+from llama_index.core.schema import BaseNode, Document, NodeRelationship, RelatedNodeInfo, TextNode
 from llama_index.embeddings.fastembed import FastEmbedEmbedding
 
 from knowledge_base_mcp.llama_index.hierarchical_node_parsers.hierarchical_node_parser import (
-    GroupNode,
-    RootNode,
     reset_prev_next_relationships,
 )
 from knowledge_base_mcp.llama_index.hierarchical_node_parsers.leaf_semantic_merging import LeafSemanticMergerNodeParser
+from tests.llama_index.hierarchical_node_parsers.test_docling_hierarchical_node_parser import dedent
 
 embedding_model: FastEmbedEmbedding | None = None
 try:
@@ -43,7 +42,7 @@ def source_document_as_ref(source_document: Document) -> RelatedNodeInfo:
 
 
 @pytest.fixture
-def warsaw_nodes(embed_model: FastEmbedEmbedding, source_document_as_ref: RelatedNodeInfo) -> Sequence[BaseNode]:
+def warsaw_nodes(embed_model: FastEmbedEmbedding, source_document_as_ref: RelatedNodeInfo) -> tuple[TextNode, list[TextNode]]:
     nodes = [
         TextNode(
             text="Warsaw: Warsaw, the capital city of Poland, is a bustling metropolis located on the banks of the Vistula River.",
@@ -61,13 +60,35 @@ def warsaw_nodes(embed_model: FastEmbedEmbedding, source_document_as_ref: Relate
             relationships={NodeRelationship.SOURCE: source_document_as_ref},
         ),
     ]
+
     reset_prev_next_relationships(sibling_nodes=nodes)
+
+    parent_node = TextNode(
+        text=dedent(
+            """
+            Warsaw: Warsaw, the capital city of Poland, is a bustling metropolis located on the banks of the Vistula River.
+
+            It is known for its rich history, vibrant culture, and resilient spirit. Warsaw's skyline is characterized by a mix of historic architecture and modern skyscrapers.
+
+            The Old Town, with its cobblestone streets and colorful buildings, is a UNESCO World Heritage Site.
+            """
+        ).strip(),
+        relationships={
+            NodeRelationship.SOURCE: source_document_as_ref,
+            NodeRelationship.CHILD: [node.as_related_node_info() for node in nodes],
+        },
+    )
+
+    for node in nodes:
+        node.relationships[NodeRelationship.PARENT] = parent_node.as_related_node_info()
+
     _ = embed_model(nodes=nodes)
-    return nodes
+
+    return parent_node, nodes
 
 
 @pytest.fixture
-def football_nodes(embed_model: FastEmbedEmbedding, source_document_as_ref: RelatedNodeInfo) -> Sequence[BaseNode]:
+def football_nodes(embed_model: FastEmbedEmbedding, source_document_as_ref: RelatedNodeInfo) -> tuple[TextNode, list[TextNode]]:
     nodes = [
         TextNode(
             text="Football: Football, also known as soccer, is a popular sport played by millions of people worldwide.",
@@ -96,12 +117,37 @@ def football_nodes(embed_model: FastEmbedEmbedding, source_document_as_ref: Rela
         ),
     ]
     reset_prev_next_relationships(sibling_nodes=nodes)
+
+    parent_node = TextNode(
+        text=dedent(
+            text="""
+            Football: Football, also known as soccer, is a popular sport played by millions of people worldwide.
+
+            It is a team sport that involves two teams of eleven players each. The objective of the game is to score goals by kicking the ball into the opposing team's goal.
+
+            Football matches are typically played on a rectangular field called a pitch, with goals at each end.
+
+            The game is governed by a set of rules known as the Laws of the Game. Football is known for its passionate fanbase and intense rivalries between clubs and countries.
+
+            The FIFA World Cup is the most prestigious international football tournament.
+            """
+        ).strip(),
+        relationships={
+            NodeRelationship.SOURCE: source_document_as_ref,
+            NodeRelationship.CHILD: [node.as_related_node_info() for node in nodes],
+        },
+    )
+
     _ = embed_model(nodes=nodes)
-    return nodes
+
+    for node in nodes:
+        node.relationships[NodeRelationship.PARENT] = parent_node.as_related_node_info()
+
+    return parent_node, nodes
 
 
 @pytest.fixture
-def mathematics_nodes(embed_model: FastEmbedEmbedding, source_document_as_ref: RelatedNodeInfo) -> list[TextNode]:
+def mathematics_nodes(embed_model: FastEmbedEmbedding, source_document_as_ref: RelatedNodeInfo) -> tuple[TextNode, list[TextNode]]:
     nodes = [
         TextNode(
             text="Mathematics: Mathematics is a fundamental discipline that deals with the study of numbers, quantities, and shapes.",
@@ -115,21 +161,92 @@ def mathematics_nodes(embed_model: FastEmbedEmbedding, source_document_as_ref: R
         ),
     ]
     reset_prev_next_relationships(sibling_nodes=nodes)
+
+    parent_node = TextNode(
+        text=dedent(
+            """
+            Mathematics: Mathematics is a fundamental discipline that deals with the study of numbers, quantities, and shapes.
+
+            Its branches include algebra, calculus, geometry, and statistics.
+            """
+        ).strip(),
+        relationships={
+            NodeRelationship.SOURCE: source_document_as_ref,
+            NodeRelationship.CHILD: [node.as_related_node_info() for node in nodes],
+        },
+    )
+
+    for node in nodes:
+        node.relationships[NodeRelationship.PARENT] = parent_node.as_related_node_info()
+
     _ = embed_model(nodes=nodes)
-    return nodes
+
+    return parent_node, nodes
 
 
 @pytest.fixture
-def common_nodes(warsaw_nodes: list[TextNode], football_nodes: list[TextNode], mathematics_nodes: list[TextNode]) -> list[TextNode]:
-    return [
-        *warsaw_nodes,
-        *football_nodes,
-        *mathematics_nodes,
+def common_nodes(
+    warsaw_nodes: tuple[TextNode, list[TextNode]],
+    football_nodes: tuple[TextNode, list[TextNode]],
+    mathematics_nodes: tuple[TextNode, list[TextNode]],
+    source_document_as_ref: RelatedNodeInfo,
+) -> tuple[TextNode, list[TextNode]]:
+    _, warsaw_child_nodes = warsaw_nodes
+    _, football_child_nodes = football_nodes
+    _, mathematics_child_nodes = mathematics_nodes
+
+    child_nodes = [
+        *warsaw_child_nodes,
+        *football_child_nodes,
+        *mathematics_child_nodes,
     ]
+
+    reset_prev_next_relationships(sibling_nodes=child_nodes)
+
+    parent_node = TextNode(
+        text=dedent(
+            """
+            Warsaw: Warsaw, the capital city of Poland, is a bustling metropolis located on the banks of the Vistula River.
+
+            It is known for its rich history, vibrant culture, and resilient spirit. Warsaw's skyline is characterized by a mix of historic architecture and modern skyscrapers.
+
+            The Old Town, with its cobblestone streets and colorful buildings, is a UNESCO World Heritage Site.
+
+            Football: Football, also known as soccer, is a popular sport played by millions of people worldwide.
+
+            It is a team sport that involves two teams of eleven players each. The objective of the game is to score goals by kicking the ball into the opposing team's goal.
+
+            Football matches are typically played on a rectangular field called a pitch, with goals at each end.
+
+            The game is governed by a set of rules known as the Laws of the Game. Football is known for its passionate fanbase and intense rivalries between clubs and countries.
+
+            The FIFA World Cup is the most prestigious international football tournament.
+
+            Mathematics: Mathematics is a fundamental discipline that deals with the study of numbers, quantities, and shapes.
+
+            Its branches include algebra, calculus, geometry, and statistics.
+            """
+        ).strip(),
+        relationships={
+            NodeRelationship.SOURCE: source_document_as_ref,
+            NodeRelationship.CHILD: [node.as_related_node_info() for node in child_nodes],
+        },
+    )
+
+    for node in child_nodes:
+        node.relationships[NodeRelationship.PARENT] = parent_node.as_related_node_info()
+
+    reset_prev_next_relationships(sibling_nodes=child_nodes)
+
+    return parent_node, child_nodes
 
 
 @pytest.mark.skipif(not fastembed_available, reason="FastEmbed model not available")
-async def test_returns_all_nodes(embed_model: FastEmbedEmbedding, common_nodes: list[TextNode]) -> None:
+async def test_returns_all_nodes(embed_model: FastEmbedEmbedding, common_nodes: tuple[TextNode, list[TextNode]]) -> None:
+    parent_node, child_nodes = common_nodes
+
+    all_nodes = [parent_node, *child_nodes]
+
     semantic_merger = LeafSemanticMergerNodeParser(
         embed_model=embed_model,
         max_token_count=256,
@@ -137,8 +254,8 @@ async def test_returns_all_nodes(embed_model: FastEmbedEmbedding, common_nodes: 
         max_dissimilar_nodes=10,
     )
 
-    nodes = await semantic_merger._aparse_nodes(nodes=common_nodes)  # pyright: ignore[reportPrivateUsage]
-    assert len(nodes) == len(common_nodes)
+    nodes = await semantic_merger._aparse_nodes(nodes=all_nodes)  # pyright: ignore[reportPrivateUsage]
+    assert len(nodes) == 11
 
 
 # @pytest.fixture
@@ -163,33 +280,54 @@ def semantic_merger(embed_model: FastEmbedEmbedding) -> LeafSemanticMergerNodePa
 
 
 @pytest.mark.skipif(not fastembed_available, reason="FastEmbed model not available")
-async def test_warsaw_nodes(semantic_merger: LeafSemanticMergerNodeParser, warsaw_nodes: list[TextNode]) -> None:
-    target_content = join_content(warsaw_nodes)
+async def test_warsaw_nodes(semantic_merger: LeafSemanticMergerNodeParser, warsaw_nodes: tuple[TextNode, list[TextNode]]) -> None:
+    parent_node, child_nodes = warsaw_nodes
 
-    merged_nodes = await semantic_merger._aparse_nodes(nodes=warsaw_nodes)  # pyright: ignore[reportPrivateUsage]
+    all_nodes = [parent_node, *child_nodes]
 
-    assert len(merged_nodes) == 1
+    target_content = join_content(child_nodes)
 
-    merged_node = merged_nodes[0]
-    assert merged_node.get_content() == target_content, "Warsaw nodes were not correctly merged"
+    merged_nodes = await semantic_merger._aparse_nodes(nodes=all_nodes)  # pyright: ignore[reportPrivateUsage]
 
-    assert merged_node.source_node is not None, "Source node was not set"
-    assert merged_node.prev_node is None, "Previous node was not set"
-    assert merged_node.next_node is None, "Next node was not set"
+    assert len(merged_nodes) == 2
+    parent_node = merged_nodes[0]
+    child_node = merged_nodes[1]
 
-    # assert target_content == join_content(warsaw_nodes), "Original nodes were modified"
-    # for node in warsaw_nodes:
-    #     assert node.metadata == {"key": "value"}, "Original nodes were modified"
+    assert parent_node.child_nodes == [child_node.as_related_node_info()]
+    assert parent_node.prev_node is None
+    assert parent_node.next_node is None
+
+    assert child_node.parent_node == parent_node.as_related_node_info()
+    assert child_node.prev_node is None
+    assert child_node.next_node is None
+    assert child_node.child_nodes is None
+
+    assert parent_node.get_content() == target_content, "Warsaw nodes were not correctly merged"
+    assert child_node.get_content() == target_content, "Child node was not correctly merged"
 
 
 @pytest.mark.skipif(not fastembed_available, reason="FastEmbed model not available")
-async def test_football_nodes(semantic_merger: LeafSemanticMergerNodeParser, football_nodes: list[TextNode]) -> None:
-    target_content = join_content(football_nodes)
+async def test_football_nodes(semantic_merger: LeafSemanticMergerNodeParser, football_nodes: tuple[TextNode, list[TextNode]]) -> None:
+    parent_node, child_nodes = football_nodes
 
-    merged_nodes = await semantic_merger._aparse_nodes(nodes=football_nodes)  # pyright: ignore[reportPrivateUsage]
+    all_nodes = [parent_node, *child_nodes]
 
-    assert len(merged_nodes) == 1
-    assert merged_nodes[0].get_content() == target_content, "Football nodes were not correctly merged"
+    target_content = join_content(child_nodes)
+
+    merged_nodes = await semantic_merger._aparse_nodes(nodes=all_nodes)  # pyright: ignore[reportPrivateUsage]
+
+    assert len(merged_nodes) == 2
+    parent_node = merged_nodes[0]
+    child_node = merged_nodes[1]
+
+    assert parent_node.child_nodes == [child_node.as_related_node_info()]
+    assert parent_node.prev_node is None
+    assert parent_node.next_node is None
+    assert child_node.parent_node == parent_node.as_related_node_info()
+
+    assert parent_node.get_content() == target_content, "Parent node was not correctly merged"
+
+    assert child_node.get_content() == target_content, "Child node was not correctly merged"
 
     # assert target_content == join_content(football_nodes), "Original nodes were modified"
     # for node in football_nodes:
@@ -197,88 +335,92 @@ async def test_football_nodes(semantic_merger: LeafSemanticMergerNodeParser, foo
 
 
 @pytest.mark.skipif(not fastembed_available, reason="FastEmbed model not available")
-async def test_mathematics_nodes(semantic_merger: LeafSemanticMergerNodeParser, mathematics_nodes: list[TextNode]) -> None:
-    target_content = join_content(mathematics_nodes)
+async def test_mathematics_nodes(semantic_merger: LeafSemanticMergerNodeParser, mathematics_nodes: tuple[TextNode, list[TextNode]]) -> None:
+    parent_node, child_nodes = mathematics_nodes
 
-    merged_nodes = await semantic_merger._aparse_nodes(nodes=mathematics_nodes)  # pyright: ignore[reportPrivateUsage]
+    all_nodes = [parent_node, *child_nodes]
 
-    assert len(merged_nodes) == 1
-    assert merged_nodes[0].get_content() == target_content, "Mathematics nodes were not correctly merged"
+    target_content = join_content(child_nodes)
 
-    # assert target_content == join_content(mathematics_nodes), "Original nodes were modified"
+    merged_nodes = await semantic_merger._aparse_nodes(nodes=all_nodes)  # pyright: ignore[reportPrivateUsage]
 
-    # for node in mathematics_nodes:
-    #     assert node.metadata == {"key": "value"}, "Original nodes were modified"
+    assert len(merged_nodes) == 2
+    parent_node = merged_nodes[0]
+    child_node = merged_nodes[1]
+
+    assert parent_node.child_nodes == [child_node.as_related_node_info()]
+    assert parent_node.prev_node is None
+    assert parent_node.next_node is None
+    assert child_node.parent_node == parent_node.as_related_node_info()
+    assert child_node.prev_node is None
+    assert child_node.next_node is None
+    assert child_node.child_nodes is None
+
+    assert parent_node.get_content() == target_content, "Mathematics nodes were not correctly merged"
+    assert child_node.get_content() == target_content, "Child node was not correctly merged"
 
 
 @pytest.mark.skipif(not fastembed_available, reason="FastEmbed model not available")
-async def test_combination_of_nodes(semantic_merger: LeafSemanticMergerNodeParser, common_nodes: list[TextNode]) -> None:  # pyright: ignore[reportPrivateUsage]
-    warsaw_target_content = join_content(common_nodes[0:3])
-    football_target_content = join_content(common_nodes[3:8])
-    mathematics_target_content = join_content(common_nodes[8:10])
+async def test_combination_of_nodes(semantic_merger: LeafSemanticMergerNodeParser, common_nodes: tuple[TextNode, list[TextNode]]) -> None:  # pyright: ignore[reportPrivateUsage]
+    parent_node, child_nodes = common_nodes
 
-    merged_nodes = await semantic_merger._aparse_nodes(nodes=common_nodes)  # pyright: ignore[reportPrivateUsage]
+    all_nodes = [parent_node, *child_nodes]
 
-    assert len(merged_nodes) == 3, "Number of returned nodes was not correct"
+    warsaw_target_content = join_content(child_nodes[0:3])
+    football_target_content = join_content(child_nodes[3:8])
+    mathematics_target_content = join_content(child_nodes[8:10])
 
-    assert merged_nodes[0].get_content() == warsaw_target_content, "Warsaw nodes were not correctly merged"
+    merged_nodes = await semantic_merger._aparse_nodes(nodes=all_nodes)  # pyright: ignore[reportPrivateUsage]
 
-    assert merged_nodes[1].get_content() == football_target_content, "Football nodes were not correctly merged"
+    assert len(merged_nodes) == 4, "Number of returned nodes was not correct"
 
-    assert merged_nodes[2].get_content() == mathematics_target_content, "Mathematics node was not correctly merged"
+    assert merged_nodes[1].get_content() == warsaw_target_content, "Warsaw nodes were not correctly merged"
 
-    # for node in common_nodes:
-    #     assert node.metadata == {"key": "value"}, "Original nodes were modified"
+    assert merged_nodes[2].get_content() == football_target_content, "Football nodes were not correctly merged"
+
+    assert merged_nodes[3].get_content() == mathematics_target_content, "Mathematics node was not correctly merged"
 
 
 @pytest.mark.skipif(not fastembed_available, reason="FastEmbed model not available")
 async def test_groups_of_nodes(
+    source_document_as_ref: RelatedNodeInfo,
     semantic_merger: LeafSemanticMergerNodeParser,
-    warsaw_nodes: list[BaseNode],
-    football_nodes: list[BaseNode],
-    mathematics_nodes: list[BaseNode],
-) -> None:  # pyright: ignore[reportPrivateUsage]
-    warsaw_target_content = join_content(nodes=warsaw_nodes)
-    football_target_content = join_content(nodes=football_nodes)
-    mathematics_target_content = join_content(nodes=mathematics_nodes)
+    warsaw_nodes: tuple[TextNode, list[TextNode]],
+    football_nodes: tuple[TextNode, list[TextNode]],
+    mathematics_nodes: tuple[TextNode, list[TextNode]],
+) -> None:
+    warsaw_parent_node, warsaw_child_nodes = warsaw_nodes
+    warsaw_target_content = join_content(warsaw_child_nodes)
 
-    warsaw_group = GroupNode(
-        member_nodes=warsaw_nodes,
-        text_resource=MediaResource(
-            text=warsaw_target_content,
-        ),
+    football_parent_node, football_child_nodes = football_nodes
+    football_target_content = join_content(football_child_nodes)
+
+    mathematics_parent_node, mathematics_child_nodes = mathematics_nodes
+    mathematics_target_content = join_content(mathematics_child_nodes)
+
+    parent_nodes = [warsaw_parent_node, football_parent_node, mathematics_parent_node]
+    child_nodes = [*warsaw_child_nodes, *football_child_nodes, *mathematics_child_nodes]
+
+    root_node = TextNode(
+        relationships={
+            NodeRelationship.SOURCE: source_document_as_ref,
+            NodeRelationship.CHILD: [node.as_related_node_info() for node in parent_nodes],
+        },
     )
 
-    football_group = GroupNode(
-        member_nodes=football_nodes,
-        text_resource=MediaResource(
-            text=football_target_content,
-        ),
-    )
+    for node in parent_nodes:
+        node.relationships[NodeRelationship.PARENT] = root_node.as_related_node_info()
 
-    mathematics_group = GroupNode(
-        member_nodes=mathematics_nodes,
-        text_resource=MediaResource(
-            text=mathematics_target_content,
-        ),
-    )
+    all_nodes = [root_node, *parent_nodes, *child_nodes]
+    merged_nodes = await semantic_merger._aparse_nodes(nodes=all_nodes)  # pyright: ignore[reportPrivateUsage]
 
-    root_node = RootNode(
-        member_nodes=[warsaw_group, football_group, mathematics_group],
-        text_resource=MediaResource(
-            text=join_content(nodes=[*warsaw_nodes, *football_nodes, *mathematics_nodes]),
-        ),
-    )
+    assert len(merged_nodes) == 7, "Number of returned nodes was not correct"
 
-    merged_nodes = await semantic_merger._aparse_nodes(nodes=root_node.descendant_nodes(leaf_nodes_only=True))  # pyright: ignore[reportPrivateUsage]
+    assert merged_nodes[4].get_content() == warsaw_target_content, "Warsaw nodes were not correctly merged"
 
-    assert len(merged_nodes) == 3, "Number of returned nodes was not correct"
+    assert merged_nodes[5].get_content() == football_target_content, "Football nodes were not correctly merged"
 
-    assert merged_nodes[0].get_content() == warsaw_target_content, "Warsaw nodes were not correctly merged"
-
-    assert merged_nodes[1].get_content() == football_target_content, "Football nodes were not correctly merged"
-
-    assert merged_nodes[2].get_content() == mathematics_target_content, "Mathematics node was not correctly merged"
+    assert merged_nodes[6].get_content() == mathematics_target_content, "Mathematics node was not correctly merged"
 
     # for node in common_nodes:
     #     assert node.metadata == {"key": "value"}, "Original nodes were modified"

@@ -26,7 +26,7 @@ def yaml_snapshot(snapshot: SnapshotAssertion) -> SnapshotAssertion:
 
 
 @pytest.fixture
-def markdown_snapshot(snapshot: SnapshotAssertion) -> SnapshotAssertion:
+def text_snapshot(snapshot: SnapshotAssertion) -> SnapshotAssertion:
     return snapshot.with_defaults(extension_class=MarkdownSnapshotExtension)
 
 
@@ -122,6 +122,8 @@ def organize_nodes_for_snapshot(nodes: Sequence[BaseNode], extra_nodes: Sequence
         node for node in serialized_nodes if node["relationships"].get("parent") not in serialized_nodes_by_id
     ]
 
+    
+
     for node in serialized_nodes:
         if not (relationships := node.get("relationships")):
             continue
@@ -139,6 +141,20 @@ def organize_nodes_for_snapshot(nodes: Sequence[BaseNode], extra_nodes: Sequence
     return root_nodes
 
 
+def serialize_node_structure_for_snapshot(nodes: Sequence[BaseNode], extra_nodes: Sequence[BaseNode] | None = None) -> str:
+    """Serialize the node structure for snapshot."""
+    serialized_nodes: list[dict[str, Any]] = serialize_nodes_for_snapshot(nodes=nodes, extra_nodes=extra_nodes)
+
+    structure: list[str] = []
+
+    for node in serialized_nodes:
+        content: str = node["content"]
+        content_preview: str = content[:50].replace("\n", " ")
+        structure.append(f"{'  ' * node['node_depth']} : {node['node_id']} - {node['content_length']}: {content_preview}")
+
+    return "\n".join(structure)
+
+
 def serialize_nodes_for_snapshot(nodes: Sequence[BaseNode], extra_nodes: Sequence[BaseNode] | None = None) -> list[dict[str, Any]]:
     """Serialize the nodes for snapshot.
 
@@ -153,6 +169,7 @@ def serialize_nodes_for_snapshot(nodes: Sequence[BaseNode], extra_nodes: Sequenc
         extra_nodes = []
 
     serialized_nodes: list[dict[str, Any]] = []
+    nodes_by_id: dict[str, BaseNode] = {node.node_id: node for node in nodes}
     guid_to_friendly_id: dict[str, str] = {}
 
     for i, node in enumerate([*nodes, *extra_nodes]):
@@ -162,12 +179,21 @@ def serialize_nodes_for_snapshot(nodes: Sequence[BaseNode], extra_nodes: Sequenc
         else:
             guid_to_friendly_id[node.node_id] = node.node_id
 
+    def determine_node_depth(node_id: str, depth: int = 0) -> int:
+        if node_id in nodes_by_id:
+            node: BaseNode = nodes_by_id[node_id]
+            if node.parent_node:
+                return determine_node_depth(node_id=node.parent_node.node_id, depth=depth + 1)
+            return depth
+        return depth
+
     for node in nodes:
         content = node.get_content()
 
         serialized_node: OrderedDict[str, Any] = OrderedDict(
             {
                 "node_id": guid_to_friendly_id[node.node_id],
+                "node_depth": determine_node_depth(node_id=node.node_id),
                 "node_type": node.__class__.__name__,
                 "content_length": len(content),
                 "content": truncate_text(text=content, length=1000),

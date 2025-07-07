@@ -1,0 +1,118 @@
+- node_id: '0'
+  node_depth: 0
+  node_type: Node
+  content_length: 7847
+  content: "# Firestore Demo\xB6\n\nThis guide shows you how to directly use our DocumentStore\
+    \ abstraction backed by Google Firestore. By putting nodes in the docstore, this\
+    \ allows you to define multiple indices over the same underlying docstore, instead\
+    \ of duplicating data across indices.\n\nIf you're opening this Notebook on colab,\
+    \ you will probably need to install LlamaIndex \U0001F999.\n\nIn\_[\_]:\n\n```\n\
+    %pip install llama-index-storage-docstore-firestore\n%pip install llama-index-storage-kvstore-firestore\n\
+    %pip install llama-index-storage-index-store-firestore\n%pip install llama-index-llms-openai\n\
+    ```\n\n%pip install llama-index-storage-docstore-firestore\n%pip install llama-index-storage-kvstore-firestore\n\
+    %pip install llama-index-storage-index-store-firestore\n%pip install llama-index-llms-openai\n\
+    \nIn\_[\_]:\n\n```\n!pip install llama-index\n```\n\n!pip install llama-index\n\
+    \nIn\_[\_]:\n\n```\nimport nest_asyncio\n\nnest_asyncio.apply()\n```\n\nimport\
+    \ nest_asyncio\n\nnest_asyncio.apply()\n\nIn\_[\_]:\n\n```\nimport logging\nimport\
+    \ sys\n\nlogging.basic..."
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/0'
+    headings:
+    - '# Firestore Demo'
+  relationships:
+    children:
+    - '1'
+    - '2'
+    - '3'
+    - '4'
+- node_id: '1'
+  node_depth: 1
+  node_type: Node
+  content_length: 953
+  content: "# Firestore Demo\n\nThis guide shows you how to directly use our DocumentStore\
+    \ abstraction backed by Google Firestore. By putting nodes in the docstore, this\
+    \ allows you to define multiple indices over the same underlying docstore, instead\
+    \ of duplicating data across indices.\n\nIf you're opening this Notebook on colab,\
+    \ you will probably need to install LlamaIndex \U0001F999.\n\nIn\_[\_]:\n\n```\n\
+    %pip install llama-index-storage-docstore-firestore\n%pip install llama-index-storage-kvstore-firestore\n\
+    %pip install llama-index-storage-index-store-firestore\n%pip install llama-index-llms-openai\n\
+    ```\n\n%pip install llama-index-storage-docstore-firestore\n%pip install llama-index-storage-kvstore-firestore\n\
+    %pip install llama-index-storage-index-store-firestore\n%pip install llama-index-llms-openai\n\
+    \nIn\_[\_]:\n\n```\n!pip install llama-index\n```\n\n!pip install llama-index\n\
+    \nIn\_[\_]:\n\n```\nimport nest_asyncio\n\nnest_asyncio.apply()\n```\n\nimport\
+    \ nest_asyncio\n\nnest_asyncio.apply()\n\nIn\_[\_]:"
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/0'
+    headings:
+    - '# Firestore Demo'
+  relationships:
+    next: '2'
+    parent: '0'
+- node_id: '2'
+  node_depth: 1
+  node_type: Node
+  content_length: 720
+  content: "```\nimport logging\nimport sys\n\nlogging.basicConfig(stream=sys.stdout,\
+    \ level=logging.INFO)\nlogging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))\n\
+    ```\n\nimport logging\nimport sys\n\nlogging.basicConfig(stream=sys.stdout, level=logging.INFO)\n\
+    logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))\n\nIn\_\
+    [\_]:\n\n```\nfrom llama_index.core import SimpleDirectoryReader, StorageContext\n\
+    from llama_index.core import VectorStoreIndex, SimpleKeywordTableIndex\nfrom llama_index.core\
+    \ import SummaryIndex\nfrom llama_index.core import ComposableGraph\nfrom llama_index.llms.openai\
+    \ import OpenAI\nfrom llama_index.core.response.notebook_utils import display_response\n\
+    from llama_index.core import Settings\n```"
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/13'
+    headings:
+    - '# Firestore Demo'
+  relationships:
+    next: '3'
+    parent: '0'
+    previous: '1'
+- node_id: '3'
+  node_depth: 1
+  node_type: Node
+  content_length: 375
+  content: |-
+    from llama_index.core import SimpleDirectoryReader, StorageContext
+    from llama_index.core import VectorStoreIndex, SimpleKeywordTableIndex
+    from llama_index.core import SummaryIndex
+    from llama_index.core import ComposableGraph
+    from llama_index.llms.openai import OpenAI
+    from llama_index.core.response.notebook_utils import display_response
+    from llama_index.core import Settings
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/17'
+    headings:
+    - '# Firestore Demo'
+  relationships:
+    next: '4'
+    parent: '0'
+    previous: '2'
+- node_id: '4'
+  node_depth: 1
+  node_type: Node
+  content_length: 5792
+  content: "#### Download Data\xB6\n\nIn\_[\_]:\n\n```\n!mkdir -p 'data/paul_graham/'\n\
+    !wget 'https://raw.githubusercontent.com/run-llama/llama_index/main/docs/docs/examples/data/paul_graham/paul_graham_essay.txt'\
+    \ -O 'data/paul_graham/paul_graham_essay.txt'\n```\n\n!mkdir -p 'data/paul_graham/'\n\
+    !wget 'https://raw.githubusercontent.com/run-llama/llama_index/main/docs/docs/examples/data/paul_graham/paul_graham_essay.txt'\
+    \ -O 'data/paul_graham/paul_graham_essay.txt'\n\n#### Load Documents\xB6\n\nIn\_\
+    [\_]:\n\n```\nreader = SimpleDirectoryReader(\"./data/paul_graham/\")\ndocuments\
+    \ = reader.load_data()\n```\n\nreader = SimpleDirectoryReader(\"./data/paul_graham/\"\
+    )\ndocuments = reader.load_data()\n\n#### Parse into Nodes\xB6\n\nIn\_[\_]:\n\n\
+    ```\nfrom llama_index.core.node_parser import SentenceSplitter\n\nnodes = SentenceSplitter().get_nodes_from_documents(documents)\n\
+    ```\n\nfrom llama_index.core.node_parser import SentenceSplitter\n\nnodes = SentenceSplitter().get_nodes_from_documents(documents)\n\
+    \n#### Add to Docstore\xB6\n\nIn\_[\_]:\n\n```\nfrom llama_index.storage..."
+  metadata:
+    docling_label: section
+    docling_ref: '#/groups/0'
+    headings:
+    - '# Firestore Demo'
+  relationships:
+    parent: '0'
+    previous: '3'

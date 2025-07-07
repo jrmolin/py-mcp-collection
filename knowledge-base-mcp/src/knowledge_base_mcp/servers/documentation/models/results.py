@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from llama_index.core.schema import MetadataMode, NodeWithScore
+from llama_index.core.schema import BaseNode, MetadataMode, NodeWithScore
 from pydantic import BaseModel, Field, RootModel
 
 
@@ -113,3 +113,20 @@ class SearchResponseWithSummary(BaseModel):
     query: str = Field(description="The query that was used to search the knowledge base")
     summary: KnowledgeBaseSummary = Field(description="The summary of the search")
     results: TreeSearchResponse = Field(description="The results of the search")
+
+
+class DocumentResponse(BaseModel):
+    """A response to a document request"""
+
+    source: str = Field(description="The source of the document")
+    title: str = Field(description="The title of the document")
+    content: str = Field(description="The content of the document")
+
+    @classmethod
+    def from_node(cls, node: BaseNode) -> "DocumentResponse":
+        """Convert a node to a document response"""
+        return cls(
+            source=node.metadata.get("source", "<no source>"),  #  pyright: ignore[reportAny]
+            title=node.metadata.get("title", "<no title>"),  #  pyright: ignore[reportAny]
+            content=node.get_content(metadata_mode=MetadataMode.LLM).strip(),
+        )

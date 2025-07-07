@@ -1,9 +1,7 @@
-from asyncio import Queue as AsyncQueue
 from collections import defaultdict
 from collections.abc import AsyncIterable, AsyncIterator, Sequence
-from contextlib import asynccontextmanager
+from typing import ClassVar
 
-from fsspec.exceptions import asyncio
 from llama_index.core.bridge.pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 from llama_index.core.constants import (
     DEFAULT_PIPELINE_NAME,
@@ -35,7 +33,7 @@ class LazyAsyncReaderConfig(ReaderConfig):
 class PipelineGroup(BaseModel):
     """A group of pipelines."""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config: ClassVar[ConfigDict] = ConfigDict(arbitrary_types_allowed=True)
 
     name: str = Field(default=DEFAULT_PIPELINE_NAME, description="Unique name of the ingestion pipeline")
 
@@ -54,7 +52,9 @@ class PipelineGroup(BaseModel):
 
     def _record_times(self, timer_group: TimerGroup):
         """Record the times for each pipeline."""
-        for name, time in timer_group.model_dump().get("times", {}).items():
+        timer_as_dict: dict[str, float] = timer_group.times
+
+        for name, time in timer_as_dict.items():
             self._total_times[name].append(time)
 
     async def arun(
@@ -81,7 +81,7 @@ class PipelineGroup(BaseModel):
 
         for i, pipeline in enumerate(self.pipelines):
             _ = timer_group.start_timer(name=f"Step {i + 1}: {pipeline.name}")
-            self._log_info(msg=f"Running step {i + 1}: {pipeline.name} with {len(new_nodes)} nodes")
+            # self._log_info(msg=f"Running step {i + 1}: {pipeline.name} with {len(new_nodes)} nodes")
 
             if len(new_nodes) == 0:
                 self._log_info(msg=f"{pipeline.name} has no nodes to process, skipping remaining steps")
@@ -93,89 +93,89 @@ class PipelineGroup(BaseModel):
 
         self._record_times(timer_group)
 
-        logger.info(f"Pipeline group {self.name}: {len(documents)} docs + {len(nodes)} nodes -> {len(new_nodes)} nodes")
+        self._log_info(f"{len(documents)} docs + {len(nodes)} nodes -> {len(new_nodes)} nodes took: {timer_group.model_dump()}")
 
         return new_nodes, timer_group
 
 
-class PipelineStats(BaseModel):
-    """A model for pipeline statistics."""
+# class PipelineStats(BaseModel):
+#     """A model for pipeline statistics."""
 
-    input_nodes: int = Field(default=0, description="The number of nodes received from the input queue")
-    output_nodes: int = Field(default=0, description="The number of nodes sent to the output queue")
+#     input_nodes: int = Field(default=0, description="The number of nodes received from the input queue")
+#     output_nodes: int = Field(default=0, description="The number of nodes sent to the output queue")
 
 
-class QueuingPipelineGroup(PipelineGroup):
-    """A pipeline group which takes nodes and"""
+# class QueuingPipelineGroup(PipelineGroup):
+#     """A pipeline group which takes nodes and"""
 
-    workers: int = Field(default=2, description="The number of workers to use")
-    batch_size: int = Field(default=96, description="The number of nodes to process at a time")
-    stats: PipelineStats = Field(default_factory=PipelineStats, description="The statistics for the pipeline group")
+#     workers: int = Field(default=2, description="The number of workers to use")
+#     batch_size: int = Field(default=96, description="The number of nodes to process at a time")
+#     stats: PipelineStats = Field(default_factory=PipelineStats, description="The statistics for the pipeline group")
 
-    async def _run_batch(self, batch: Sequence[BaseNode]) -> Sequence[BaseNode]:
-        """Run a batch of nodes through the pipelines."""
-        return await self.arun(nodes=batch)
+#     async def _run_batch(self, batch: Sequence[BaseNode]) -> Sequence[BaseNode]:
+#         """Run a batch of nodes through the pipelines."""
+#         return await self.arun(nodes=batch)
 
-    async def _queue_worker(
-        self,
-        worker_id: int,
-        input_queue: AsyncQueue[Sequence[BaseNode]],
-        output_queue: AsyncQueue[Sequence[BaseNode]] | None,
-    ):
-        """A worker which takes nodes from the incoming queue and runs them through the pipelines."""
+#     async def _queue_worker(
+#         self,
+#         worker_id: int,
+#         input_queue: AsyncQueue[Sequence[BaseNode]],
+#         output_queue: AsyncQueue[Sequence[BaseNode]] | None,
+#     ):
+#         """A worker which takes nodes from the incoming queue and runs them through the pipelines."""
 
-        batch: list[BaseNode] = []
+#         batch: list[BaseNode] = []
 
-        async def run_batch():
-            if not batch:
-                return
+#         async def run_batch():
+#             if not batch:
+#                 return
 
-            nodes: Sequence[BaseNode] = []
+#             nodes: Sequence[BaseNode] = []
 
-            try:
-                nodes = await self.arun(nodes=batch)
+#             try:
+#                 nodes = await self.arun(nodes=batch)
 
-            except Exception:
-                logger.exception(f"Worker {worker_id}: Error running batch.")
+#             except Exception:
+#                 logger.exception(f"Worker {worker_id}: Error running batch.")
 
-            if output_queue:
-                await output_queue.put(nodes)
+#             if output_queue:
+#                 await output_queue.put(nodes)
 
-            self.stats.output_nodes += len(nodes)
+#             self.stats.output_nodes += len(nodes)
 
-            batch.clear()
+#             batch.clear()
 
-        try:
-            while nodes := await input_queue.get():
-                batch.extend(nodes)
+#         try:
+#             while nodes := await input_queue.get():
+#                 batch.extend(nodes)
 
-                self.stats.input_nodes += len(nodes)
+#                 self.stats.input_nodes += len(nodes)
 
-                input_queue.task_done()
+#                 input_queue.task_done()
 
-                if len(batch) < self.batch_size:
-                    continue
+#                 if len(batch) < self.batch_size:
+#                     continue
 
-                await run_batch()
+#                 await run_batch()
 
-        except asyncio.QueueShutDown:
-            logger.info(f"Worker {worker_id}: Shutting down")
-            await run_batch()
+#         except asyncio.QueueShutDown:
+#             logger.info(f"Worker {worker_id}: Shutting down")
+#             await run_batch()
 
-    @asynccontextmanager
-    async def start(self, output_queue: AsyncQueue[Sequence[BaseNode]] | None = None) -> AsyncIterator[AsyncQueue[Sequence[BaseNode]]]:
-        """Start the pipeline group."""
+#     @asynccontextmanager
+#     async def start(self, output_queue: AsyncQueue[Sequence[BaseNode]] | None = None) -> AsyncIterator[AsyncQueue[Sequence[BaseNode]]]:
+#         """Start the pipeline group."""
 
-        incoming_queue: AsyncQueue[Sequence[BaseNode]] = AsyncQueue(maxsize=self.workers)
+#         incoming_queue: AsyncQueue[Sequence[BaseNode]] = AsyncQueue(maxsize=self.workers)
 
-        async with asyncio.TaskGroup() as tg:
-            for i in range(self.workers):
-                tg.create_task(self._queue_worker(worker_id=i, input_queue=incoming_queue, output_queue=output_queue))
+#         async with asyncio.TaskGroup() as tg:
+#             for i in range(self.workers):
+#                 tg.create_task(self._queue_worker(worker_id=i, input_queue=incoming_queue, output_queue=output_queue))
 
-            yield incoming_queue
+#             yield incoming_queue
 
-            # We're shutting down,, so wait for the input queue to be empty
-            await incoming_queue.join()
+#             # We're shutting down,, so wait for the input queue to be empty
+#             await incoming_queue.join()
 
-            # Shut down the queue to trigger the workers to flush their internal buffers and exit
-            incoming_queue.shutdown()
+#             # Shut down the queue to trigger the workers to flush their internal buffers and exit
+#             incoming_queue.shutdown()

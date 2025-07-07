@@ -1,5 +1,4 @@
 from textwrap import dedent
-from typing import Any
 
 import pytest
 from docling.datamodel.base_models import InputFormat
@@ -12,13 +11,14 @@ from llama_index.embeddings.fastembed import FastEmbedEmbedding
 from syrupy.assertion import SnapshotAssertion
 
 from knowledge_base_mcp.docling.html_backend import TrimmedHTMLDocumentBackend
+from knowledge_base_mcp.docling.md_backend import GroupingMarkdownDocumentBackend
 from knowledge_base_mcp.llama_index.hierarchical_node_parsers.docling_hierarchical_node_parser import DoclingHierarchicalNodeParser
-from knowledge_base_mcp.llama_index.hierarchical_node_parsers.hierarchical_node_parser import GroupNode, RootNode
 from knowledge_base_mcp.llama_index.hierarchical_node_parsers.leaf_semantic_merging import LeafSemanticMergerNodeParser
 from tests.conftest import (
     DoclingSample,
     get_docling_samples,
     organize_nodes_for_snapshot,
+    serialize_node_structure_for_snapshot,
     serialize_nodes_for_snapshot,
     validate_relationships,
 )
@@ -32,89 +32,91 @@ except Exception:
     fastembed_available = False
 
 
-def get_root_node(nodes: list[LlamaBaseNode]) -> RootNode:
-    return next(node for node in nodes if isinstance(node, RootNode))
-
-
-def get_group_nodes(nodes: list[LlamaBaseNode]) -> list[GroupNode]:
-    return [node for node in nodes if isinstance(node, GroupNode) and not isinstance(node, RootNode)]
-
-
-def get_leaf_nodes(nodes: list[LlamaBaseNode]) -> list[LlamaBaseNode]:
-    return [node for node in nodes if node.child_nodes is None]
-
-
-def assert_source_relationship(document: LlamaBaseNode, node: LlamaBaseNode) -> None:
-    assert node.source_node is not None, f"Node {node.node_id} has no source node"
-    assert document.node_id == node.source_node.node_id, (
-        f"The source of node {node.node_id} is not {document.node_id}, it's {node.source_node.node_id}"
-    )
-
-
-def assert_sibling_relationship(first_node: LlamaBaseNode, second_node: LlamaBaseNode) -> None:
-    assert first_node.next_node is second_node.as_related_node_info()
-    assert second_node.prev_node is first_node.as_related_node_info()
-
-
-def assert_parent_child_relationship(parent: LlamaBaseNode, child: LlamaBaseNode) -> None:
-    parent_id: str = parent.node_id
-    child_id: str = child.node_id
-
-    assert child.parent_node is not None, f"Child node {child_id} has no parent node"
-    assert parent_id == child.parent_node.node_id, f"The parent of node {child_id} is not {parent_id}, it's {child.parent_node.node_id}"
-
-    assert parent.child_nodes is not None, f"Parent node {parent_id} has no child nodes"
-    assert child_id in [c.node_id for c in parent.child_nodes], f"Child node {child_id} is not in parent node {parent_id} child nodes"
-
-
-def assert_not_isolated(node: LlamaBaseNode) -> None:
-    is_isolated: bool = node.parent_node is None and node.child_nodes is None
-    assert not is_isolated, f"Node {node.node_id} is isolated"
-
-
 def test_init():
     assert DoclingHierarchicalNodeParser()
 
 
-@pytest.fixture
-def docling_hierarchical_node_parser() -> DoclingHierarchicalNodeParser:
-    """Takes a list of Llama nodesfrom the Docling node parserand converts them to a list of Llama nodes with a hierarchical structure."""
-    return DoclingHierarchicalNodeParser()
+def common_assertions(parsed_nodes: list[LlamaBaseNode], source_document: LlamaDocument) -> None:
+    assert len(parsed_nodes) > 1
+    for node in parsed_nodes:
+        assert node.source_node is not None, f"Node {node.node_id} has no source node"
+        assert source_document.node_id == node.source_node.node_id, (
+            f"The source of node {node.node_id} is not {source_document.node_id}, it's {node.source_node.node_id}"
+        )
+
+        is_isolated: bool = node.parent_node is None and node.child_nodes is None and node.prev_node is None and node.next_node is None
+        assert not is_isolated, f"Node {node.node_id} is isolated"
+
+    validate_relationships(nodes=parsed_nodes)
 
 
-class TestDocuments:
-    @pytest.fixture
-    def source_document(self) -> LlamaDocument: ...
-
-    @pytest.fixture
-    def parsed_nodes(
-        self, docling_hierarchical_node_parser: DoclingHierarchicalNodeParser, source_document: LlamaDocument
-    ) -> list[LlamaBaseNode]:
-        return docling_hierarchical_node_parser.get_nodes_from_documents(documents=[source_document])
-
-    @pytest.fixture(autouse=True)
-    def assert_has_root_node(self, parsed_nodes: list[LlamaBaseNode]) -> None:
-        root_node: RootNode = get_root_node(nodes=parsed_nodes)
-        assert root_node.next_node is None
-        assert root_node.prev_node is None
-
-    @pytest.fixture(autouse=True)
-    def assert_source_document_relationships(self, source_document: LlamaDocument, parsed_nodes: list[LlamaBaseNode]) -> None:
-        for node in parsed_nodes:
-            assert_source_relationship(document=source_document, node=node)
-
-    @pytest.fixture(autouse=True)
-    def assert_no_isolation(self, parsed_nodes: list[LlamaBaseNode]) -> None:
-        for node in parsed_nodes:
-            assert_not_isolated(node=node)
-
-    @pytest.fixture(autouse=True)
-    def assert_valid_relationships(self, parsed_nodes: list[LlamaBaseNode]) -> None:
-        validate_relationships(nodes=parsed_nodes)
-
-    class TestSimpleHTML:
+class TestUnitTests:
+    class TestMarkdown:
         @pytest.fixture
-        def source_document(self) -> LlamaDocument:
+        def simple_document(self) -> LlamaDocument:
+            input_markdown: str = dedent(
+                text="""
+                # A document that is good for testing
+
+                # A document with an h1 heading
+
+                Some text under the first h1 heading
+            """
+            ).strip()
+
+            return LlamaDocument(text_resource=MediaResource(text=input_markdown, mimetype="text/markdown"))
+
+        def test_simple(self, simple_document: LlamaDocument, yaml_snapshot: SnapshotAssertion) -> None:
+            docling_hierarchical_node_parser: DoclingHierarchicalNodeParser = DoclingHierarchicalNodeParser()
+            parsed_nodes: list[LlamaBaseNode] = docling_hierarchical_node_parser.get_nodes_from_documents(documents=[simple_document])
+            common_assertions(parsed_nodes=parsed_nodes, source_document=simple_document)
+
+            assert len(parsed_nodes) == 3
+
+            root_1: LlamaBaseNode = parsed_nodes[0]
+            root_2: LlamaBaseNode = parsed_nodes[1]
+            root_3: LlamaBaseNode = parsed_nodes[2]
+
+            assert root_1.get_content() == "# A document that is good for testing"
+
+            assert root_1.metadata == {
+                "docling_label": "title",
+                "docling_ref": "#/texts/0",
+                "headings": ["# A document that is good for testing"],
+            }
+
+            assert root_1.parent_node is None
+            assert root_1.next_node == root_2.as_related_node_info()
+            assert root_2.prev_node == root_1.as_related_node_info()
+
+            assert root_2.get_content() == "# A document with an h1 heading"
+
+            assert root_2.metadata == {
+                "docling_label": "title",
+                "docling_ref": "#/texts/1",
+                "headings": ["# A document with an h1 heading"],
+            }
+            assert root_2.next_node == root_3.as_related_node_info()
+            assert root_3.prev_node == root_2.as_related_node_info()
+
+            assert root_3.get_content() == "Some text under the first h1 heading"
+
+            assert root_3.metadata == {
+                "docling_label": "text",
+                "docling_ref": "#/texts/2",
+                "headings": ["# A document with an h1 heading"],
+            }
+
+            assert root_3.parent_node is None
+            assert root_3.child_nodes is None
+            assert root_3.prev_node == root_2.as_related_node_info()
+            assert root_3.next_node is None
+
+            assert serialize_nodes_for_snapshot(nodes=parsed_nodes) == yaml_snapshot
+
+    class TestHTML:
+        @pytest.fixture
+        def simple_document(self) -> LlamaDocument:
             input_html: str = dedent(
                 text="""
                 <!DOCTYPE html>
@@ -135,29 +137,39 @@ class TestDocuments:
 
             return LlamaDocument(text_resource=MediaResource(text=input_html, mimetype="text/html"))
 
-        @pytest.fixture
-        def ideal_content(self) -> str:
-            return dedent(
-                text="""
-                # A document that is good for testing
+        def test_simple(self, simple_document: LlamaDocument) -> None:
+            docling_hierarchical_node_parser: DoclingHierarchicalNodeParser = DoclingHierarchicalNodeParser()
+            parsed_nodes: list[LlamaBaseNode] = docling_hierarchical_node_parser.get_nodes_from_documents(documents=[simple_document])
+            common_assertions(parsed_nodes=parsed_nodes, source_document=simple_document)
 
-                # A document with an h1 heading
+            assert len(parsed_nodes) == 2
 
-                Some text under the first h1 heading
-            """
-            ).strip()
+            root_1: LlamaBaseNode = parsed_nodes[0]
+            assert root_1.get_content() == "# A document that is good for testing"
+            assert root_1.metadata == {
+                "docling_label": "title",
+                "docling_ref": "#/texts/0",
+                "headings": ["# A document that is good for testing"],
+            }
 
-        @pytest.fixture
-        def ideal_metadata(self) -> dict[str, Any]:
-            return {}
+            assert root_1.parent_node is None
 
-        def test_nodes(self, parsed_nodes: list[LlamaBaseNode], ideal_content: str) -> None:
-            root: LlamaBaseNode = parsed_nodes[0]
+            root_2: LlamaBaseNode = parsed_nodes[1]
+            assert root_2.get_content() == "# A document with an h1 heading\n\nSome text under the first h1 heading"
 
-            assert root.get_content() == ideal_content
-            assert root.metadata == {}
+            assert root_2.metadata == {
+                "docling_label": "title",
+                "docling_ref": "#/texts/1",
+                "headings": ["# A document with an h1 heading"],
+            }
 
-            root_1: LlamaBaseNode = parsed_nodes[1]
+        def test_simple_no_chunking(self, simple_document: LlamaDocument) -> None:
+            docling_hierarchical_node_parser: DoclingHierarchicalNodeParser = DoclingHierarchicalNodeParser(minimum_chunk_size=0)
+            parsed_nodes: list[LlamaBaseNode] = docling_hierarchical_node_parser.get_nodes_from_documents(documents=[simple_document])
+            common_assertions(parsed_nodes=parsed_nodes, source_document=simple_document)
+
+            assert len(parsed_nodes) == 2
+            root_1: LlamaBaseNode = parsed_nodes[0]
 
             assert root_1.get_content() == "# A document that is good for testing"
 
@@ -167,15 +179,7 @@ class TestDocuments:
                 "headings": ["# A document that is good for testing"],
             }
 
-            root_1_1: LlamaBaseNode = parsed_nodes[2]
-            assert root_1_1.get_content() == "# A document that is good for testing"
-            assert root_1_1.metadata == {
-                "docling_label": "title",
-                "docling_ref": "#/texts/0",
-                "headings": ["# A document that is good for testing"],
-            }
-
-            root_2: LlamaBaseNode = parsed_nodes[3]
+            root_2: LlamaBaseNode = parsed_nodes[1]
 
             assert root_2.get_content() == "# A document with an h1 heading\n\nSome text under the first h1 heading"
 
@@ -185,102 +189,8 @@ class TestDocuments:
                 "headings": ["# A document with an h1 heading"],
             }
 
-            assert root.child_nodes == [
-                root_1.as_related_node_info(),
-                root_2.as_related_node_info(),
-            ]
-
-            root_2_1: LlamaBaseNode = parsed_nodes[4]
-            root_2_2: LlamaBaseNode = parsed_nodes[5]
-
-            assert root_2.child_nodes == [
-                root_2_1.as_related_node_info(),
-                root_2_2.as_related_node_info(),
-            ]
-
-            assert root_2_1.get_content() == "# A document with an h1 heading"
-
-            assert root_2_1.metadata == {
-                "docling_label": "title",
-                "docling_ref": "#/texts/1",
-                "headings": ["# A document with an h1 heading"],
-            }
-
-            assert root_2_1.parent_node == root_2.as_related_node_info()
-            assert root_2_1.child_nodes is None
-            assert root_2_1.prev_node is None
-            assert root_2_1.next_node == root_2_2.as_related_node_info()
-
-            assert root_2_2.get_content() == "Some text under the first h1 heading"
-            assert root_2_2.metadata == {
-                "docling_label": "text",
-                "docling_ref": "#/texts/2",
-                "headings": ["# A document with an h1 heading"],
-            }
-
-            assert root_2_2.parent_node == root_2.as_related_node_info()
-            assert root_2_2.child_nodes is None
-            assert root_2_2.prev_node == root_2_1.as_related_node_info()
-            assert root_2_2.next_node is None
-
-        class TestCollapsed:
-            @pytest.fixture
-            def docling_hierarchical_node_parser(self) -> DoclingHierarchicalNodeParser:
-                return DoclingHierarchicalNodeParser(
-                    collapse_nodes=True,
-                    collapse_max_size=1024,
-                    collapse_min_size=256,
-                )
-
-            def test_collapsed(self, parsed_nodes: list[LlamaBaseNode], ideal_content: str, yaml_snapshot: SnapshotAssertion) -> None:
-                node_parser: DoclingHierarchicalNodeParser = DoclingHierarchicalNodeParser(collapse_nodes=True)
-                collapsed_nodes: list[LlamaBaseNode] = node_parser._postprocess_parsed_nodes(nodes=parsed_nodes, parent_doc_map={})
-
-                root: LlamaBaseNode = collapsed_nodes[0]
-
-                assert root.get_content() == ideal_content
-                assert root.metadata == {}
-
-                root_1: LlamaBaseNode = collapsed_nodes[1]
-
-                assert root_1.get_content() == "# A document that is good for testing"
-
-                assert root_1.metadata == {
-                    "docling_label": "title",
-                    "docling_ref": "#/texts/0",
-                    "headings": ["# A document that is good for testing"],
-                }
-
-                root_2: LlamaBaseNode = collapsed_nodes[2]
-
-                assert root_2.get_content() == "# A document with an h1 heading"
-
-                assert root_2.metadata == {
-                    "docling_label": "title",
-                    "docling_ref": "#/texts/1",
-                    "headings": ["# A document with an h1 heading"],
-                }
-
-                root_3: LlamaBaseNode = collapsed_nodes[3]
-
-                assert root_3.get_content() == "Some text under the first h1 heading"
-
-                assert root_3.metadata == {
-                    "docling_label": "text",
-                    "docling_ref": "#/texts/2",
-                    "headings": ["# A document with an h1 heading"],
-                }
-
-                assert root_3.parent_node == root.as_related_node_info()
-                assert root_3.child_nodes is None
-                assert root_3.prev_node == root_2.as_related_node_info()
-                assert root_3.next_node is None
-
-                assert organize_nodes_for_snapshot(nodes=collapsed_nodes) == yaml_snapshot
-
-    class TestMixedHTML:
         @pytest.fixture
-        def source_document(self) -> LlamaDocument:
+        def mixed_document(self) -> LlamaDocument:
             input_html: str = dedent(
                 text="""
                 <!DOCTYPE html>
@@ -337,110 +247,58 @@ class TestDocuments:
 
             return LlamaDocument(text_resource=MediaResource(text=input_html, mimetype="text/html"))
 
-        @pytest.fixture
-        def converted_content(self) -> str:
-            # Notes:
-            # - Docling does not support quotes/blockquotes
-            # - Docling does not support inline code
-            # - If the page has headers, any content before the first header is "outside" the body and excluded
+        def test_mixed(
+            self,
+            mixed_document: LlamaDocument,
+            yaml_snapshot: SnapshotAssertion,
+        ) -> None:
+            docling_hierarchical_node_parser: DoclingHierarchicalNodeParser = DoclingHierarchicalNodeParser()
+            parsed_nodes: list[LlamaBaseNode] = docling_hierarchical_node_parser.get_nodes_from_documents(documents=[mixed_document])
+            common_assertions(parsed_nodes=parsed_nodes, source_document=mixed_document)
 
-            return dedent(
+            assert len(parsed_nodes) == 12
+
+            root_1: LlamaBaseNode = parsed_nodes[0]
+            root_2: LlamaBaseNode = parsed_nodes[11]
+
+            root_1_ideal_content: str = dedent(
                 text="""
-                # Main Heading
+            # Main Heading
 
-                Content under the first H1, with italic text.
+            Content under the first H1, with italic text.
 
-                ## Section with a Table
+            ## Section with a Table
 
-                | Column A   | Column B   |
-                |------------|------------|
-                | Data 1A    | Data 1B    |
-                | Data 2A    | Data 2B    |
+            | Column A   | Column B   |
+            |------------|------------|
+            | Data 1A    | Data 1B    |
+            | Data 2A    | Data 2B    |
 
-                ## Another Section with Lists
+            ## Another Section with Lists
 
-                Here are some lists.
+            Here are some lists.
 
-                - First item
-                - Second item
+            - First item
+            - Second item
 
-                1. Step 1
-                2. Step 2
+            1. Step 1
+            2. Step 2
 
-                This is a blockquote.
+            This is a blockquote.
 
-                ### Subsection with Code
+            ### Subsection with Code
 
-                An example of inline code is document.getElementById().
+            An example of inline code is document.getElementById().
 
-                ```
-                function hello() {
-                    console.log("Hello, world!");
-                }
-                ```
-
-                # Final Heading
-
-                A final paragraph with an image and some text that should not be formatted: 5 * 3 = 15.
+            ```
+            function hello() {
+                console.log("Hello, world!");
+            }
+            ```
             """
             ).strip()
 
-        def test_node(
-            self,
-            converted_content: str,
-            parsed_nodes: list[LlamaBaseNode],
-            yaml_snapshot: SnapshotAssertion,
-        ) -> None:
-            root: LlamaBaseNode = parsed_nodes[0]
-            assert root.get_content() == converted_content
-
-            assert root.metadata == {}
-            assert root.next_node is None
-            assert root.prev_node is None
-            assert root.child_nodes is not None
-            assert len(root.child_nodes) == 2
-
-            root_1: LlamaBaseNode = parsed_nodes[1]
-
-            assert (
-                root_1.get_content()
-                == dedent(
-                    text="""
-                # Main Heading
-
-                Content under the first H1, with italic text.
-
-                ## Section with a Table
-
-                | Column A   | Column B   |
-                |------------|------------|
-                | Data 1A    | Data 1B    |
-                | Data 2A    | Data 2B    |
-
-                ## Another Section with Lists
-
-                Here are some lists.
-
-                - First item
-                - Second item
-
-                1. Step 1
-                2. Step 2
-
-                This is a blockquote.
-
-                ### Subsection with Code
-
-                An example of inline code is document.getElementById().
-
-                ```
-                function hello() {
-                    console.log("Hello, world!");
-                }
-                ```
-                """
-                ).strip()
-            )
+            assert root_1.get_content() == root_1_ideal_content
 
             assert root_1.metadata == {
                 "docling_label": "title",
@@ -448,20 +306,19 @@ class TestDocuments:
                 "headings": ["# Main Heading"],
             }
 
-            assert root_1.parent_node == root.as_related_node_info()
+            assert root_1.parent_node is None
+            assert root_1.child_nodes is not None
+            assert len(root_1.child_nodes) == 4
 
-            root_2: LlamaBaseNode = parsed_nodes[17]
+            root_2_ideal_content: str = dedent(
+                text="""
+                # Final Heading
 
-            assert (
-                root_2.get_content()
-                == dedent(
-                    text="""
-            # Final Heading
-
-            A final paragraph with an image and some text that should not be formatted: 5 * 3 = 15.
+                A final paragraph with an image and some text that should not be formatted: 5 * 3 = 15.
             """
-                ).strip()
-            )
+            ).strip()
+
+            assert root_2.get_content() == root_2_ideal_content
 
             assert root_2.metadata == {
                 "docling_label": "title",
@@ -469,37 +326,116 @@ class TestDocuments:
                 "headings": ["# Final Heading"],
             }
 
+            assert root_2.prev_node == root_1.as_related_node_info()
+            assert root_2.next_node is None
+            assert root_2.parent_node is None
+            assert root_2.child_nodes is None
+
+            assert serialize_nodes_for_snapshot(nodes=parsed_nodes) == yaml_snapshot
+
+        def test_mixed_no_chunking(
+            self,
+            mixed_document: LlamaDocument,
+            yaml_snapshot: SnapshotAssertion,
+        ) -> None:
+            docling_hierarchical_node_parser: DoclingHierarchicalNodeParser = DoclingHierarchicalNodeParser(minimum_chunk_size=0)
+            parsed_nodes: list[LlamaBaseNode] = docling_hierarchical_node_parser.get_nodes_from_documents(documents=[mixed_document])
+            common_assertions(parsed_nodes=parsed_nodes, source_document=mixed_document)
+
+            assert len(parsed_nodes) == 17
+
+            root_1: LlamaBaseNode = parsed_nodes[0]
+            root_1_ideal_content: str = dedent(
+                text="""
+            # Main Heading
+
+            Content under the first H1, with italic text.
+
+            ## Section with a Table
+
+            | Column A   | Column B   |
+            |------------|------------|
+            | Data 1A    | Data 1B    |
+            | Data 2A    | Data 2B    |
+
+            ## Another Section with Lists
+
+            Here are some lists.
+
+            - First item
+            - Second item
+
+            1. Step 1
+            2. Step 2
+
+            This is a blockquote.
+
+            ### Subsection with Code
+
+            An example of inline code is document.getElementById().
+
+            ```
+            function hello() {
+                console.log("Hello, world!");
+            }
+            ```
+            """
+            ).strip()
+
+            assert root_1.get_content() == root_1_ideal_content
+
+            assert root_1.metadata == {
+                "docling_label": "title",
+                "docling_ref": "#/texts/1",
+                "headings": ["# Main Heading"],
+            }
+
+            assert root_1.parent_node is None
+            assert root_1.child_nodes is not None
+            assert len(root_1.child_nodes) == 4
+
+            root_2: LlamaBaseNode = parsed_nodes[14]
+
+            assert root_1.next_node == root_2.as_related_node_info()
+
+            root_2_ideal_content: str = dedent(
+                text="""
+                # Final Heading
+
+                A final paragraph with an image and some text that should not be formatted: 5 * 3 = 15.
+            """
+            ).strip()
+
+            assert root_2.get_content() == root_2_ideal_content
+
+            assert root_2.metadata == {
+                "docling_label": "title",
+                "docling_ref": "#/texts/14",
+                "headings": ["# Final Heading"],
+            }
+
+            root_2_2: LlamaBaseNode = parsed_nodes[16]
+
+            assert root_2_2.get_content() == "A final paragraph with an image and some text that should not be formatted: 5 * 3 = 15."
+
+            assert root_2_2.metadata == {
+                "docling_label": "text",
+                "docling_ref": "#/texts/15",
+                "headings": ["# Final Heading"],
+            }
+
             assert organize_nodes_for_snapshot(nodes=parsed_nodes, extra_nodes=parsed_nodes) == yaml_snapshot
 
-        class TestCollapsed:
-            @pytest.fixture
-            def docling_hierarchical_node_parser(self) -> DoclingHierarchicalNodeParser:
-                return DoclingHierarchicalNodeParser(
-                    collapse_nodes=True,
-                    collapse_max_size=1024,
-                    collapse_min_size=256,
-                )
 
-            def test_collapsed(
-                self,
-                converted_content: str,
-                parsed_nodes: list[LlamaBaseNode],
-                yaml_snapshot: SnapshotAssertion,
-            ) -> None:
-                root: LlamaBaseNode = parsed_nodes[0]
+html_samples = get_docling_samples(sample_type="html")
+markdown_samples = get_docling_samples(sample_type="markdown")
 
-                assert root.get_content() == converted_content
-                assert root.metadata == {}
+all_samples: list[DoclingSample] = html_samples + markdown_samples
 
-                assert organize_nodes_for_snapshot(nodes=parsed_nodes) == yaml_snapshot
+test_case_ids: list[str] = [sample.name for sample in all_samples]
 
 
-samples = get_docling_samples(sample_type="html")
-
-test_case_ids: list[str] = [sample.name for sample in samples]
-
-
-class TestSamples:
+class TestIntegrationTests:
     @pytest.fixture
     def docling_hierarchical_node_parser(self) -> DoclingHierarchicalNodeParser:
         return DoclingHierarchicalNodeParser()
@@ -512,68 +448,85 @@ class TestSamples:
             embed_model=embedding_model,
         )
 
-    @pytest.mark.parametrize(argnames=("sample"), argvalues=samples, ids=test_case_ids)
-    def test_sample(
-        self,
-        sample: DoclingSample,
-        yaml_snapshot: SnapshotAssertion,
-        markdown_snapshot: SnapshotAssertion,
-        leaf_semantic_merger_node_parser: LeafSemanticMergerNodeParser,
-    ):
-        # Generate nodes without collapsing
-        node_parser: DoclingHierarchicalNodeParser = DoclingHierarchicalNodeParser()
+    @pytest.mark.parametrize(argnames=("sample"), argvalues=all_samples, ids=test_case_ids)
+    class TestPipelineStages:
+        def test_basic(
+            self,
+            sample: DoclingSample,
+            yaml_snapshot: SnapshotAssertion,
+            text_snapshot: SnapshotAssertion,
+        ):
+            node_parser: DoclingHierarchicalNodeParser = DoclingHierarchicalNodeParser()
 
-        parsed_nodes: list[LlamaBaseNode] = node_parser.get_nodes_from_documents(documents=[sample.input_as_document()])
-        validate_relationships(nodes=parsed_nodes)
+            parsed_nodes: list[LlamaBaseNode] = node_parser.get_nodes_from_documents(documents=[sample.input_as_document()])
+            validate_relationships(nodes=parsed_nodes)
 
-        assert serialize_nodes_for_snapshot(nodes=parsed_nodes) == yaml_snapshot
-        assert parsed_nodes[0].get_content() == markdown_snapshot
+            assert serialize_nodes_for_snapshot(nodes=parsed_nodes) == yaml_snapshot
+            assert serialize_node_structure_for_snapshot(nodes=parsed_nodes) == text_snapshot(name="structure")
+            assert parsed_nodes[0].get_content() == text_snapshot
 
-        parsed_root_node: LlamaBaseNode = parsed_nodes[0]
-        assert isinstance(parsed_root_node, LlamaBaseNode)
+        def test_custom_backend(
+            self,
+            sample: DoclingSample,
+            yaml_snapshot: SnapshotAssertion,
+            text_snapshot: SnapshotAssertion,
+        ):
+            # Now Generate the nodes with our custom HTML backend
+            format_options: dict[InputFormat, FormatOption] = {
+                InputFormat.HTML: FormatOption(
+                    pipeline_cls=SimplePipeline,
+                    backend=TrimmedHTMLDocumentBackend,
+                ),
+                InputFormat.MD: FormatOption(
+                    pipeline_cls=SimplePipeline,
+                    backend=GroupingMarkdownDocumentBackend,
+                ),
+            }
 
-        # Generate nodes with collapsing
-        collapsing_node_parser: DoclingHierarchicalNodeParser = DoclingHierarchicalNodeParser(collapse_nodes=True)
-        collapsed_nodes: list[LlamaBaseNode] = collapsing_node_parser.get_nodes_from_documents(documents=[sample.input_as_document()])
-        validate_relationships(nodes=collapsed_nodes)
+            node_parser: DoclingHierarchicalNodeParser = DoclingHierarchicalNodeParser(format_options=format_options)
 
-        assert serialize_nodes_for_snapshot(nodes=collapsed_nodes) == yaml_snapshot(name="collapsed")
+            parsed_nodes: list[LlamaBaseNode] = node_parser.get_nodes_from_documents(documents=[sample.input_as_document()])
+            validate_relationships(nodes=parsed_nodes)
 
-        collapsed_root_node: LlamaBaseNode = collapsed_nodes[0]
-        assert isinstance(collapsed_root_node, LlamaBaseNode)
+            assert serialize_nodes_for_snapshot(nodes=parsed_nodes) == yaml_snapshot
+            assert serialize_node_structure_for_snapshot(nodes=parsed_nodes) == text_snapshot(name="structure")
 
-        # Generate collapsed nodes with custom HTML Backend
-        format_options: dict[InputFormat, FormatOption] = {
-            InputFormat.HTML: FormatOption(
-                pipeline_cls=SimplePipeline,
-                backend=TrimmedHTMLDocumentBackend,
-            ),
-        }
-        assert collapsed_root_node.get_content() == parsed_root_node.get_content()
+            assert parsed_nodes[0].get_content() == text_snapshot
 
-        # Use the custom HTML backend to generate nodes
-        trimmed_node_parser: DoclingHierarchicalNodeParser = DoclingHierarchicalNodeParser(
-            format_options=format_options, collapse_nodes=True
-        )
+        def test_leaf_semantic_merging(
+            self,
+            sample: DoclingSample,
+            yaml_snapshot: SnapshotAssertion,
+            text_snapshot: SnapshotAssertion,
+            leaf_semantic_merger_node_parser: LeafSemanticMergerNodeParser,
+        ):
+            # Now Generate the nodes with our custom HTML backend
+            format_options: dict[InputFormat, FormatOption] = {
+                InputFormat.HTML: FormatOption(
+                    pipeline_cls=SimplePipeline,
+                    backend=TrimmedHTMLDocumentBackend,
+                ),
+            }
+            node_parser: DoclingHierarchicalNodeParser = DoclingHierarchicalNodeParser(format_options=format_options)
 
-        trimmed_nodes: list[LlamaBaseNode] = trimmed_node_parser.get_nodes_from_documents(documents=[sample.input_as_document()])
-        validate_relationships(nodes=trimmed_nodes)
+            parsed_nodes: list[LlamaBaseNode] = node_parser.get_nodes_from_documents(documents=[sample.input_as_document()])
+            validate_relationships(nodes=parsed_nodes)
 
-        assert serialize_nodes_for_snapshot(nodes=trimmed_nodes) == yaml_snapshot(name="custom_backend")
+            leaf_nodes: list[LlamaBaseNode] = [leaf_node for leaf_node in parsed_nodes if leaf_node.child_nodes is None]
 
-        assert trimmed_nodes[0].get_content() == markdown_snapshot(name="custom_backend")
+            assert embedding_model is not None
+            _ = embedding_model(nodes=leaf_nodes)
 
-        leaf_nodes = [leaf_node for leaf_node in trimmed_nodes if leaf_node.child_nodes is None]
+            merged_nodes: list[LlamaBaseNode] = leaf_semantic_merger_node_parser._parse_nodes(nodes=parsed_nodes)  # pyright: ignore[reportPrivateUsage]
+            merged_nodes = leaf_semantic_merger_node_parser._postprocess_parsed_nodes(nodes=merged_nodes, parent_doc_map={})  # pyright: ignore[reportPrivateUsage]
 
-        assert embedding_model is not None
-        _ = embedding_model(nodes=leaf_nodes)
+            validate_relationships(nodes=merged_nodes)
 
-        merged_nodes: list[LlamaBaseNode] = leaf_semantic_merger_node_parser._parse_nodes(nodes=trimmed_nodes)
-        merged_nodes = leaf_semantic_merger_node_parser._postprocess_parsed_nodes(nodes=merged_nodes, parent_doc_map={})
+            assert serialize_nodes_for_snapshot(nodes=merged_nodes) == yaml_snapshot
+            assert serialize_node_structure_for_snapshot(nodes=merged_nodes) == text_snapshot(name="structure")
+            assert serialize_nodes_for_snapshot(nodes=leaf_nodes, extra_nodes=merged_nodes) == yaml_snapshot(name="chunks")
 
-        validate_relationships(nodes=merged_nodes)
-
-        assert serialize_nodes_for_snapshot(nodes=merged_nodes) == yaml_snapshot(name="merged")
+            assert merged_nodes[0].get_content() == text_snapshot
 
 
 # class TestSimpleMarkdown:

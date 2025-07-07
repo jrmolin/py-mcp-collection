@@ -5,10 +5,12 @@ from typing import Any, ClassVar, Literal, override
 
 from llama_index.core.base.embeddings.base import BaseEmbedding, Embedding, mean_agg
 from llama_index.core.bridge.pydantic import ConfigDict, Field, SerializeAsAny
-from llama_index.core.schema import BaseNode, MetadataMode, NodeRelationship
+from llama_index.core.schema import BaseNode, MediaResource, MetadataMode, Node
 
 from knowledge_base_mcp.llama_index.hierarchical_node_parsers.hierarchical_node_parser import HierarchicalNodeParser
+from knowledge_base_mcp.llama_index.utils.node_registry import NodeRegistry
 from knowledge_base_mcp.utils.logging import BASE_LOGGER
+from knowledge_base_mcp.utils.window import PeekableIterator
 
 logger: Logger = BASE_LOGGER.getChild(suffix=__name__)
 
@@ -81,6 +83,9 @@ class LeafSemanticMergerNodeParser(HierarchicalNodeParser):
         If None, the limit is retrieved from the embed_model.
         If the embed_model does not have a max_tokens limit, the default is 256."""
 
+    collapse_max_size: int = Field(default=384)
+    """The maximum size of a node to collapse. If a node is larger than this size, it will not be collapsed."""
+
     estimate_token_count: bool = Field(default=True)
     """If True, the token count of the accumulated nodes will be estimated by dividing
     the character count by 4. This is significantly faster than calculating the token count
@@ -124,86 +129,160 @@ class LeafSemanticMergerNodeParser(HierarchicalNodeParser):
     ) -> list[BaseNode]:
         """Asynchronously parse document into nodes."""
 
-        related_node_iterator: NextNodeIterator = NextNodeIterator(nodes=nodes)
+        node_registry: NodeRegistry = NodeRegistry()
 
-        all_nodes: list[BaseNode] = []
+        node_registry.add(nodes=list(nodes))
 
-        for node in related_node_iterator:
-            if node.child_nodes is not None:
-                all_nodes.append(node)
+        for _, children in node_registry.get_leaf_families():
+            # We cannot merge if there is only one child node
+            if len(children) == 1:
                 continue
 
-            if len(node.get_content(metadata_mode=MetadataMode.NONE)) > self.collapse_max_size:
-                all_nodes.append(node)
-                continue
+            # We will use a peekable iterator to iterate over the children
+            # A peekable iterator lets us look ahead without consuming so we can determine if we want the node or not
+            peekable_iterator: PeekableIterator[BaseNode] = PeekableIterator(items=children)
 
-            nodes_to_merge: list[BaseNode] = [node]
+            for node in peekable_iterator:
+                nodes_to_merge: list[BaseNode] = [node]
+                nodes_to_merge_size: int = self._count_nodes_tokens(nodes=nodes_to_merge)
 
-            dissimilar_nodes: list[BaseNode] = []
-            similar_nodes_embeddings: list[Embedding] = [node.get_embedding()]
+                # We will use a list of embeddings to track the embeddings of the nodes we are merging
+                similar_node_embeddings: list[Embedding] = [node.get_embedding()]
 
-            # Let's see if we can merge this node with the next node
-            next_node = node
+                # Time to start peeking
+                while peek_node := peekable_iterator.peek():
+                    # We can use the size of the peek window as our # of dissimilar nodes so far
+                    # If we hit our threshold, we'll break out of the iterator
+                    # and any peeked nodes will be automatically "returned" to the iterator
+                    if len(peekable_iterator.repeek()) > self.max_dissimilar_nodes:
+                        break
 
-            while next_node := related_node_iterator.next_node(node=next_node):
-                if next_node.child_nodes is not None:
-                    break
+                    # We need to make sure we aren't going to exceed the max token count by adding more nodes
+                    pending_nodes_size: int = self._count_nodes_tokens(nodes=peekable_iterator.repeek())
 
-                # Make sure we don't have too many dissimilar nodes in a row
-                dissimilar_node_count: int = len(nodes_to_merge) - len(similar_nodes_embeddings)
-                if dissimilar_node_count > self.max_dissimilar_nodes:
-                    break
+                    if nodes_to_merge_size + pending_nodes_size > self._max_token_count:
+                        break
 
-                # Make sure we don't have too many tokens in the window
-                candidate_token_count: int = self._count_nodes_tokens(nodes=nodes_to_merge) + self._count_node_tokens(node=next_node)
-                if candidate_token_count > self._max_token_count:
-                    break
+                    # First check the similarity to the first node in the window
+                    similarity_to_first_node: float = self._node_embeddings_similarity(node=peek_node, embedding=similar_node_embeddings[0])
 
-                # Check for similarity to our previous similar node
-                # print("--------------------------------")
-                # print(f"Node: {node.node_id}")
-                # print(f"Next node: {next_node.node_id}")
-                # print("--------------")
+                    if similarity_to_first_node < self.merge_similarity_threshold:
+                        # Then check the similarity to the last similar node in the window
+                        similarity_to_last_node: float = self._embeddings_similarity(
+                            embedding=peek_node.get_embedding(),
+                            other_embedding=similar_node_embeddings[-1],
+                        )
 
-                similarity_to_previous_node: float = self._node_embeddings_similarity(
-                    embedding=similar_nodes_embeddings[-1],
-                    node=next_node,
-                )
+                        if similarity_to_last_node < self.merge_similarity_threshold:
+                            # This is a dissimilar node, but we'll check more nodes before deciding whether to keep it
+                            continue
 
-                # print(f"Similarity to previous node: {similarity_to_previous_node}")
+                    # We have a similar node! Add it to the list of nodes to merge
+                    similar_node_embeddings.append(peek_node.get_embedding())
 
-                if similarity_to_previous_node < self.merge_similarity_threshold:
-                    similarity_to_mean_of_similar_nodes: float = self._node_embeddings_similarity(
-                        embedding=self._combine_embeddings(embeddings=similar_nodes_embeddings),
-                        node=next_node,
-                    )
+                    # Also add any dissimilar nodes that we encountered along the way
+                    nodes_to_merge.extend(peekable_iterator.repeek())
 
-                    # print(f"Similarity to mean of similar nodes: {similarity_to_mean_of_similar_nodes}")
+                    # Update the size of the nodes to merge
+                    nodes_to_merge_size += self._count_nodes_tokens(nodes=peekable_iterator.repeek())
 
-                    if similarity_to_mean_of_similar_nodes < self.merge_similarity_threshold:
-                        dissimilar_nodes.append(next_node)
-                        continue
+                    # Tell the iterator to consume any peeked nodes that we are keeping
+                    # So that the next iteration starts at at the first node after the peeked nodes
+                    _ = peekable_iterator.commit_to_peek()
 
-                # print("--------------------------------")
+                # If we only have one node to merge, we can't merge it
+                if len(nodes_to_merge) == 1:
+                    continue
 
-                # Add the next node to the nodes to merge
-                related_node_iterator.pop_node(node=next_node)
+                reference_node: BaseNode = nodes_to_merge[0]
+                other_nodes: list[BaseNode] = nodes_to_merge[1:]
 
-                nodes_to_merge.extend(dissimilar_nodes)
-                dissimilar_nodes.clear()
+                new_node = self._merge_nodes(reference_node=reference_node, other_nodes=other_nodes, use_embeddings=similar_node_embeddings)
 
-                nodes_to_merge.append(next_node)
-                similar_nodes_embeddings.append(next_node.get_embedding())
+                node_registry.replace_node(node=reference_node, replacement_node=new_node)
 
-            if len(nodes_to_merge) == 1:
-                all_nodes.append(node)
-                continue
+                node_registry.remove(nodes=other_nodes)
 
-            new_node = self._merge_nodes(nodes=nodes_to_merge, use_embeddings=similar_nodes_embeddings)
+        return list(node_registry.get())
 
-            all_nodes.append(new_node)
+        # related_node_iterator: NextNodeIterator = NextNodeIterator(nodes=nodes)
 
-        return all_nodes
+        # all_nodes: list[BaseNode] = []
+
+        # for node in related_node_iterator:
+        #     if node.child_nodes is not None:
+        #         all_nodes.append(node)
+        #         continue
+
+        #     if len(node.get_content(metadata_mode=MetadataMode.NONE)) > self.collapse_max_size:
+        #         all_nodes.append(node)
+        #         continue
+
+        #     nodes_to_merge: list[BaseNode] = [node]
+
+        #     dissimilar_nodes: list[BaseNode] = []
+        #     similar_nodes_embeddings: list[Embedding] = [node.get_embedding()]
+
+        #     # Let's see if we can merge this node with the next node
+        #     next_node = node
+
+        #     while next_node := related_node_iterator.next_node(node=next_node):
+        #         if next_node.child_nodes is not None:
+        #             break
+
+        #         # Make sure we don't have too many dissimilar nodes in a row
+        #         dissimilar_node_count: int = len(nodes_to_merge) - len(similar_nodes_embeddings)
+        #         if dissimilar_node_count > self.max_dissimilar_nodes:
+        #             break
+
+        #         # Make sure we don't have too many tokens in the window
+        #         candidate_token_count: int = self._count_nodes_tokens(nodes=nodes_to_merge) + self._count_node_tokens(node=next_node)
+        #         if candidate_token_count > self._max_token_count:
+        #             break
+
+        #         # Check for similarity to our previous similar node
+        #         # print("--------------------------------")
+        #         # print(f"Node: {node.node_id}")
+        #         # print(f"Next node: {next_node.node_id}")
+        #         # print("--------------")
+
+        #         similarity_to_previous_node: float = self._node_embeddings_similarity(
+        #             embedding=similar_nodes_embeddings[-1],
+        #             node=next_node,
+        #         )
+
+        #         # print(f"Similarity to previous node: {similarity_to_previous_node}")
+
+        #         if similarity_to_previous_node < self.merge_similarity_threshold:
+        #             similarity_to_mean_of_similar_nodes: float = self._node_embeddings_similarity(
+        #                 embedding=self._combine_embeddings(embeddings=similar_nodes_embeddings),
+        #                 node=next_node,
+        #             )
+
+        #             # print(f"Similarity to mean of similar nodes: {similarity_to_mean_of_similar_nodes}")
+
+        #             if similarity_to_mean_of_similar_nodes < self.merge_similarity_threshold:
+        #                 dissimilar_nodes.append(next_node)
+        #                 continue
+
+        #         # print("--------------------------------")
+
+        #         # Add the next node to the nodes to merge
+        #         related_node_iterator.pop_node(node=next_node)
+
+        #         nodes_to_merge.extend(dissimilar_nodes)
+        #         dissimilar_nodes.clear()
+
+        #         nodes_to_merge.append(next_node)
+        #         similar_nodes_embeddings.append(next_node.get_embedding())
+
+        #     if len(nodes_to_merge) == 1:
+        #         all_nodes.append(node)
+        #         continue
+
+        #     new_node = self._merge_nodes(nodes=nodes_to_merge, use_embeddings=similar_nodes_embeddings)
+
+        #     all_nodes.append(new_node)
 
         # all_nodes: list[BaseNode] = []
         # nodes_by_id: dict[str, BaseNode] = {node.node_id: node for node in nodes}
@@ -340,52 +419,49 @@ class LeafSemanticMergerNodeParser(HierarchicalNodeParser):
 
         return self.embed_model.similarity(node.get_embedding(), embedding)
 
-    def _merge_nodes(self, nodes: Sequence[BaseNode], use_embeddings: list[Embedding]) -> BaseNode:
+    def _embeddings_similarity(self, embedding: Embedding, other_embedding: Embedding) -> float:
+        """Calculate the similarity between a list of embeddings."""
+        return self.embed_model.similarity(embedding, other_embedding)
+
+    def _merge_nodes(self, reference_node: BaseNode, other_nodes: Sequence[BaseNode], use_embeddings: list[Embedding]) -> BaseNode:
         """Merge nodes together into a common node. Inlining any embeddable metadata that is not common to all nodes."""
 
-        reference_node = nodes[0]
+        all_nodes: list[BaseNode] = [reference_node, *other_nodes]
 
-        if len(nodes) == 1:
-            return reference_node
+        new_content: str = "\n\n".join([self._get_embeddable_content(node=node) for node in all_nodes])
 
-        all_content: list[str] = [self._get_embeddable_content(node=node) for node in nodes]
+        new_metadata: dict[str, Any] = reference_node.metadata.copy()
 
-        reference_node.set_content(value="\n\n".join(all_content))
+        return Node(
+            text_resource=MediaResource(text=new_content),
+            extra_info=new_metadata,
+            embedding=self._combine_embeddings(embeddings=use_embeddings),
+        )
 
-        reference_node.embedding = self._combine_embeddings(embeddings=use_embeddings)
+    # def _merge_nodes_in_place(self, reference_node: BaseNode, other_nodes: Sequence[BaseNode], use_embeddings: list[Embedding]) -> BaseNode:
+    #     """Merge nodes together into a common node. Inlining any embeddable metadata that is not common to all nodes."""
 
-        if reference_node.prev_node:
-            del reference_node.relationships[NodeRelationship.PREVIOUS]
+    #     if len(other_nodes) == 0:
+    #         return reference_node
 
-        if reference_node.next_node:
-            del reference_node.relationships[NodeRelationship.NEXT]
+    #     all_content: list[str] = [self._get_embeddable_content(node=node) for node in other_nodes]
 
-        if new_prev_node := nodes[0].prev_node:
-            reference_node.relationships[NodeRelationship.PREVIOUS] = new_prev_node
+    #     reference_node.set_content(value="\n\n".join(all_content))
 
-        if new_next_node := nodes[-1].next_node:
-            reference_node.relationships[NodeRelationship.NEXT] = new_next_node
+    #     reference_node.embedding = self._combine_embeddings(embeddings=use_embeddings)
 
-        return reference_node
+    #     return reference_node
 
     def _count_nodes_tokens(self, nodes: Sequence[BaseNode]) -> int:
         """Count the number of tokens in a node."""
-        return sum(self._count_node_tokens(node=node) for node in nodes)
 
-    def _count_node_tokens(self, node: BaseNode) -> int:
-        """Count the number of tokens in a node."""
-        embeddable_content = self._get_embeddable_content(node=node)
+        if not self.estimate_token_count:
+            msg = "Non-estimated token counting is not implemented yet"
+            raise NotImplementedError(msg)
 
-        return self._count_text_tokens(text=embeddable_content)
+        token_counts: list[int] = [len(self._get_embeddable_content(node=node)) for node in nodes]
 
-    def _count_text_tokens(self, text: str) -> int:
-        """Count the number of tokens in a text."""
-
-        if self.estimate_token_count:
-            return len(text) // 4
-
-        msg = "Non-estimated token counting is not implemented yet"
-        raise NotImplementedError(msg)
+        return sum(token_counts) // 4
 
     def _get_embeddable_content(self, node: BaseNode) -> str:
         """Get the embeddable content of a node."""

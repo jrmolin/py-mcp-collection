@@ -15,6 +15,11 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
+def get_nodes_size(nodes: list[NodeWithScore]) -> int:
+    """Get the size of the nodes."""
+    return sum(len(node.node.get_content(metadata_mode=MetadataMode.LLM).strip()) for node in nodes)
+
+
 class ParentContextNodePostprocessor(BaseNodePostprocessor):
     doc_store: BaseDocumentStore
     """The document store to get the parent nodes from."""
@@ -43,9 +48,11 @@ class ParentContextNodePostprocessor(BaseNodePostprocessor):
 
         nodes_by_parent_id: dict[str, list[NodeWithScore]] = defaultdict(list)
 
-        for node in nodes:
-            if parent_node := node.node.parent_node:
-                nodes_by_parent_id[parent_node.node_id].append(node)
+        for scored_node in nodes:
+            if parent_node := scored_node.node.parent_node:
+                nodes_by_parent_id[parent_node.node_id].append(scored_node)
+            elif source_node := scored_node.node.source_node:
+                nodes_by_parent_id[source_node.node_id].append(scored_node)
 
         candidate_parent_nodes: Sequence[BaseNode] = self.doc_store.get_nodes(node_ids=list(nodes_by_parent_id.keys()))
 
@@ -57,7 +64,7 @@ class ParentContextNodePostprocessor(BaseNodePostprocessor):
             if not candidate_parent_node.child_nodes:
                 continue
 
-            scored_children = nodes_by_parent_id[candidate_parent_node.node_id]
+            scored_children: list[NodeWithScore] = nodes_by_parent_id[candidate_parent_node.node_id]
 
             if len(scored_children) / len(candidate_parent_node.child_nodes) < self.threshold:
                 continue

@@ -1,0 +1,2011 @@
+- node_id: '0'
+  node_depth: 0
+  node_type: Node
+  content_length: 26433
+  content: |-
+    # ES|QL aggregation functions
+
+    The STATS command supports these aggregate functions:
+
+    - AVG
+    - COUNT
+    - COUNT_DISTINCT
+    - MAX
+    - MEDIAN
+    - MEDIAN_ABSOLUTE_DEVIATION
+    - MIN
+    - PERCENTILE
+    - [preview] ST_CENTROID_AGG
+    - [preview] ST_EXTENT_AGG
+    - STD_DEV
+    - SUM
+    - TOP
+    - [preview] VALUES
+    - WEIGHTED_AVG
+
+    ## AVG
+
+    Syntax
+
+    Parameters
+
+    - number
+        - Expression that outputs values to average.
+
+    Description
+
+    The average of a numeric field.
+
+    Supported types
+
+    | number   | result   |
+    |----------|----------|
+    | double   | double   |
+    | integer  | double   |
+    | long     | double   |
+
+    Examples
+
+    ```
+    FROM employees
+    | STATS AVG(height)
+    ```
+
+    |   AVG(height):double |
+    |----------------------|
+    |               1.7682 |
+
+    The expression can use inline functions. For example, to calculate the average over a multivalued column, first use MV_AVG to average the multiple values per row, and use the result with the AVG function
+
+    ```
+    FROM employees
+    | STATS avg_salary_change = ROUND(AVG(MV_AVG(salary_change)), 10)
+    ```
+
+    |   avg_salary...
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/9'
+    headings:
+    - '# ES|QL aggregation functions'
+  relationships:
+    children:
+    - '1'
+    - '2'
+    - '4'
+    - '8'
+    - '15'
+    - '17'
+    - '20'
+    - '23'
+    - '25'
+    - '32'
+    - '34'
+    - '36'
+    - '38'
+    - '40'
+    - '42'
+    - '46'
+- node_id: '1'
+  node_depth: 1
+  node_type: Node
+  content_length: 288
+  content: |-
+    # ES|QL aggregation functions
+
+    The STATS command supports these aggregate functions:
+
+    - AVG
+    - COUNT
+    - COUNT_DISTINCT
+    - MAX
+    - MEDIAN
+    - MEDIAN_ABSOLUTE_DEVIATION
+    - MIN
+    - PERCENTILE
+    - [preview] ST_CENTROID_AGG
+    - [preview] ST_EXTENT_AGG
+    - STD_DEV
+    - SUM
+    - TOP
+    - [preview] VALUES
+    - WEIGHTED_AVG
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/9'
+    headings:
+    - '# ES|QL aggregation functions'
+  relationships:
+    next: '2'
+    parent: '0'
+- node_id: '2'
+  node_depth: 1
+  node_type: Node
+  content_length: 788
+  content: |-
+    ## AVG
+
+    Syntax
+
+    Parameters
+
+    - number
+        - Expression that outputs values to average.
+
+    Description
+
+    The average of a numeric field.
+
+    Supported types
+
+    | number   | result   |
+    |----------|----------|
+    | double   | double   |
+    | integer  | double   |
+    | long     | double   |
+
+    Examples
+
+    ```
+    FROM employees
+    | STATS AVG(height)
+    ```
+
+    |   AVG(height):double |
+    |----------------------|
+    |               1.7682 |
+
+    The expression can use inline functions. For example, to calculate the average over a multivalued column, first use MV_AVG to average the multiple values per row, and use the result with the AVG function
+
+    ```
+    FROM employees
+    | STATS avg_salary_change = ROUND(AVG(MV_AVG(salary_change)), 10)
+    ```
+
+    |   avg_salary_change:double |
+    |----------------------------|
+    |                    1.39045 |
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/26'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## AVG'
+  relationships:
+    children:
+    - '3'
+    next: '4'
+    parent: '0'
+    previous: '1'
+- node_id: '3'
+  node_depth: 2
+  node_type: Node
+  content_length: 788
+  content: |-
+    ## AVG
+
+    Syntax
+
+    Parameters
+
+    - number
+        - Expression that outputs values to average.
+
+    Description
+
+    The average of a numeric field.
+
+    Supported types
+
+    | number   | result   |
+    |----------|----------|
+    | double   | double   |
+    | integer  | double   |
+    | long     | double   |
+
+    Examples
+
+    ```
+    FROM employees
+    | STATS AVG(height)
+    ```
+
+    |   AVG(height):double |
+    |----------------------|
+    |               1.7682 |
+
+    The expression can use inline functions. For example, to calculate the average over a multivalued column, first use MV_AVG to average the multiple values per row, and use the result with the AVG function
+
+    ```
+    FROM employees
+    | STATS avg_salary_change = ROUND(AVG(MV_AVG(salary_change)), 10)
+    ```
+
+    |   avg_salary_change:double |
+    |----------------------------|
+    |                    1.39045 |
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/26'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## AVG'
+  relationships:
+    parent: '2'
+- node_id: '4'
+  node_depth: 1
+  node_type: Node
+  content_length: 2347
+  content: |-
+    ## COUNT
+
+    Syntax
+
+    Parameters
+
+    - field
+        - Expression that outputs values to be counted. If omitted, equivalent to COUNT(*) (the number of rows).
+
+    Description
+
+    Returns the total number (count) of input values.
+
+    Supported types
+
+    | field           | result   |
+    |-----------------|----------|
+    | boolean         | long     |
+    | cartesian_point | long     |
+    | date            | long     |
+    | double          | long     |
+    | geo_point       | long     |
+    | integer         | long     |
+    | ip              | long     |
+    | keyword         | long     |
+    | long            | long     |
+    | text            | long     |
+    | unsigned_long   | long     |
+    | version         | long     |
+
+    Examples
+
+    ```
+    FROM employees
+    | STATS COUNT(height)
+    ```
+
+    |   COUNT(height):long |
+    |----------------------|
+    |                  100 |
+
+    To count the number of rows, use COUNT() or COUNT(*)
+
+    ```
+    FROM employees
+    | STATS count = COUNT(*) BY languages
+    | SORT languages DESC
+    ```
+
+    |   count:long | languages:integer   |
+    |--------------|-----------...
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/38'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  relationships:
+    children:
+    - '5'
+    - '6'
+    - '7'
+    next: '8'
+    parent: '0'
+    previous: '2'
+- node_id: '5'
+  node_depth: 2
+  node_type: Node
+  content_length: 932
+  content: |-
+    ## COUNT
+
+    Syntax
+
+    Parameters
+
+    - field
+        - Expression that outputs values to be counted. If omitted, equivalent to COUNT(*) (the number of rows).
+
+    Description
+
+    Returns the total number (count) of input values.
+
+    Supported types
+
+    | field           | result   |
+    |-----------------|----------|
+    | boolean         | long     |
+    | cartesian_point | long     |
+    | date            | long     |
+    | double          | long     |
+    | geo_point       | long     |
+    | integer         | long     |
+    | ip              | long     |
+    | keyword         | long     |
+    | long            | long     |
+    | text            | long     |
+    | unsigned_long   | long     |
+    | version         | long     |
+
+    Examples
+
+    ```
+    FROM employees
+    | STATS COUNT(height)
+    ```
+
+    |   COUNT(height):long |
+    |----------------------|
+    |                  100 |
+
+    To count the number of rows, use COUNT() or COUNT(*)
+
+    ```
+    FROM employees
+    | STATS count = COUNT(*) BY languages
+    | SORT languages DESC
+    ```
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/38'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  relationships:
+    next: '6'
+    parent: '4'
+- node_id: '6'
+  node_depth: 2
+  node_type: Node
+  content_length: 837
+  content: "|   count:long | languages:integer   |\n|--------------|---------------------|\n\
+    |           10 | null                |\n|           21 | 5                   |\n\
+    |           18 | 4                   |\n|           17 | 3                   |\n\
+    |           19 | 2                   |\n|           15 | 1                   |\n\
+    \nThe expression can use inline functions. This example splits a string into multiple\
+    \ values using the SPLIT function and counts the values\n\n```\nROW words=\"foo;bar;baz;qux;quux;foo\"\
+    \n| STATS word_count = COUNT(SPLIT(words, \";\"))\n```\n\n|   word_count:long\
+    \ |\n|-------------------|\n|                 6 |\n\nTo count the number of times\
+    \ an expression returns TRUE use a WHERE command to remove rows that shouldn\u2019\
+    t be included\n\n```\nROW n=1\n| WHERE n < 0\n| STATS COUNT(n)\n```\n\n|   COUNT(n):long\
+    \ |\n|-----------------|\n|               0 |"
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/5'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  relationships:
+    next: '7'
+    parent: '4'
+    previous: '5'
+- node_id: '7'
+  node_depth: 2
+  node_type: Node
+  content_length: 574
+  content: |-
+    To count the same stream of data based on two different expressions use the pattern COUNT(<expression> OR NULL). This builds on the three-valued logic (3VL) of the language: TRUE OR NULL is TRUE, but FALSE OR NULL is NULL, plus the way COUNT handles NULLs: COUNT(TRUE) and COUNT(FALSE) are both 1, but COUNT(NULL) is 0.
+
+    ```
+    ROW n=1
+    | STATS COUNT(n > 0 OR NULL), COUNT(n < 0 OR NULL)
+    ```
+
+    |   COUNT(n > 0 OR NULL):long |   COUNT(n < 0 OR NULL):long |
+    |-----------------------------|-----------------------------|
+    |                           1 |                           0 |
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/54'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  relationships:
+    parent: '4'
+    previous: '6'
+- node_id: '8'
+  node_depth: 1
+  node_type: Node
+  content_length: 5110
+  content: |-
+    ## COUNT_DISTINCT
+
+    Syntax
+
+    Parameters
+
+    - field
+        - Column or literal for which to count the number of distinct values.
+    - precision
+        - Precision threshold. Refer to AGG-COUNT-DISTINCT-APPROXIMATE. The maximum supported value is 40000. Thresholds above this number will have the same effect as a threshold of 40000. The default value is 3000.
+
+    Description
+
+    Returns the approximate number of distinct values.
+
+    Supported types
+
+    | field      | precision     | result   |
+    |------------|---------------|----------|
+    | boolean    | integer       | long     |
+    | boolean    | long          | long     |
+    | boolean    | unsigned_long | long     |
+    | boolean    |               | long     |
+    | date       | integer       | long     |
+    | date       | long          | long     |
+    | date       | unsigned_long | long     |
+    | date       |               | long     |
+    | date_nanos | integer       | long     |
+    | date_nanos | long          | long     |
+    | date_nanos | unsigned_long | long     |
+    | date_nanos |           ...
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/56'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  relationships:
+    children:
+    - '9'
+    - '10'
+    - '11'
+    - '12'
+    next: '15'
+    parent: '0'
+    previous: '4'
+- node_id: '9'
+  node_depth: 2
+  node_type: Node
+  content_length: 427
+  content: |-
+    ## COUNT_DISTINCT
+
+    Syntax
+
+    Parameters
+
+    - field
+        - Column or literal for which to count the number of distinct values.
+    - precision
+        - Precision threshold. Refer to AGG-COUNT-DISTINCT-APPROXIMATE. The maximum supported value is 40000. Thresholds above this number will have the same effect as a threshold of 40000. The default value is 3000.
+
+    Description
+
+    Returns the approximate number of distinct values.
+
+    Supported types
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/56'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  relationships:
+    next: '10'
+    parent: '8'
+- node_id: '10'
+  node_depth: 2
+  node_type: Node
+  content_length: 1763
+  content: |-
+    | field      | precision     | result   |
+    |------------|---------------|----------|
+    | boolean    | integer       | long     |
+    | boolean    | long          | long     |
+    | boolean    | unsigned_long | long     |
+    | boolean    |               | long     |
+    | date       | integer       | long     |
+    | date       | long          | long     |
+    | date       | unsigned_long | long     |
+    | date       |               | long     |
+    | date_nanos | integer       | long     |
+    | date_nanos | long          | long     |
+    | date_nanos | unsigned_long | long     |
+    | date_nanos |               | long     |
+    | double     | integer       | long     |
+    | double     | long          | long     |
+    | double     | unsigned_long | long     |
+    | double     |               | long     |
+    | integer    | integer       | long     |
+    | integer    | long          | long     |
+    | integer    | unsigned_long | long     |
+    | integer    |               | long     |
+    | ip         | integer       | long     |
+    | ip         | long          | lon...
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/9'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  relationships:
+    next: '11'
+    parent: '8'
+    previous: '9'
+- node_id: '11'
+  node_depth: 2
+  node_type: Node
+  content_length: 971
+  content: |-
+    Examples
+
+    ```
+    FROM hosts
+    | STATS COUNT_DISTINCT(ip0), COUNT_DISTINCT(ip1)
+    ```
+
+    |   COUNT_DISTINCT(ip0):long |   COUNT_DISTINCT(ip1):long |
+    |----------------------------|----------------------------|
+    |                          7 |                          8 |
+
+    With the optional second parameter to configure the precision threshold
+
+    ```
+    FROM hosts
+    | STATS COUNT_DISTINCT(ip0, 80000), COUNT_DISTINCT(ip1, 5)
+    ```
+
+    |   COUNT_DISTINCT(ip0, 80000):long |   COUNT_DISTINCT(ip1, 5):long |
+    |-----------------------------------|-------------------------------|
+    |                                 7 |                             9 |
+
+    The expression can use inline functions. This example splits a string into multiple values using the SPLIT function and counts the unique values
+
+    ```
+    ROW words="foo;bar;baz;qux;quux;foo"
+    | STATS distinct_word_count = COUNT_DISTINCT(SPLIT(words, ";"))
+    ```
+
+    |   distinct_word_count:long |
+    |----------------------------|
+    |                          5 |
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/66'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  relationships:
+    next: '12'
+    parent: '8'
+    previous: '10'
+- node_id: '12'
+  node_depth: 2
+  node_type: Node
+  content_length: 1943
+  content: "### Counts are approximate\n\nComputing exact counts requires loading\
+    \ values into a set and returning its\nsize. This doesn\u2019t scale when working\
+    \ on high-cardinality sets and/or large\nvalues as the required memory usage and\
+    \ the need to communicate those\nper-shard sets between nodes would utilize too\
+    \ many resources of the cluster.\n\nThis COUNT_DISTINCT function is based on the\n\
+    HyperLogLog++\nalgorithm, which counts based on the hashes of the values with\
+    \ some interesting\nproperties:\n\n- configurable precision, which decides on\
+    \ how to trade memory for accuracy,\n- excellent accuracy on low-cardinality sets,\n\
+    - fixed memory usage: no matter if there are tens or billions of unique values,\
+    \ memory usage only depends on the configured precision.\n\nFor a precision threshold\
+    \ of c, the implementation that we are using requires about c * 8 bytes.\n\nThe\
+    \ following chart shows how the error varies before and after the threshold:\n\
+    \nFor all 3 thresholds, counts have been accurate up to the configured threshold.\
+    \ Al..."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/72'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+    - '### Counts are approximate'
+  relationships:
+    children:
+    - '13'
+    - '14'
+    parent: '8'
+    previous: '11'
+- node_id: '13'
+  node_depth: 3
+  node_type: Node
+  content_length: 916
+  content: "### Counts are approximate\n\nComputing exact counts requires loading\
+    \ values into a set and returning its\nsize. This doesn\u2019t scale when working\
+    \ on high-cardinality sets and/or large\nvalues as the required memory usage and\
+    \ the need to communicate those\nper-shard sets between nodes would utilize too\
+    \ many resources of the cluster.\n\nThis COUNT_DISTINCT function is based on the\n\
+    HyperLogLog++\nalgorithm, which counts based on the hashes of the values with\
+    \ some interesting\nproperties:\n\n- configurable precision, which decides on\
+    \ how to trade memory for accuracy,\n- excellent accuracy on low-cardinality sets,\n\
+    - fixed memory usage: no matter if there are tens or billions of unique values,\
+    \ memory usage only depends on the configured precision.\n\nFor a precision threshold\
+    \ of c, the implementation that we are using requires about c * 8 bytes.\n\nThe\
+    \ following chart shows how the error varies before and after the threshold:"
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/72'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+    - '### Counts are approximate'
+  relationships:
+    next: '14'
+    parent: '12'
+- node_id: '14'
+  node_depth: 3
+  node_type: Node
+  content_length: 1025
+  content: |-
+    For all 3 thresholds, counts have been accurate up to the configured threshold. Although not guaranteed,
+    this is likely to be the case. Accuracy in practice depends on the dataset in question. In general,
+    most datasets show consistently good accuracy. Also note that even with a threshold as low as 100,
+    the error remains very low (1-6% as seen in the above graph) even when counting millions of items.
+
+    The HyperLogLog++ algorithm depends on the leading zeros of hashed values, the exact distributions of
+    hashes in a dataset can affect the accuracy of the cardinality.
+
+    The COUNT_DISTINCT function takes an optional second parameter to configure
+    the precision threshold. The precision_threshold options allows to trade memory
+    for accuracy, and defines a unique count below which counts are expected to be
+    close to accurate. Above this value, counts might become a bit more fuzzy. The
+    maximum supported value is 40000, thresholds above this number will have the
+    same effect as a threshold of 40000. T...
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/80'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+    - '### Counts are approximate'
+  relationships:
+    parent: '12'
+    previous: '13'
+- node_id: '15'
+  node_depth: 1
+  node_type: Node
+  content_length: 986
+  content: |-
+    ## MAX
+
+    Syntax
+
+    Parameters
+
+    - field
+
+    Description
+
+    The maximum value of a field.
+
+    Supported types
+
+    | field      | result     |
+    |------------|------------|
+    | boolean    | boolean    |
+    | date       | date       |
+    | date_nanos | date_nanos |
+    | double     | double     |
+    | integer    | integer    |
+    | ip         | ip         |
+    | keyword    | keyword    |
+    | long       | long       |
+    | text       | keyword    |
+    | version    | version    |
+
+    Examples
+
+    ```
+    FROM employees
+    | STATS MAX(languages)
+    ```
+
+    |   MAX(languages):integer |
+    |--------------------------|
+    |                        5 |
+
+    The expression can use inline functions. For example, to calculate the maximum over an average of a multivalued column, use MV_AVG to first average the multiple values per row, and use the result with the MAX function
+
+    ```
+    FROM employees
+    | STATS max_avg_salary_change = MAX(MV_AVG(salary_change))
+    ```
+
+    |   max_avg_salary_change:double |
+    |--------------------------------|
+    |                          13.75 |
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/83'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MAX'
+  relationships:
+    children:
+    - '16'
+    next: '17'
+    parent: '0'
+    previous: '8'
+- node_id: '16'
+  node_depth: 2
+  node_type: Node
+  content_length: 986
+  content: |-
+    ## MAX
+
+    Syntax
+
+    Parameters
+
+    - field
+
+    Description
+
+    The maximum value of a field.
+
+    Supported types
+
+    | field      | result     |
+    |------------|------------|
+    | boolean    | boolean    |
+    | date       | date       |
+    | date_nanos | date_nanos |
+    | double     | double     |
+    | integer    | integer    |
+    | ip         | ip         |
+    | keyword    | keyword    |
+    | long       | long       |
+    | text       | keyword    |
+    | version    | version    |
+
+    Examples
+
+    ```
+    FROM employees
+    | STATS MAX(languages)
+    ```
+
+    |   MAX(languages):integer |
+    |--------------------------|
+    |                        5 |
+
+    The expression can use inline functions. For example, to calculate the maximum over an average of a multivalued column, use MV_AVG to first average the multiple values per row, and use the result with the MAX function
+
+    ```
+    FROM employees
+    | STATS max_avg_salary_change = MAX(MV_AVG(salary_change))
+    ```
+
+    |   max_avg_salary_change:double |
+    |--------------------------------|
+    |                          13.75 |
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/83'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MAX'
+  relationships:
+    parent: '15'
+- node_id: '17'
+  node_depth: 1
+  node_type: Node
+  content_length: 1222
+  content: |-
+    ## MEDIAN
+
+    Syntax
+
+    Parameters
+
+    - number
+        - Expression that outputs values to calculate the median of.
+
+    Description
+
+    The value that is greater than half of all values and less than half of all values, also known as the 50% PERCENTILE.
+
+    Like PERCENTILE, MEDIAN is usually approximate.
+
+    Supported types
+
+    | number   | result   |
+    |----------|----------|
+    | double   | double   |
+    | integer  | double   |
+    | long     | double   |
+
+    Examples
+
+    ```
+    FROM employees
+    | STATS MEDIAN(salary), PERCENTILE(salary, 50)
+    ```
+
+    |   MEDIAN(salary):double |   PERCENTILE(salary, 50):double |
+    |-------------------------|---------------------------------|
+    |                   47003 |                           47003 |
+
+    The expression can use inline functions. For example, to calculate the median of the maximum values of a multivalued column, first use MV_MAX to get the maximum value per row, and use the result with the MEDIAN function
+
+    ```
+    FROM employees
+    | STATS median_max_salary_change = MEDIAN(MV_MAX(salary_change))
+    ``...
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/94'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN'
+  relationships:
+    children:
+    - '18'
+    - '19'
+    next: '20'
+    parent: '0'
+    previous: '15'
+- node_id: '18'
+  node_depth: 2
+  node_type: Node
+  content_length: 1001
+  content: |-
+    ## MEDIAN
+
+    Syntax
+
+    Parameters
+
+    - number
+        - Expression that outputs values to calculate the median of.
+
+    Description
+
+    The value that is greater than half of all values and less than half of all values, also known as the 50% PERCENTILE.
+
+    Like PERCENTILE, MEDIAN is usually approximate.
+
+    Supported types
+
+    | number   | result   |
+    |----------|----------|
+    | double   | double   |
+    | integer  | double   |
+    | long     | double   |
+
+    Examples
+
+    ```
+    FROM employees
+    | STATS MEDIAN(salary), PERCENTILE(salary, 50)
+    ```
+
+    |   MEDIAN(salary):double |   PERCENTILE(salary, 50):double |
+    |-------------------------|---------------------------------|
+    |                   47003 |                           47003 |
+
+    The expression can use inline functions. For example, to calculate the median of the maximum values of a multivalued column, first use MV_MAX to get the maximum value per row, and use the result with the MEDIAN function
+
+    ```
+    FROM employees
+    | STATS median_max_salary_change = MEDIAN(MV_MAX(salary_change))
+    ``...
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/94'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN'
+  relationships:
+    next: '19'
+    parent: '17'
+- node_id: '19'
+  node_depth: 2
+  node_type: Node
+  content_length: 219
+  content: |-
+    |   median_max_salary_change:double |
+    |-----------------------------------|
+    |                              7.69 |
+
+    MEDIAN is also non-deterministic.
+    This means you can get slightly different results using the same data.
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/18'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN'
+  relationships:
+    parent: '17'
+    previous: '18'
+- node_id: '20'
+  node_depth: 1
+  node_type: Node
+  content_length: 1649
+  content: "## MEDIAN_ABSOLUTE_DEVIATION\n\nSyntax\n\nParameters\n\n- number\n\nDescription\n\
+    \nReturns the median absolute deviation, a measure of variability. It is a robust\
+    \ statistic, meaning that it is useful for describing data that may have outliers,\
+    \ or may not be normally distributed. For such data it can be more descriptive\
+    \ than standard deviation.  It is calculated as the median of each data point\u2019\
+    s deviation from the median of the entire sample. That is, for a random variable\
+    \ X, the median absolute deviation is median(|median(X) - X|).\n\nLike PERCENTILE,\
+    \ MEDIAN_ABSOLUTE_DEVIATION is usually approximate.\n\nSupported types\n\n| number\
+    \   | result   |\n|----------|----------|\n| double   | double   |\n| integer\
+    \  | double   |\n| long     | double   |\n\nExamples\n\n```\nFROM employees\n\
+    | STATS MEDIAN(salary), MEDIAN_ABSOLUTE_DEVIATION(salary)\n```\n\n|   MEDIAN(salary):double\
+    \ |   MEDIAN_ABSOLUTE_DEVIATION(salary):double |\n|-------------------------|--------------------------------------------|\n\
+    |                   47003 ..."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/108'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN_ABSOLUTE_DEVIATION'
+  relationships:
+    children:
+    - '21'
+    - '22'
+    next: '23'
+    parent: '0'
+    previous: '17'
+- node_id: '21'
+  node_depth: 2
+  node_type: Node
+  content_length: 1046
+  content: "## MEDIAN_ABSOLUTE_DEVIATION\n\nSyntax\n\nParameters\n\n- number\n\nDescription\n\
+    \nReturns the median absolute deviation, a measure of variability. It is a robust\
+    \ statistic, meaning that it is useful for describing data that may have outliers,\
+    \ or may not be normally distributed. For such data it can be more descriptive\
+    \ than standard deviation.  It is calculated as the median of each data point\u2019\
+    s deviation from the median of the entire sample. That is, for a random variable\
+    \ X, the median absolute deviation is median(|median(X) - X|).\n\nLike PERCENTILE,\
+    \ MEDIAN_ABSOLUTE_DEVIATION is usually approximate.\n\nSupported types\n\n| number\
+    \   | result   |\n|----------|----------|\n| double   | double   |\n| integer\
+    \  | double   |\n| long     | double   |\n\nExamples\n\n```\nFROM employees\n\
+    | STATS MEDIAN(salary), MEDIAN_ABSOLUTE_DEVIATION(salary)\n```\n\n|   MEDIAN(salary):double\
+    \ |   MEDIAN_ABSOLUTE_DEVIATION(salary):double |\n|-------------------------|--------------------------------------------|\n\
+    |                   47003 ..."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/108'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN_ABSOLUTE_DEVIATION'
+  relationships:
+    next: '22'
+    parent: '20'
+- node_id: '22'
+  node_depth: 2
+  node_type: Node
+  content_length: 601
+  content: |-
+    The expression can use inline functions. For example, to calculate the median absolute deviation of the maximum values of a multivalued column, first use MV_MAX to get the maximum value per row, and use the result with the MEDIAN_ABSOLUTE_DEVIATION function
+
+    ```
+    FROM employees
+    | STATS m_a_d_max_salary_change = MEDIAN_ABSOLUTE_DEVIATION(MV_MAX(salary_change))
+    ```
+
+    |   m_a_d_max_salary_change:double |
+    |----------------------------------|
+    |                             5.69 |
+
+    MEDIAN_ABSOLUTE_DEVIATION is also non-deterministic.
+    This means you can get slightly different results using the same data.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/118'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN_ABSOLUTE_DEVIATION'
+  relationships:
+    parent: '20'
+    previous: '21'
+- node_id: '23'
+  node_depth: 1
+  node_type: Node
+  content_length: 986
+  content: |-
+    ## MIN
+
+    Syntax
+
+    Parameters
+
+    - field
+
+    Description
+
+    The minimum value of a field.
+
+    Supported types
+
+    | field      | result     |
+    |------------|------------|
+    | boolean    | boolean    |
+    | date       | date       |
+    | date_nanos | date_nanos |
+    | double     | double     |
+    | integer    | integer    |
+    | ip         | ip         |
+    | keyword    | keyword    |
+    | long       | long       |
+    | text       | keyword    |
+    | version    | version    |
+
+    Examples
+
+    ```
+    FROM employees
+    | STATS MIN(languages)
+    ```
+
+    |   MIN(languages):integer |
+    |--------------------------|
+    |                        1 |
+
+    The expression can use inline functions. For example, to calculate the minimum over an average of a multivalued column, use MV_AVG to first average the multiple values per row, and use the result with the MIN function
+
+    ```
+    FROM employees
+    | STATS min_avg_salary_change = MIN(MV_AVG(salary_change))
+    ```
+
+    |   min_avg_salary_change:double |
+    |--------------------------------|
+    |                          -8.46 |
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/121'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MIN'
+  relationships:
+    children:
+    - '24'
+    next: '25'
+    parent: '0'
+    previous: '20'
+- node_id: '24'
+  node_depth: 2
+  node_type: Node
+  content_length: 986
+  content: |-
+    ## MIN
+
+    Syntax
+
+    Parameters
+
+    - field
+
+    Description
+
+    The minimum value of a field.
+
+    Supported types
+
+    | field      | result     |
+    |------------|------------|
+    | boolean    | boolean    |
+    | date       | date       |
+    | date_nanos | date_nanos |
+    | double     | double     |
+    | integer    | integer    |
+    | ip         | ip         |
+    | keyword    | keyword    |
+    | long       | long       |
+    | text       | keyword    |
+    | version    | version    |
+
+    Examples
+
+    ```
+    FROM employees
+    | STATS MIN(languages)
+    ```
+
+    |   MIN(languages):integer |
+    |--------------------------|
+    |                        1 |
+
+    The expression can use inline functions. For example, to calculate the minimum over an average of a multivalued column, use MV_AVG to first average the multiple values per row, and use the result with the MIN function
+
+    ```
+    FROM employees
+    | STATS min_avg_salary_change = MIN(MV_AVG(salary_change))
+    ```
+
+    |   min_avg_salary_change:double |
+    |--------------------------------|
+    |                          -8.46 |
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/121'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MIN'
+  relationships:
+    parent: '23'
+- node_id: '25'
+  node_depth: 1
+  node_type: Node
+  content_length: 3314
+  content: |-
+    ## PERCENTILE
+
+    Syntax
+
+    Parameters
+
+    - number
+    - percentile
+
+    Description
+
+    Returns the value at which a certain percentage of observed values occur. For example, the 95th percentile is the value which is greater than 95% of the observed values and the 50th percentile is the MEDIAN.
+
+    Supported types
+
+    | number   | percentile   | result   |
+    |----------|--------------|----------|
+    | double   | double       | double   |
+    | double   | integer      | double   |
+    | double   | long         | double   |
+    | integer  | double       | double   |
+    | integer  | integer      | double   |
+    | integer  | long         | double   |
+    | long     | double       | double   |
+    | long     | integer      | double   |
+    | long     | long         | double   |
+
+    Examples
+
+    ```
+    FROM employees
+    | STATS p0 = PERCENTILE(salary,  0)
+     , p50 = PERCENTILE(salary, 50)
+     , p99 = PERCENTILE(salary, 99)
+    ```
+
+    |   p0:double |   p50:double |   p99:double |
+    |-------------|--------------|--------------|
+    |       25324 |        47003 |      74970.3 |
+
+    ...
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/132'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+  relationships:
+    children:
+    - '26'
+    - '27'
+    - '28'
+    next: '32'
+    parent: '0'
+    previous: '23'
+- node_id: '26'
+  node_depth: 2
+  node_type: Node
+  content_length: 998
+  content: |-
+    ## PERCENTILE
+
+    Syntax
+
+    Parameters
+
+    - number
+    - percentile
+
+    Description
+
+    Returns the value at which a certain percentage of observed values occur. For example, the 95th percentile is the value which is greater than 95% of the observed values and the 50th percentile is the MEDIAN.
+
+    Supported types
+
+    | number   | percentile   | result   |
+    |----------|--------------|----------|
+    | double   | double       | double   |
+    | double   | integer      | double   |
+    | double   | long         | double   |
+    | integer  | double       | double   |
+    | integer  | integer      | double   |
+    | integer  | long         | double   |
+    | long     | double       | double   |
+    | long     | integer      | double   |
+    | long     | long         | double   |
+
+    Examples
+
+    ```
+    FROM employees
+    | STATS p0 = PERCENTILE(salary,  0)
+     , p50 = PERCENTILE(salary, 50)
+     , p99 = PERCENTILE(salary, 99)
+    ```
+
+    |   p0:double |   p50:double |   p99:double |
+    |-------------|--------------|--------------|
+    |       25324 |        47003 |      74970.3 |
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/132'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+  relationships:
+    next: '27'
+    parent: '25'
+- node_id: '27'
+  node_depth: 2
+  node_type: Node
+  content_length: 425
+  content: |-
+    The expression can use inline functions. For example, to calculate a percentile of the maximum values of a multivalued column, first use MV_MAX to get the maximum value per row, and use the result with the PERCENTILE function
+
+    ```
+    FROM employees
+    | STATS p80_max_salary_change = PERCENTILE(MV_MAX(salary_change), 80)
+    ```
+
+    |   p80_max_salary_change:double |
+    |--------------------------------|
+    |                         12.132 |
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/142'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+  relationships:
+    next: '28'
+    parent: '25'
+    previous: '26'
+- node_id: '28'
+  node_depth: 2
+  node_type: Node
+  content_length: 1887
+  content: "### PERCENTILE is (usually) approximate\n\nThere are many different algorithms\
+    \ to calculate percentiles. The naive implementation simply stores all the values\
+    \ in a sorted array. To find the 50th percentile, you simply find the value that\
+    \ is at my_array[count(my_array) * 0.5].\n\nClearly, the naive implementation\
+    \ does not scale \u2014 the sorted array grows linearly with the number of values\
+    \ in your dataset. To calculate percentiles across potentially billions of values\
+    \ in an Elasticsearch cluster, approximate percentiles are calculated.\n\nThe\
+    \ algorithm used by the percentile metric is called TDigest (introduced by Ted\
+    \ Dunning in Computing Accurate Quantiles using T-Digests).\n\nWhen using this\
+    \ metric, there are a few guidelines to keep in mind:\n\n- Accuracy is proportional\
+    \ to q(1-q). This means that extreme percentiles (e.g. 99%) are more accurate\
+    \ than less extreme percentiles, such as the median\n- For small sets of values,\
+    \ percentiles are highly accurate (and potentially 100% accurate if the data ..."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/144'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+    - '### PERCENTILE is (usually) approximate'
+  relationships:
+    children:
+    - '29'
+    - '30'
+    - '31'
+    parent: '25'
+    previous: '27'
+- node_id: '29'
+  node_depth: 3
+  node_type: Node
+  content_length: 742
+  content: "### PERCENTILE is (usually) approximate\n\nThere are many different algorithms\
+    \ to calculate percentiles. The naive implementation simply stores all the values\
+    \ in a sorted array. To find the 50th percentile, you simply find the value that\
+    \ is at my_array[count(my_array) * 0.5].\n\nClearly, the naive implementation\
+    \ does not scale \u2014 the sorted array grows linearly with the number of values\
+    \ in your dataset. To calculate percentiles across potentially billions of values\
+    \ in an Elasticsearch cluster, approximate percentiles are calculated.\n\nThe\
+    \ algorithm used by the percentile metric is called TDigest (introduced by Ted\
+    \ Dunning in Computing Accurate Quantiles using T-Digests).\n\nWhen using this\
+    \ metric, there are a few guidelines to keep in mind:"
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/144'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+    - '### PERCENTILE is (usually) approximate'
+  relationships:
+    next: '30'
+    parent: '28'
+- node_id: '30'
+  node_depth: 3
+  node_type: Node
+  content_length: 711
+  content: |-
+    - Accuracy is proportional to q(1-q). This means that extreme percentiles (e.g. 99%) are more accurate than less extreme percentiles, such as the median
+    - For small sets of values, percentiles are highly accurate (and potentially 100% accurate if the data is small enough).
+    - As the quantity of values in a bucket grows, the algorithm begins to approximate the percentiles. It is effectively trading accuracy for memory savings. The exact level of inaccuracy is difficult to generalize, since it depends on your data distribution and volume of data being aggregated
+
+    The following chart shows the relative error on a uniform distribution depending on the number of collected values and the requested percentile:
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/20'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+    - '### PERCENTILE is (usually) approximate'
+  relationships:
+    next: '31'
+    parent: '28'
+    previous: '29'
+- node_id: '31'
+  node_depth: 3
+  node_type: Node
+  content_length: 430
+  content: |-
+    It shows how precision is better for extreme percentiles. The reason why error diminishes for large number of values is that the law of large numbers makes the distribution of values more and more uniform and the t-digest tree can do a better job at summarizing it. It would not be the case on more skewed distributions.
+
+    PERCENTILE is also non-deterministic.
+    This means you can get slightly different results using the same data.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/153'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+    - '### PERCENTILE is (usually) approximate'
+  relationships:
+    parent: '28'
+    previous: '30'
+- node_id: '32'
+  node_depth: 1
+  node_type: Node
+  content_length: 611
+  content: |-
+    ## ST_CENTROID_AGG
+
+    Elastic Stack
+    Technical Preview
+
+
+
+    Serverless
+    Technical Preview
+
+    Syntax
+
+    Parameters
+
+    - field
+
+    Description
+
+    Calculate the spatial centroid over a field with spatial point geometry type.
+
+    Supported types
+
+    | field           | result          |
+    |-----------------|-----------------|
+    | cartesian_point | cartesian_point |
+    | geo_point       | geo_point       |
+
+    Example
+
+    ```
+    FROM airports
+    | STATS centroid=ST_CENTROID_AGG(location)
+    ```
+
+    | centroid:geo_point                             |
+    |------------------------------------------------|
+    | POINT(-0.030548143003023033 24.37553649504829) |
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/155'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_CENTROID_AGG'
+  relationships:
+    children:
+    - '33'
+    next: '34'
+    parent: '0'
+    previous: '25'
+- node_id: '33'
+  node_depth: 2
+  node_type: Node
+  content_length: 611
+  content: |-
+    ## ST_CENTROID_AGG
+
+    Elastic Stack
+    Technical Preview
+
+
+
+    Serverless
+    Technical Preview
+
+    Syntax
+
+    Parameters
+
+    - field
+
+    Description
+
+    Calculate the spatial centroid over a field with spatial point geometry type.
+
+    Supported types
+
+    | field           | result          |
+    |-----------------|-----------------|
+    | cartesian_point | cartesian_point |
+    | geo_point       | geo_point       |
+
+    Example
+
+    ```
+    FROM airports
+    | STATS centroid=ST_CENTROID_AGG(location)
+    ```
+
+    | centroid:geo_point                             |
+    |------------------------------------------------|
+    | POINT(-0.030548143003023033 24.37553649504829) |
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/155'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_CENTROID_AGG'
+  relationships:
+    parent: '32'
+- node_id: '34'
+  node_depth: 1
+  node_type: Node
+  content_length: 842
+  content: |-
+    ## ST_EXTENT_AGG
+
+    Elastic Stack
+    Technical Preview
+
+
+
+    Serverless
+    Technical Preview
+
+    Syntax
+
+    Parameters
+
+    - field
+
+    Description
+
+    Calculate the spatial extent over a field with geometry type. Returns a bounding box for all values of the field.
+
+    Supported types
+
+    | field           | result          |
+    |-----------------|-----------------|
+    | cartesian_point | cartesian_shape |
+    | cartesian_shape | cartesian_shape |
+    | geo_point       | geo_shape       |
+    | geo_shape       | geo_shape       |
+
+    Example
+
+    ```
+    FROM airports
+    | WHERE country == "India"
+    | STATS extent = ST_EXTENT_AGG(location)
+    ```
+
+    | extent:geo_shape                                                               |
+    |--------------------------------------------------------------------------------|
+    | BBOX (70.77995480038226, 91.5882289968431, 33.9830909203738, 8.47650992218405) |
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/165'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_EXTENT_AGG'
+  relationships:
+    children:
+    - '35'
+    next: '36'
+    parent: '0'
+    previous: '32'
+- node_id: '35'
+  node_depth: 2
+  node_type: Node
+  content_length: 842
+  content: |-
+    ## ST_EXTENT_AGG
+
+    Elastic Stack
+    Technical Preview
+
+
+
+    Serverless
+    Technical Preview
+
+    Syntax
+
+    Parameters
+
+    - field
+
+    Description
+
+    Calculate the spatial extent over a field with geometry type. Returns a bounding box for all values of the field.
+
+    Supported types
+
+    | field           | result          |
+    |-----------------|-----------------|
+    | cartesian_point | cartesian_shape |
+    | cartesian_shape | cartesian_shape |
+    | geo_point       | geo_shape       |
+    | geo_shape       | geo_shape       |
+
+    Example
+
+    ```
+    FROM airports
+    | WHERE country == "India"
+    | STATS extent = ST_EXTENT_AGG(location)
+    ```
+
+    | extent:geo_shape                                                               |
+    |--------------------------------------------------------------------------------|
+    | BBOX (70.77995480038226, 91.5882289968431, 33.9830909203738, 8.47650992218405) |
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/165'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_EXTENT_AGG'
+  relationships:
+    parent: '34'
+- node_id: '36'
+  node_depth: 1
+  node_type: Node
+  content_length: 791
+  content: "## STD_DEV\n\nSyntax\n\nParameters\n\n- number\n\nDescription\n\nThe population\
+    \ standard deviation of a numeric field.\n\nSupported types\n\n| number   | result\
+    \   |\n|----------|----------|\n| double   | double   |\n| integer  | double \
+    \  |\n| long     | double   |\n\nExamples\n\n```\nFROM employees\n| STATS STD_DEV(height)\n\
+    ```\n\n|   STD_DEV(height):double |\n|--------------------------|\n|         \
+    \         0.20637 |\n\nThe expression can use inline functions. For example, to\
+    \ calculate the population standard deviation of each employee\u2019s maximum\
+    \ salary changes, first use MV_MAX on each row, and then use STD_DEV on the result\n\
+    \n```\nFROM employees\n| STATS stddev_salary_change = STD_DEV(MV_MAX(salary_change))\n\
+    ```\n\n|   stddev_salary_change:double |\n|-------------------------------|\n\
+    |                       6.87583 |"
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/175'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## STD_DEV'
+  relationships:
+    children:
+    - '37'
+    next: '38'
+    parent: '0'
+    previous: '34'
+- node_id: '37'
+  node_depth: 2
+  node_type: Node
+  content_length: 791
+  content: "## STD_DEV\n\nSyntax\n\nParameters\n\n- number\n\nDescription\n\nThe population\
+    \ standard deviation of a numeric field.\n\nSupported types\n\n| number   | result\
+    \   |\n|----------|----------|\n| double   | double   |\n| integer  | double \
+    \  |\n| long     | double   |\n\nExamples\n\n```\nFROM employees\n| STATS STD_DEV(height)\n\
+    ```\n\n|   STD_DEV(height):double |\n|--------------------------|\n|         \
+    \         0.20637 |\n\nThe expression can use inline functions. For example, to\
+    \ calculate the population standard deviation of each employee\u2019s maximum\
+    \ salary changes, first use MV_MAX on each row, and then use STD_DEV on the result\n\
+    \n```\nFROM employees\n| STATS stddev_salary_change = STD_DEV(MV_MAX(salary_change))\n\
+    ```\n\n|   stddev_salary_change:double |\n|-------------------------------|\n\
+    |                       6.87583 |"
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/175'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## STD_DEV'
+  relationships:
+    parent: '36'
+- node_id: '38'
+  node_depth: 1
+  node_type: Node
+  content_length: 724
+  content: "## SUM\n\nSyntax\n\nParameters\n\n- number\n\nDescription\n\nThe sum of\
+    \ a numeric expression.\n\nSupported types\n\n| number   | result   |\n|----------|----------|\n\
+    | double   | double   |\n| integer  | long     |\n| long     | long     |\n\n\
+    Examples\n\n```\nFROM employees\n| STATS SUM(languages)\n```\n\n|   SUM(languages):long\
+    \ |\n|-----------------------|\n|                   281 |\n\nThe expression can\
+    \ use inline functions. For example, to calculate the sum of each employee\u2019\
+    s maximum salary changes, apply the MV_MAX function to each row and then sum the\
+    \ results\n\n```\nFROM employees\n| STATS total_salary_changes = SUM(MV_MAX(salary_change))\n\
+    ```\n\n|   total_salary_changes:double |\n|-------------------------------|\n\
+    |                        446.75 |"
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/186'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## SUM'
+  relationships:
+    children:
+    - '39'
+    next: '40'
+    parent: '0'
+    previous: '36'
+- node_id: '39'
+  node_depth: 2
+  node_type: Node
+  content_length: 724
+  content: "## SUM\n\nSyntax\n\nParameters\n\n- number\n\nDescription\n\nThe sum of\
+    \ a numeric expression.\n\nSupported types\n\n| number   | result   |\n|----------|----------|\n\
+    | double   | double   |\n| integer  | long     |\n| long     | long     |\n\n\
+    Examples\n\n```\nFROM employees\n| STATS SUM(languages)\n```\n\n|   SUM(languages):long\
+    \ |\n|-----------------------|\n|                   281 |\n\nThe expression can\
+    \ use inline functions. For example, to calculate the sum of each employee\u2019\
+    s maximum salary changes, apply the MV_MAX function to each row and then sum the\
+    \ results\n\n```\nFROM employees\n| STATS total_salary_changes = SUM(MV_MAX(salary_change))\n\
+    ```\n\n|   total_salary_changes:double |\n|-------------------------------|\n\
+    |                        446.75 |"
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/186'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## SUM'
+  relationships:
+    parent: '38'
+- node_id: '40'
+  node_depth: 1
+  node_type: Node
+  content_length: 991
+  content: |-
+    ## TOP
+
+    Syntax
+
+    Parameters
+
+    - field
+        - The field to collect the top values for.
+    - limit
+        - The maximum number of values to collect.
+    - order
+        - The order to calculate the top values. Either asc or desc.
+
+    Description
+
+    Collects the top values for a field. Includes repeated values.
+
+    Supported types
+
+    | field   | limit   | order   | result   |
+    |---------|---------|---------|----------|
+    | boolean | integer | keyword | boolean  |
+    | date    | integer | keyword | date     |
+    | double  | integer | keyword | double   |
+    | integer | integer | keyword | integer  |
+    | ip      | integer | keyword | ip       |
+    | keyword | integer | keyword | keyword  |
+    | long    | integer | keyword | long     |
+    | text    | integer | keyword | keyword  |
+
+    Example
+
+    ```
+    FROM employees
+    | STATS top_salaries = TOP(salary, 3, "desc"), top_salary = MAX(salary)
+    ```
+
+    | top_salaries:integer   |   top_salary:integer |
+    |------------------------|----------------------|
+    | [74999, 74970, 74572]  |                74999 |
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/197'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## TOP'
+  relationships:
+    children:
+    - '41'
+    next: '42'
+    parent: '0'
+    previous: '38'
+- node_id: '41'
+  node_depth: 2
+  node_type: Node
+  content_length: 991
+  content: |-
+    ## TOP
+
+    Syntax
+
+    Parameters
+
+    - field
+        - The field to collect the top values for.
+    - limit
+        - The maximum number of values to collect.
+    - order
+        - The order to calculate the top values. Either asc or desc.
+
+    Description
+
+    Collects the top values for a field. Includes repeated values.
+
+    Supported types
+
+    | field   | limit   | order   | result   |
+    |---------|---------|---------|----------|
+    | boolean | integer | keyword | boolean  |
+    | date    | integer | keyword | date     |
+    | double  | integer | keyword | double   |
+    | integer | integer | keyword | integer  |
+    | ip      | integer | keyword | ip       |
+    | keyword | integer | keyword | keyword  |
+    | long    | integer | keyword | long     |
+    | text    | integer | keyword | keyword  |
+
+    Example
+
+    ```
+    FROM employees
+    | STATS top_salaries = TOP(salary, 3, "desc"), top_salary = MAX(salary)
+    ```
+
+    | top_salaries:integer   |   top_salary:integer |
+    |------------------------|----------------------|
+    | [74999, 74970, 74572]  |                74999 |
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/197'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## TOP'
+  relationships:
+    parent: '40'
+- node_id: '42'
+  node_depth: 1
+  node_type: Node
+  content_length: 4701
+  content: "## VALUES\n\nElastic Stack\nTechnical Preview\n\n\n\nServerless\nTechnical\
+    \ Preview\n\nSyntax\n\nParameters\n\n- field\n\nDescription\n\nReturns unique\
+    \ values as a multivalued field. The order of the returned values isn\u2019t guaranteed.\
+    \ If you need the values returned in order use MV_SORT.\n\nSupported types\n\n\
+    | field           | result          |\n|-----------------|-----------------|\n\
+    | boolean         | boolean         |\n| cartesian_point | cartesian_point |\n\
+    | cartesian_shape | cartesian_shape |\n| date            | date            |\n\
+    | date_nanos      | date_nanos      |\n| double          | double          |\n\
+    | geo_point       | geo_point       |\n| geo_shape       | geo_shape       |\n\
+    | integer         | integer         |\n| ip              | ip              |\n\
+    | keyword         | keyword         |\n| long            | long            |\n\
+    | text            | keyword         |\n| version         | version         |\n\
+    \nExample\n\n```\nFROM employees\n| EVAL first_letter = SUBSTRING(first_name,\
+    \ 0, 1)\n| STATS first_name..."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/211'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## VALUES'
+  relationships:
+    children:
+    - '43'
+    - '44'
+    - '45'
+    next: '46'
+    parent: '0'
+    previous: '40'
+- node_id: '43'
+  node_depth: 2
+  node_type: Node
+  content_length: 1070
+  content: "## VALUES\n\nElastic Stack\nTechnical Preview\n\n\n\nServerless\nTechnical\
+    \ Preview\n\nSyntax\n\nParameters\n\n- field\n\nDescription\n\nReturns unique\
+    \ values as a multivalued field. The order of the returned values isn\u2019t guaranteed.\
+    \ If you need the values returned in order use MV_SORT.\n\nSupported types\n\n\
+    | field           | result          |\n|-----------------|-----------------|\n\
+    | boolean         | boolean         |\n| cartesian_point | cartesian_point |\n\
+    | cartesian_shape | cartesian_shape |\n| date            | date            |\n\
+    | date_nanos      | date_nanos      |\n| double          | double          |\n\
+    | geo_point       | geo_point       |\n| geo_shape       | geo_shape       |\n\
+    | integer         | integer         |\n| ip              | ip              |\n\
+    | keyword         | keyword         |\n| long            | long            |\n\
+    | text            | keyword         |\n| version         | version         |\n\
+    \nExample\n\n```\nFROM employees\n| EVAL first_letter = SUBSTRING(first_name,\
+    \ 0, 1)\n| STATS first_name..."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/211'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## VALUES'
+  relationships:
+    next: '44'
+    parent: '42'
+- node_id: '44'
+  node_depth: 2
+  node_type: Node
+  content_length: 3301
+  content: |-
+    | first_name:keyword                                                                                | first_letter:keyword   |
+    |---------------------------------------------------------------------------------------------------|------------------------|
+    | [Alejandro, Amabile, Anneke, Anoosh, Arumugam]                                                    | A                      |
+    | [Basil, Berhard, Berni, Bezalel, Bojan, Breannda, Brendon]                                        | B                      |
+    | [Charlene, Chirstian, Claudi, Cristinel]                                                          | C                      |
+    | [Danel, Divier, Domenick, Duangkaew]                                                              | D                      |
+    | [Ebbe, Eberhardt, Erez]                                                                           | E                      |
+    | Florian                                                                                           | F        ...
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/41'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## VALUES'
+  relationships:
+    next: '45'
+    parent: '42'
+    previous: '43'
+- node_id: '45'
+  node_depth: 2
+  node_type: Node
+  content_length: 326
+  content: "Use TOP\nif you need to keep repeated values.\n\nThis can use a significant\
+    \ amount of memory and ES|QL doesn\u2019t yet\ngrow aggregations beyond memory.\
+    \ So this aggregation will work until\nit is used to collect more values than\
+    \ can fit into memory. Once it\ncollects too many values it will fail the query\
+    \ with\na Circuit Breaker Error."
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/221'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## VALUES'
+  relationships:
+    parent: '42'
+    previous: '44'
+- node_id: '46'
+  node_depth: 1
+  node_type: Node
+  content_length: 1053
+  content: |-
+    ## WEIGHTED_AVG
+
+    Syntax
+
+    Parameters
+
+    - number
+        - A numeric value.
+    - weight
+        - A numeric weight.
+
+    Description
+
+    The weighted average of a numeric expression.
+
+    Supported types
+
+    | number   | weight   | result   |
+    |----------|----------|----------|
+    | double   | double   | double   |
+    | double   | integer  | double   |
+    | double   | long     | double   |
+    | integer  | double   | double   |
+    | integer  | integer  | double   |
+    | integer  | long     | double   |
+    | long     | double   | double   |
+    | long     | integer  | double   |
+    | long     | long     | double   |
+
+    Example
+
+    ```
+    FROM employees
+    | STATS w_avg = WEIGHTED_AVG(salary, height) BY languages
+    | EVAL w_avg = ROUND(w_avg)
+    | KEEP w_avg, languages
+    | SORT languages
+    ```
+
+    |   w_avg:double | languages:integer   |
+    |----------------|---------------------|
+    |          51464 | 1                   |
+    |          48477 | 2                   |
+    |          52379 | 3                   |
+    |          47990 | 4                   |
+    |          42119 | 5        ...
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/223'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## WEIGHTED_AVG'
+  relationships:
+    children:
+    - '47'
+    parent: '0'
+    previous: '42'
+- node_id: '47'
+  node_depth: 2
+  node_type: Node
+  content_length: 1053
+  content: |-
+    ## WEIGHTED_AVG
+
+    Syntax
+
+    Parameters
+
+    - number
+        - A numeric value.
+    - weight
+        - A numeric weight.
+
+    Description
+
+    The weighted average of a numeric expression.
+
+    Supported types
+
+    | number   | weight   | result   |
+    |----------|----------|----------|
+    | double   | double   | double   |
+    | double   | integer  | double   |
+    | double   | long     | double   |
+    | integer  | double   | double   |
+    | integer  | integer  | double   |
+    | integer  | long     | double   |
+    | long     | double   | double   |
+    | long     | integer  | double   |
+    | long     | long     | double   |
+
+    Example
+
+    ```
+    FROM employees
+    | STATS w_avg = WEIGHTED_AVG(salary, height) BY languages
+    | EVAL w_avg = ROUND(w_avg)
+    | KEEP w_avg, languages
+    | SORT languages
+    ```
+
+    |   w_avg:double | languages:integer   |
+    |----------------|---------------------|
+    |          51464 | 1                   |
+    |          48477 | 2                   |
+    |          52379 | 3                   |
+    |          47990 | 4                   |
+    |          42119 | 5        ...
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/223'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## WEIGHTED_AVG'
+  relationships:
+    parent: '46'

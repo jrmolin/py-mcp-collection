@@ -1,0 +1,616 @@
+- node_id: '0'
+  node_depth: 0
+  node_type: Node
+  content_length: 5664
+  content: "# Metrics\n\nA measurement captured at runtime.\n\nA metric is a measurement\
+    \ of a service captured at runtime. The moment\nof capturing a measurements is\
+    \ known as a metric event, which consists not\nonly of the measurement itself,\
+    \ but also the time at which it was captured and\nassociated metadata.\n\nApplication\
+    \ and request metrics are important indicators of availability and\nperformance.\
+    \ Custom metrics can provide insights into how availability\nindicators impact\
+    \ user experience or the business. Collected data can be used to\nalert of an\
+    \ outage or trigger scheduling decisions to scale up a deployment\nautomatically\
+    \ upon high demand.\n\nTo understand how metrics in OpenTelemetry works, let\u2019\
+    s look at a list of\ncomponents that will play a part in instrumenting our code.\n\
+    \n## Meter Provider\n\nA Meter Provider (sometimes called MeterProvider) is a\
+    \ factory for Meters.\nIn most applications, a Meter Provider is initialized once\
+    \ and its lifecycle\nmatches the application\u2019s lifecycle. Meter Provider\
+    \ initializa..."
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/633'
+    headings:
+    - '# Metrics'
+  relationships:
+    children:
+    - '1'
+    - '2'
+    - '3'
+    - '4'
+    - '5'
+    - '6'
+    - '7'
+    - '8'
+    - '9'
+    - '17'
+    - '22'
+    - '23'
+    - '27'
+    - '28'
+- node_id: '1'
+  node_depth: 1
+  node_type: Node
+  content_length: 9
+  content: '# Metrics'
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/633'
+    headings:
+    - '# Metrics'
+  relationships:
+    next: '2'
+    parent: '0'
+- node_id: '2'
+  node_depth: 1
+  node_type: Node
+  content_length: 34
+  content: A measurement captured at runtime.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/634'
+    headings:
+    - '# Metrics'
+  relationships:
+    next: '3'
+    parent: '0'
+    previous: '1'
+- node_id: '3'
+  node_depth: 1
+  node_type: Node
+  content_length: 245
+  content: |-
+    A metric is a measurement of a service captured at runtime. The moment
+    of capturing a measurements is known as a metric event, which consists not
+    only of the measurement itself, but also the time at which it was captured and
+    associated metadata.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/635'
+    headings:
+    - '# Metrics'
+  relationships:
+    next: '4'
+    parent: '0'
+    previous: '2'
+- node_id: '4'
+  node_depth: 1
+  node_type: Node
+  content_length: 336
+  content: |-
+    Application and request metrics are important indicators of availability and
+    performance. Custom metrics can provide insights into how availability
+    indicators impact user experience or the business. Collected data can be used to
+    alert of an outage or trigger scheduling decisions to scale up a deployment
+    automatically upon high demand.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/636'
+    headings:
+    - '# Metrics'
+  relationships:
+    next: '5'
+    parent: '0'
+    previous: '3'
+- node_id: '5'
+  node_depth: 1
+  node_type: Node
+  content_length: 133
+  content: "To understand how metrics in OpenTelemetry works, let\u2019s look at a\
+    \ list of\ncomponents that will play a part in instrumenting our code."
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/637'
+    headings:
+    - '# Metrics'
+  relationships:
+    next: '6'
+    parent: '0'
+    previous: '4'
+- node_id: '6'
+  node_depth: 1
+  node_type: Node
+  content_length: 431
+  content: "## Meter Provider\n\nA Meter Provider (sometimes called MeterProvider)\
+    \ is a factory for Meters.\nIn most applications, a Meter Provider is initialized\
+    \ once and its lifecycle\nmatches the application\u2019s lifecycle. Meter Provider\
+    \ initialization also includes\nResource and Exporter initialization. It is typically\
+    \ the first step in metering\nwith OpenTelemetry. In some language SDKs, a global\
+    \ Meter Provider is already\ninitialized for you."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/638'
+    headings:
+    - '# Metrics'
+    - '## Meter Provider'
+  relationships:
+    next: '7'
+    parent: '0'
+    previous: '5'
+- node_id: '7'
+  node_depth: 1
+  node_type: Node
+  content_length: 137
+  content: |-
+    ## Meter
+
+    A Meter creates metric instruments, capturing
+    measurements about a service at runtime. Meters are created from Meter
+    Providers.
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/640'
+    headings:
+    - '# Metrics'
+    - '## Meter'
+  relationships:
+    next: '8'
+    parent: '0'
+    previous: '6'
+- node_id: '8'
+  node_depth: 1
+  node_type: Node
+  content_length: 221
+  content: |-
+    ## Metric Exporter
+
+    Metric Exporters send metric data to a consumer. This consumer can be standard
+    output for debugging during development, the OpenTelemetry Collector, or any
+    open source or vendor backend of your choice.
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/642'
+    headings:
+    - '# Metrics'
+    - '## Metric Exporter'
+  relationships:
+    next: '9'
+    parent: '0'
+    previous: '7'
+- node_id: '9'
+  node_depth: 1
+  node_type: Node
+  content_length: 1740
+  content: "## Metric Instruments\n\nIn OpenTelemetry measurements are captured by\
+    \ metric instruments. A metric\ninstrument is defined by:\n\n- Name\n- Kind\n\
+    - Unit (optional)\n- Description (optional)\n\nThe name, unit, and description\
+    \ are chosen by the developer or defined via\nsemantic conventions for common\
+    \ ones\nlike request and process metrics.\n\nThe instrument kind is one of the\
+    \ following:\n\n- Counter: A value that accumulates over time \u2013 you can think\
+    \ of this like\nan odometer on a car; it only ever goes up.\n- Asynchronous Counter:\
+    \ Same as the Counter, but is collected once for\neach export. Could be used if\
+    \ you don\u2019t have access to the continuous\nincrements, but only to the aggregated\
+    \ value.\n- UpDownCounter: A value that accumulates over time, but can also go\
+    \ down\nagain. An example could be a queue length, it will increase and decrease\
+    \ with\nthe number of work items in the queue.\n- Asynchronous UpDownCounter:\
+    \ Same as the UpDownCounter, but is\ncollected once for each export. Could be\
+    \ used if you don\u2019t have..."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/644'
+    headings:
+    - '# Metrics'
+    - '## Metric Instruments'
+  relationships:
+    children:
+    - '10'
+    - '11'
+    - '12'
+    - '13'
+    - '14'
+    - '15'
+    - '16'
+    next: '17'
+    parent: '0'
+    previous: '8'
+- node_id: '10'
+  node_depth: 2
+  node_type: Node
+  content_length: 21
+  content: '## Metric Instruments'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/644'
+    headings:
+    - '# Metrics'
+    - '## Metric Instruments'
+  relationships:
+    next: '11'
+    parent: '9'
+- node_id: '11'
+  node_depth: 2
+  node_type: Node
+  content_length: 100
+  content: |-
+    In OpenTelemetry measurements are captured by metric instruments. A metric
+    instrument is defined by:
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/645'
+    headings:
+    - '# Metrics'
+    - '## Metric Instruments'
+  relationships:
+    next: '12'
+    parent: '9'
+    previous: '10'
+- node_id: '12'
+  node_depth: 2
+  node_type: Node
+  content_length: 56
+  content: |-
+    - Name
+    - Kind
+    - Unit (optional)
+    - Description (optional)
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/98'
+    headings:
+    - '# Metrics'
+    - '## Metric Instruments'
+  relationships:
+    next: '13'
+    parent: '9'
+    previous: '11'
+- node_id: '13'
+  node_depth: 2
+  node_type: Node
+  content_length: 145
+  content: |-
+    The name, unit, and description are chosen by the developer or defined via
+    semantic conventions for common ones
+    like request and process metrics.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/650'
+    headings:
+    - '# Metrics'
+    - '## Metric Instruments'
+  relationships:
+    next: '14'
+    parent: '9'
+    previous: '12'
+- node_id: '14'
+  node_depth: 2
+  node_type: Node
+  content_length: 44
+  content: 'The instrument kind is one of the following:'
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/651'
+    headings:
+    - '# Metrics'
+    - '## Metric Instruments'
+  relationships:
+    next: '15'
+    parent: '9'
+    previous: '13'
+- node_id: '15'
+  node_depth: 2
+  node_type: Node
+  content_length: 1230
+  content: "- Counter: A value that accumulates over time \u2013 you can think of\
+    \ this like\nan odometer on a car; it only ever goes up.\n- Asynchronous Counter:\
+    \ Same as the Counter, but is collected once for\neach export. Could be used if\
+    \ you don\u2019t have access to the continuous\nincrements, but only to the aggregated\
+    \ value.\n- UpDownCounter: A value that accumulates over time, but can also go\
+    \ down\nagain. An example could be a queue length, it will increase and decrease\
+    \ with\nthe number of work items in the queue.\n- Asynchronous UpDownCounter:\
+    \ Same as the UpDownCounter, but is\ncollected once for each export. Could be\
+    \ used if you don\u2019t have access to the\ncontinuous changes, but only to the\
+    \ aggregated value (e.g., current queue\nsize).\n- Gauge: Measures a current value\
+    \ at the time it is read. An example would\nbe the fuel gauge in a vehicle. Gauges\
+    \ are synchronous.\n- Asynchronous Gauge: Same as the Gauge, but is collected\
+    \ once for each\nexport. Could be used if you don\u2019t have access to the continuous\
+    \ changes, but..."
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/99'
+    headings:
+    - '# Metrics'
+    - '## Metric Instruments'
+  relationships:
+    next: '16'
+    parent: '9'
+    previous: '14'
+- node_id: '16'
+  node_depth: 2
+  node_type: Node
+  content_length: 132
+  content: |-
+    For more on synchronous and asynchronous instruments, and which kind is best
+    suited for your use case, see
+    Supplementary Guidelines.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/659'
+    headings:
+    - '# Metrics'
+    - '## Metric Instruments'
+  relationships:
+    parent: '9'
+    previous: '15'
+- node_id: '17'
+  node_depth: 1
+  node_type: Node
+  content_length: 1234
+  content: |-
+    ## Aggregation
+
+    In addition to the metric instruments, the concept of aggregations is an
+    important one to understand. An aggregation is a technique whereby a large
+    number of measurements are combined into either exact or estimated statistics
+    about metric events that took place during a time window. The OTLP protocol
+    transports such aggregated metrics. The OpenTelemetry API provides a default
+    aggregation for each instrument which can be overridden using the Views. The
+    OpenTelemetry project aims to provide default aggregations that are supported by
+    visualizers and telemetry backends.
+
+    Unlike request tracing, which is intended to capture request
+    lifecycles and provide context to the individual pieces of a request, metrics
+    are intended to provide statistical information in aggregate. Some examples of
+    use cases for metrics include:
+
+    - Reporting the total number of bytes read by a service, per protocol type.
+    - Reporting the total number of bytes read and the bytes per request.
+    - Reporting th...
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/660'
+    headings:
+    - '# Metrics'
+    - '## Aggregation'
+  relationships:
+    children:
+    - '18'
+    - '19'
+    - '20'
+    - '21'
+    next: '22'
+    parent: '0'
+    previous: '9'
+- node_id: '18'
+  node_depth: 2
+  node_type: Node
+  content_length: 14
+  content: '## Aggregation'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/660'
+    headings:
+    - '# Metrics'
+    - '## Aggregation'
+  relationships:
+    next: '19'
+    parent: '17'
+- node_id: '19'
+  node_depth: 2
+  node_type: Node
+  content_length: 572
+  content: |-
+    In addition to the metric instruments, the concept of aggregations is an
+    important one to understand. An aggregation is a technique whereby a large
+    number of measurements are combined into either exact or estimated statistics
+    about metric events that took place during a time window. The OTLP protocol
+    transports such aggregated metrics. The OpenTelemetry API provides a default
+    aggregation for each instrument which can be overridden using the Views. The
+    OpenTelemetry project aims to provide default aggregations that are supported by
+    visualizers and telemetry backends.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/661'
+    headings:
+    - '# Metrics'
+    - '## Aggregation'
+  relationships:
+    next: '20'
+    parent: '17'
+    previous: '18'
+- node_id: '20'
+  node_depth: 2
+  node_type: Node
+  content_length: 248
+  content: |-
+    Unlike request tracing, which is intended to capture request
+    lifecycles and provide context to the individual pieces of a request, metrics
+    are intended to provide statistical information in aggregate. Some examples of
+    use cases for metrics include:
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/662'
+    headings:
+    - '# Metrics'
+    - '## Aggregation'
+  relationships:
+    next: '21'
+    parent: '17'
+    previous: '19'
+- node_id: '21'
+  node_depth: 2
+  node_type: Node
+  content_length: 394
+  content: |-
+    - Reporting the total number of bytes read by a service, per protocol type.
+    - Reporting the total number of bytes read and the bytes per request.
+    - Reporting the duration of a system call.
+    - Reporting request sizes in order to determine a trend.
+    - Reporting CPU or memory usage of a process.
+    - Reporting average balance values from an account.
+    - Reporting current active requests being handled.
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/100'
+    headings:
+    - '# Metrics'
+    - '## Aggregation'
+  relationships:
+    parent: '17'
+    previous: '20'
+- node_id: '22'
+  node_depth: 1
+  node_type: Node
+  content_length: 261
+  content: |-
+    ## Views
+
+    A view provides SDK users with the flexibility to customize the metrics output
+    by the SDK. You can customize which metric instruments are to be processed or
+    ignored. You can also customize aggregation and what attributes you want to
+    report on metrics.
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/670'
+    headings:
+    - '# Metrics'
+    - '## Views'
+  relationships:
+    next: '23'
+    parent: '0'
+    previous: '17'
+- node_id: '23'
+  node_depth: 1
+  node_type: Node
+  content_length: 606
+  content: |-
+    ## Language Support
+
+    Metrics are a stable signal
+    in the OpenTelemetry specification. For the individual language specific
+    implementations of the Metrics API & SDK, the status is as follows:
+
+    | Language      | Metrics     |
+    |---------------|-------------|
+    | C++           | Stable      |
+    | C#/.NET       | Stable      |
+    | Erlang/Elixir | Development |
+    | Go            | Stable      |
+    | Java          | Stable      |
+    | JavaScript    | Stable      |
+    | PHP           | Stable      |
+    | Python        | Stable      |
+    | Ruby          | Development |
+    | Rust          | Beta        |
+    | Swift         | Development |
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/672'
+    headings:
+    - '# Metrics'
+    - '## Language Support'
+  relationships:
+    children:
+    - '24'
+    - '25'
+    - '26'
+    next: '27'
+    parent: '0'
+    previous: '22'
+- node_id: '24'
+  node_depth: 2
+  node_type: Node
+  content_length: 19
+  content: '## Language Support'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/672'
+    headings:
+    - '# Metrics'
+    - '## Language Support'
+  relationships:
+    next: '25'
+    parent: '23'
+- node_id: '25'
+  node_depth: 2
+  node_type: Node
+  content_length: 168
+  content: |-
+    Metrics are a stable signal
+    in the OpenTelemetry specification. For the individual language specific
+    implementations of the Metrics API & SDK, the status is as follows:
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/673'
+    headings:
+    - '# Metrics'
+    - '## Language Support'
+  relationships:
+    next: '26'
+    parent: '23'
+    previous: '24'
+- node_id: '26'
+  node_depth: 2
+  node_type: Node
+  content_length: 415
+  content: |-
+    | Language      | Metrics     |
+    |---------------|-------------|
+    | C++           | Stable      |
+    | C#/.NET       | Stable      |
+    | Erlang/Elixir | Development |
+    | Go            | Stable      |
+    | Java          | Stable      |
+    | JavaScript    | Stable      |
+    | PHP           | Stable      |
+    | Python        | Stable      |
+    | Ruby          | Development |
+    | Rust          | Beta        |
+    | Swift         | Development |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/0'
+    headings:
+    - '# Metrics'
+    - '## Language Support'
+  relationships:
+    parent: '23'
+    previous: '25'
+- node_id: '27'
+  node_depth: 1
+  node_type: Node
+  content_length: 94
+  content: |-
+    ## Specification
+
+    To learn more about metrics in OpenTelemetry, see the
+    metrics specification.
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/674'
+    headings:
+    - '# Metrics'
+    - '## Specification'
+  relationships:
+    next: '28'
+    parent: '0'
+    previous: '23'
+- node_id: '28'
+  node_depth: 1
+  node_type: Node
+  content_length: 157
+  content: |-
+    ## Feedback
+
+    Was this page helpful?
+
+    Thank you. Your feedback is appreciated!
+
+    Please let us know how we can improve this page. Your feedback is appreciated!
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/676'
+    headings:
+    - '# Metrics'
+    - '## Feedback'
+  relationships:
+    parent: '0'
+    previous: '27'

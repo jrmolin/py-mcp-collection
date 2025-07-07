@@ -1,18 +1,18 @@
 from abc import ABC, abstractmethod
-from typing import Literal
+from typing import ClassVar, Literal, override
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from filesystem_operations_mcp.filesystem.errors import FilePatchDoesNotMatchError, FilePatchIndexError
 
 
-class BaseFilePatch(BaseModel, ABC):
+class BaseFilePatch(BaseModel, ABC):  # pyright: ignore[reportUnsafeMultipleInheritance]
     """A base class for file patches."""
 
-    patch_type: Literal["insert", "replace", "delete", "append"] = Field(...)
-    """The type of patch."""
+    # patch_type: Literal["insert", "replace", "delete", "append"] = Field(...)
+    # """The type of patch."""
 
-    model_config = ConfigDict(use_attribute_docstrings=True)
+    model_config: ClassVar[ConfigDict] = ConfigDict(use_attribute_docstrings=True)
 
     @abstractmethod
     def apply(self, lines: list[str]) -> list[str]:
@@ -20,50 +20,53 @@ class BaseFilePatch(BaseModel, ABC):
 
     @classmethod
     def validate_line_numbers(cls, line_numbers: list[int], lines: list[str]) -> None:
-        """Checks if the line numbers are valid."""
+        """Checks if the index 1-based line numbers are valid to the index 0-based line numbers array."""
         line_count = len(lines)
 
         for line_number in line_numbers:
-            if line_number < 0 or line_number >= line_count:
+            if line_number < 1 or line_number > line_count:
                 raise FilePatchIndexError(line_number, line_count)
 
 
 class FileInsertPatch(BaseFilePatch):
     """A patch for inserting lines into a file."""
 
-    patch_type: Literal["insert"] = "insert"
+    patch_type: Literal["insert"] = Field(default="insert", exclude=True)
     """The type of patch."""
 
-    line_number: int = Field(...)
+    line_number: int = Field(..., examples=[1])
     """The line number to insert the lines at."""
 
-    current_line: str = Field(...)
+    current_line: str = Field(..., examples=["the current line of text at the line number"])
     """The current line of text at `line_number`, new lines will be inserted immediately before this line."""
 
-    lines: list[str] = Field(...)
+    lines: list[str] = Field(..., examples=["Line to insert before the current line", "Line to insert after the current line"])
     """The lines to insert into the file."""
 
-    def apply(self, lines: list[str]) -> list[str]:
+    @override
+    def apply(self, lines: list[str]) -> list[str]: 
         """Applies the patch to the file."""
         self.validate_line_numbers([self.line_number], lines)
 
-        file_line = lines[self.line_number]
+        file_line_number = self.line_number - 1
+        file_line = lines[file_line_number]
 
         if self.current_line != file_line:
             raise FilePatchDoesNotMatchError(self.line_number, [self.current_line], [file_line])
 
-        return lines[: self.line_number] + self.lines + lines[self.line_number :]
+        return lines[: file_line_number] + self.lines + lines[file_line_number :]
 
 
 class FileAppendPatch(BaseFilePatch):
     """A patch for appending lines to a file."""
 
-    patch_type: Literal["append"] = "append"
+    patch_type: Literal["append"] = Field(default="append", exclude=True)
     """The type of patch."""
 
     lines: list[str] = Field(...)
     """The lines to append to the end of thefile."""
 
+    @override
     def apply(self, lines: list[str]) -> list[str]:
         """Applies the patch to the file."""
         return lines + self.lines
@@ -72,23 +75,26 @@ class FileAppendPatch(BaseFilePatch):
 class FileDeletePatch(BaseFilePatch):
     """A patch to delete lines from a file."""
 
-    patch_type: Literal["delete"] = "delete"
+    patch_type: Literal["delete"] = Field(default="delete", exclude=True)
     """The type of patch."""
 
     line_numbers: list[int] = Field(...)
     """The exact line numbers to delete from the file."""
 
+    @override
     def apply(self, lines: list[str]) -> list[str]:
         """Applies the patch to the file."""
         self.validate_line_numbers(self.line_numbers, lines)
 
-        return [line for i, line in enumerate(lines) if i not in self.line_numbers]
+        file_line_numbers = [line_number - 1 for line_number in self.line_numbers]
+
+        return [line for i, line in enumerate(lines) if i not in file_line_numbers]
 
 
 class FileReplacePatch(BaseFilePatch):
     """A patch to replace lines in a file."""
 
-    patch_type: Literal["replace"] = "replace"
+    patch_type: Literal["replace"] = Field(default="replace", exclude=True)
     """The type of patch."""
 
     start_line_number: int = Field(...)
@@ -100,19 +106,21 @@ class FileReplacePatch(BaseFilePatch):
     new_lines: list[str] = Field(...)
     """The lines to replace the existing lines with. Does not have to match the length of `current_lines`."""
 
+    @override
     def apply(self, lines: list[str]) -> list[str]:
         """Applies the patch to the file."""
         self.validate_line_numbers([self.start_line_number, self.start_line_number + len(self.current_lines) - 1], lines)
 
-        end_line_number = self.start_line_number + len(self.current_lines)
+        file_start_line_number = self.start_line_number - 1
+        file_end_line_number = self.start_line_number + len(self.current_lines) - 1
 
-        file_lines = lines[self.start_line_number : end_line_number]
+        current_file_lines = lines[file_start_line_number : file_end_line_number]
 
-        if file_lines != self.current_lines:
-            raise FilePatchDoesNotMatchError(self.start_line_number, self.current_lines, file_lines)
+        if current_file_lines != self.current_lines:
+            raise FilePatchDoesNotMatchError(self.start_line_number, self.current_lines, current_file_lines)
 
-        prepend_lines = lines[: self.start_line_number]
-        append_lines = lines[end_line_number:]
+        prepend_lines = lines[: file_start_line_number]
+        append_lines = lines[file_end_line_number:]
 
         return prepend_lines + self.new_lines + append_lines
 

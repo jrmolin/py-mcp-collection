@@ -1,8 +1,9 @@
 from logging import Logger
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 
 from fastmcp.tools import Tool as FastMCPTool
 from llama_index.core.base.base_query_engine import BaseQueryEngine
+from llama_index.core.bridge.pydantic import Field
 from llama_index.core.llms import MockLLM
 from llama_index.core.postprocessor import SentenceTransformerRerank
 from llama_index.core.query_engine.retriever_query_engine import RetrieverQueryEngine
@@ -11,14 +12,54 @@ from llama_index.core.response_synthesizers.no_text import NoText
 from knowledge_base_mcp.clients.knowledge_base import KnowledgeBaseClient
 from knowledge_base_mcp.llama_index.post_processors.duplicate_node import DuplicateNodePostprocessor
 from knowledge_base_mcp.llama_index.post_processors.parent_context import ParentContextNodePostprocessor
-from knowledge_base_mcp.servers.documentation.models.results import KnowledgeBaseSummary, SearchResponseWithSummary, TreeSearchResponse
+from knowledge_base_mcp.servers.documentation.models.results import (
+    DocumentResponse,
+    KnowledgeBaseSummary,
+    SearchResponseWithSummary,
+    TreeSearchResponse,
+)
 from knowledge_base_mcp.utils.logging import BASE_LOGGER
 from knowledge_base_mcp.utils.models import BaseKBModel
 
 if TYPE_CHECKING:
     from llama_index.core.base.base_retriever import BaseRetriever
+    from llama_index.core.schema import BaseNode
 
 logger: Logger = BASE_LOGGER.getChild(suffix=__name__)
+
+
+QueryStringField = Annotated[
+    str,
+    Field(
+        description="The plain language query to search the knowledge base for.",
+        examples=["What is the Python Language?", "What is the FastAPI library?", "What is the Pydantic library?"],
+    ),
+]
+
+
+QueryKnowledgeBasesField = Annotated[
+    list[str],
+    Field(
+        description="The optional name of the Knowledge Bases to restrict searches to. If not provided, searches all knowledge bases.",
+        examples=["Python Language - 3.12", "Python Library - Pydantic - 2.11", "Python Library - FastAPI - 0.115"],
+    ),
+]
+
+DocumentKnowledgeBaseField = Annotated[
+    str,
+    Field(
+        description="The name of the Knowledge Base that the document belongs to.",
+        examples=["Python Language - 3.12", "Python Library - Pydantic - 2.11", "Python Library - FastAPI - 0.115"],
+    ),
+]
+
+DocumentTitleField = Annotated[
+    str,
+    Field(
+        description="The title of the document to fetch. After running a general query, you may be interested in a specific document.",
+        examples=["doctest — Test interactive Python examples", "JSON Schema", "Name-based Virtual Host Support"],
+    ),
+]
 
 
 class KnowledgeBaseSearchServer(BaseKBModel):
@@ -30,6 +71,7 @@ class KnowledgeBaseSearchServer(BaseKBModel):
     def get_raw_tools(self) -> list[FastMCPTool]:
         return [
             FastMCPTool.from_function(fn=self.query),
+            FastMCPTool.from_function(fn=self.get_document),
         ]
 
     # def _alt_query_engine(self, knowledge_base: list[str] | str | None = None, result_count: int = 5) -> BaseQueryEngine:
@@ -67,9 +109,16 @@ class KnowledgeBaseSearchServer(BaseKBModel):
 
         reranker = SentenceTransformerRerank(model=self.reranker_model, top_n=result_count * 3)
 
+        # Always bring in the parent node
         parent_context_postprocessor = ParentContextNodePostprocessor(
             doc_store=self.knowledge_base_client.docstore,
-            threshold=0.1,
+            threshold=0.0,
+        )
+
+        # Sometimes bring in the grandaprent node
+        grandparent_context_postprocessor = ParentContextNodePostprocessor(
+            doc_store=self.knowledge_base_client.docstore,
+            threshold=0.5,
         )
 
         duplicate_node_postprocessor = DuplicateNodePostprocessor()
@@ -83,9 +132,10 @@ class KnowledgeBaseSearchServer(BaseKBModel):
         return RetrieverQueryEngine(
             retriever=self.knowledge_base_client.get_knowledge_base_retriever(knowledge_base=knowledge_base),
             node_postprocessors=[
+                parent_context_postprocessor,
                 duplicate_node_postprocessor,
                 reranker,
-                parent_context_postprocessor,
+                grandparent_context_postprocessor,
                 reranker,
                 duplicate_node_postprocessor,
             ],
@@ -108,10 +158,15 @@ class KnowledgeBaseSearchServer(BaseKBModel):
 
         return KnowledgeBaseSummary.from_nodes(response.source_nodes)
 
-    async def query(self, query: str, knowledge_base: list[str] | str | None = None) -> SearchResponseWithSummary:
+    async def get_document(self, knowledge_base: DocumentKnowledgeBaseField, title: DocumentTitleField) -> DocumentResponse:
+        """Get a document from the knowledge base"""
+        document: BaseNode = await self.knowledge_base_client.get_document(knowledge_base=knowledge_base, title=title)
+        return DocumentResponse.from_node(node=document)
+
+    async def query(self, query: QueryStringField, knowledge_bases: QueryKnowledgeBasesField | None = None) -> SearchResponseWithSummary:
         """Query all knowledge bases with a question."""
         # response = await self._query_engine(knowledge_base=knowledge_base).aquery(query)
-        response = await self._query_engine(knowledge_base=knowledge_base).aquery(query)
+        response = await self._query_engine(knowledge_base=knowledge_bases).aquery(query)
 
         summary: KnowledgeBaseSummary = await self._get_summary(query, knowledge_base=None)
 

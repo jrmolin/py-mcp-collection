@@ -1,0 +1,3613 @@
+- node_id: '0'
+  node_depth: 0
+  node_type: Node
+  content_length: 29
+  content: '# ES|QL aggregation functions'
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/9'
+    headings:
+    - '# ES|QL aggregation functions'
+  is_isolated: true
+  relationships: {}
+- node_id: '1'
+  node_depth: 0
+  node_type: Node
+  content_length: 53
+  content: 'The STATS command supports these aggregate functions:'
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/10'
+    headings:
+    - '# ES|QL aggregation functions'
+  is_isolated: true
+  relationships: {}
+- node_id: '2'
+  node_depth: 0
+  node_type: Node
+  content_length: 202
+  content: |-
+    - AVG
+    - COUNT
+    - COUNT_DISTINCT
+    - MAX
+    - MEDIAN
+    - MEDIAN_ABSOLUTE_DEVIATION
+    - MIN
+    - PERCENTILE
+    - [preview] ST_CENTROID_AGG
+    - [preview] ST_EXTENT_AGG
+    - STD_DEV
+    - SUM
+    - TOP
+    - [preview] VALUES
+    - WEIGHTED_AVG
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/1'
+    headings:
+    - '# ES|QL aggregation functions'
+  is_isolated: true
+  relationships: {}
+- node_id: '3'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: '## AVG'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/26'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '4'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: Syntax
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/27'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '5'
+  node_depth: 0
+  node_type: Node
+  content_length: 10
+  content: Parameters
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/28'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '6'
+  node_depth: 0
+  node_type: Node
+  content_length: 57
+  content: |-
+    - number
+        - Expression that outputs values to average.
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/2'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '7'
+  node_depth: 0
+  node_type: Node
+  content_length: 11
+  content: Description
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/31'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '8'
+  node_depth: 0
+  node_type: Node
+  content_length: 31
+  content: The average of a numeric field.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/32'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '9'
+  node_depth: 0
+  node_type: Node
+  content_length: 15
+  content: Supported types
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/33'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '10'
+  node_depth: 0
+  node_type: Node
+  content_length: 119
+  content: |-
+    | number   | result   |
+    |----------|----------|
+    | double   | double   |
+    | integer  | double   |
+    | long     | double   |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/0'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '11'
+  node_depth: 0
+  node_type: Node
+  content_length: 8
+  content: Examples
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/34'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '12'
+  node_depth: 0
+  node_type: Node
+  content_length: 42
+  content: |-
+    ```
+    FROM employees
+    | STATS AVG(height)
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/35'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '13'
+  node_depth: 0
+  node_type: Node
+  content_length: 74
+  content: |-
+    |   AVG(height):double |
+    |----------------------|
+    |               1.7682 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/1'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '14'
+  node_depth: 0
+  node_type: Node
+  content_length: 203
+  content: The expression can use inline functions. For example, to calculate the
+    average over a multivalued column, first use MV_AVG to average the multiple values
+    per row, and use the result with the AVG function
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/36'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '15'
+  node_depth: 0
+  node_type: Node
+  content_length: 88
+  content: |-
+    ```
+    FROM employees
+    | STATS avg_salary_change = ROUND(AVG(MV_AVG(salary_change)), 10)
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/37'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '16'
+  node_depth: 0
+  node_type: Node
+  content_length: 92
+  content: |-
+    |   avg_salary_change:double |
+    |----------------------------|
+    |                    1.39045 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/2'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '17'
+  node_depth: 0
+  node_type: Node
+  content_length: 8
+  content: '## COUNT'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/38'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '18'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: Syntax
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/39'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '19'
+  node_depth: 0
+  node_type: Node
+  content_length: 10
+  content: Parameters
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/40'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '20'
+  node_depth: 0
+  node_type: Node
+  content_length: 116
+  content: |-
+    - field
+        - Expression that outputs values to be counted. If omitted, equivalent to COUNT(*) (the number of rows).
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/4'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '21'
+  node_depth: 0
+  node_type: Node
+  content_length: 11
+  content: Description
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/43'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '22'
+  node_depth: 0
+  node_type: Node
+  content_length: 49
+  content: Returns the total number (count) of input values.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/44'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '23'
+  node_depth: 0
+  node_type: Node
+  content_length: 15
+  content: Supported types
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/45'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '24'
+  node_depth: 0
+  node_type: Node
+  content_length: 433
+  content: |-
+    | field           | result   |
+    |-----------------|----------|
+    | boolean         | long     |
+    | cartesian_point | long     |
+    | date            | long     |
+    | double          | long     |
+    | geo_point       | long     |
+    | integer         | long     |
+    | ip              | long     |
+    | keyword         | long     |
+    | long            | long     |
+    | text            | long     |
+    | unsigned_long   | long     |
+    | version         | long     |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/3'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '25'
+  node_depth: 0
+  node_type: Node
+  content_length: 8
+  content: Examples
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/46'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '26'
+  node_depth: 0
+  node_type: Node
+  content_length: 44
+  content: |-
+    ```
+    FROM employees
+    | STATS COUNT(height)
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/47'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '27'
+  node_depth: 0
+  node_type: Node
+  content_length: 74
+  content: |-
+    |   COUNT(height):long |
+    |----------------------|
+    |                  100 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/4'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '28'
+  node_depth: 0
+  node_type: Node
+  content_length: 52
+  content: To count the number of rows, use COUNT() or COUNT(*)
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/48'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '29'
+  node_depth: 0
+  node_type: Node
+  content_length: 82
+  content: |-
+    ```
+    FROM employees
+    | STATS count = COUNT(*) BY languages
+    | SORT languages DESC
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/49'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '30'
+  node_depth: 0
+  node_type: Node
+  content_length: 311
+  content: |-
+    |   count:long | languages:integer   |
+    |--------------|---------------------|
+    |           10 | null                |
+    |           21 | 5                   |
+    |           18 | 4                   |
+    |           17 | 3                   |
+    |           19 | 2                   |
+    |           15 | 1                   |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/5'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '31'
+  node_depth: 0
+  node_type: Node
+  content_length: 137
+  content: The expression can use inline functions. This example splits a string into
+    multiple values using the SPLIT function and counts the values
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/50'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '32'
+  node_depth: 0
+  node_type: Node
+  content_length: 90
+  content: |-
+    ```
+    ROW words="foo;bar;baz;qux;quux;foo"
+    | STATS word_count = COUNT(SPLIT(words, ";"))
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/51'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '33'
+  node_depth: 0
+  node_type: Node
+  content_length: 65
+  content: |-
+    |   word_count:long |
+    |-------------------|
+    |                 6 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/6'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '34'
+  node_depth: 0
+  node_type: Node
+  content_length: 117
+  content: "To count the number of times an expression returns TRUE use a WHERE command\
+    \ to remove rows that shouldn\u2019t be included"
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/52'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '35'
+  node_depth: 0
+  node_type: Node
+  content_length: 46
+  content: |-
+    ```
+    ROW n=1
+    | WHERE n < 0
+    | STATS COUNT(n)
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/53'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '36'
+  node_depth: 0
+  node_type: Node
+  content_length: 59
+  content: |-
+    |   COUNT(n):long |
+    |-----------------|
+    |               0 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/7'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '37'
+  node_depth: 0
+  node_type: Node
+  content_length: 319
+  content: 'To count the same stream of data based on two different expressions use
+    the pattern COUNT(<expression> OR NULL). This builds on the three-valued logic
+    (3VL) of the language: TRUE OR NULL is TRUE, but FALSE OR NULL is NULL, plus the
+    way COUNT handles NULLs: COUNT(TRUE) and COUNT(FALSE) are both 1, but COUNT(NULL)
+    is 0.'
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/54'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '38'
+  node_depth: 0
+  node_type: Node
+  content_length: 66
+  content: |-
+    ```
+    ROW n=1
+    | STATS COUNT(n > 0 OR NULL), COUNT(n < 0 OR NULL)
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/55'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '39'
+  node_depth: 0
+  node_type: Node
+  content_length: 185
+  content: |-
+    |   COUNT(n > 0 OR NULL):long |   COUNT(n < 0 OR NULL):long |
+    |-----------------------------|-----------------------------|
+    |                           1 |                           0 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/8'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT'
+  is_isolated: true
+  relationships: {}
+- node_id: '40'
+  node_depth: 0
+  node_type: Node
+  content_length: 17
+  content: '## COUNT_DISTINCT'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/56'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  is_isolated: true
+  relationships: {}
+- node_id: '41'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: Syntax
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/57'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  is_isolated: true
+  relationships: {}
+- node_id: '42'
+  node_depth: 0
+  node_type: Node
+  content_length: 10
+  content: Parameters
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/58'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  is_isolated: true
+  relationships: {}
+- node_id: '43'
+  node_depth: 0
+  node_type: Node
+  content_length: 306
+  content: |-
+    - field
+        - Column or literal for which to count the number of distinct values.
+    - precision
+        - Precision threshold. Refer to AGG-COUNT-DISTINCT-APPROXIMATE. The maximum supported value is 40000. Thresholds above this number will have the same effect as a threshold of 40000. The default value is 3000.
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/6'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  is_isolated: true
+  relationships: {}
+- node_id: '44'
+  node_depth: 0
+  node_type: Node
+  content_length: 11
+  content: Description
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/63'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  is_isolated: true
+  relationships: {}
+- node_id: '45'
+  node_depth: 0
+  node_type: Node
+  content_length: 50
+  content: Returns the approximate number of distinct values.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/64'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  is_isolated: true
+  relationships: {}
+- node_id: '46'
+  node_depth: 0
+  node_type: Node
+  content_length: 15
+  content: Supported types
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/65'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  is_isolated: true
+  relationships: {}
+- node_id: '247'
+  node_depth: 1
+  node_type: Node
+  content_length: 1763
+  content: |-
+    | field      | precision     | result   |
+    |------------|---------------|----------|
+    | boolean    | integer       | long     |
+    | boolean    | long          | long     |
+    | boolean    | unsigned_long | long     |
+    | boolean    |               | long     |
+    | date       | integer       | long     |
+    | date       | long          | long     |
+    | date       | unsigned_long | long     |
+    | date       |               | long     |
+    | date_nanos | integer       | long     |
+    | date_nanos | long          | long     |
+    | date_nanos | unsigned_long | long     |
+    | date_nanos |               | long     |
+    | double     | integer       | long     |
+    | double     | long          | long     |
+    | double     | unsigned_long | long     |
+    | double     |               | long     |
+    | integer    | integer       | long     |
+    | integer    | long          | long     |
+    | integer    | unsigned_long | long     |
+    | integer    |               | long     |
+    | ip         | integer       | long     |
+    | ip         | long          | lon...
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/9'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  relationships:
+    next: '248'
+    parent: '245'
+    previous: '246'
+- node_id: '48'
+  node_depth: 0
+  node_type: Node
+  content_length: 8
+  content: Examples
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/66'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  is_isolated: true
+  relationships: {}
+- node_id: '49'
+  node_depth: 0
+  node_type: Node
+  content_length: 67
+  content: |-
+    ```
+    FROM hosts
+    | STATS COUNT_DISTINCT(ip0), COUNT_DISTINCT(ip1)
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/67'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  is_isolated: true
+  relationships: {}
+- node_id: '50'
+  node_depth: 0
+  node_type: Node
+  content_length: 179
+  content: |-
+    |   COUNT_DISTINCT(ip0):long |   COUNT_DISTINCT(ip1):long |
+    |----------------------------|----------------------------|
+    |                          7 |                          8 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/10'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  is_isolated: true
+  relationships: {}
+- node_id: '51'
+  node_depth: 0
+  node_type: Node
+  content_length: 71
+  content: With the optional second parameter to configure the precision threshold
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/68'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  is_isolated: true
+  relationships: {}
+- node_id: '52'
+  node_depth: 0
+  node_type: Node
+  content_length: 77
+  content: |-
+    ```
+    FROM hosts
+    | STATS COUNT_DISTINCT(ip0, 80000), COUNT_DISTINCT(ip1, 5)
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/69'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  is_isolated: true
+  relationships: {}
+- node_id: '53'
+  node_depth: 0
+  node_type: Node
+  content_length: 209
+  content: |-
+    |   COUNT_DISTINCT(ip0, 80000):long |   COUNT_DISTINCT(ip1, 5):long |
+    |-----------------------------------|-------------------------------|
+    |                                 7 |                             9 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/11'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  is_isolated: true
+  relationships: {}
+- node_id: '54'
+  node_depth: 0
+  node_type: Node
+  content_length: 144
+  content: The expression can use inline functions. This example splits a string into
+    multiple values using the SPLIT function and counts the unique values
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/70'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  is_isolated: true
+  relationships: {}
+- node_id: '55'
+  node_depth: 0
+  node_type: Node
+  content_length: 108
+  content: |-
+    ```
+    ROW words="foo;bar;baz;qux;quux;foo"
+    | STATS distinct_word_count = COUNT_DISTINCT(SPLIT(words, ";"))
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/71'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  is_isolated: true
+  relationships: {}
+- node_id: '56'
+  node_depth: 0
+  node_type: Node
+  content_length: 92
+  content: |-
+    |   distinct_word_count:long |
+    |----------------------------|
+    |                          5 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/12'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+  is_isolated: true
+  relationships: {}
+- node_id: '57'
+  node_depth: 0
+  node_type: Node
+  content_length: 26
+  content: '### Counts are approximate'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/72'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+    - '### Counts are approximate'
+  is_isolated: true
+  relationships: {}
+- node_id: '58'
+  node_depth: 0
+  node_type: Node
+  content_length: 299
+  content: "Computing exact counts requires loading values into a set and returning\
+    \ its\nsize. This doesn\u2019t scale when working on high-cardinality sets and/or\
+    \ large\nvalues as the required memory usage and the need to communicate those\n\
+    per-shard sets between nodes would utilize too many resources of the cluster."
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/73'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+    - '### Counts are approximate'
+  is_isolated: true
+  relationships: {}
+- node_id: '59'
+  node_depth: 0
+  node_type: Node
+  content_length: 150
+  content: |-
+    This COUNT_DISTINCT function is based on the
+    HyperLogLog++
+    algorithm, which counts based on the hashes of the values with some interesting
+    properties:
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/74'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+    - '### Counts are approximate'
+  is_isolated: true
+  relationships: {}
+- node_id: '60'
+  node_depth: 0
+  node_type: Node
+  content_length: 257
+  content: |-
+    - configurable precision, which decides on how to trade memory for accuracy,
+    - excellent accuracy on low-cardinality sets,
+    - fixed memory usage: no matter if there are tens or billions of unique values, memory usage only depends on the configured precision.
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/9'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+    - '### Counts are approximate'
+  is_isolated: true
+  relationships: {}
+- node_id: '61'
+  node_depth: 0
+  node_type: Node
+  content_length: 96
+  content: For a precision threshold of c, the implementation that we are using requires
+    about c * 8 bytes.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/78'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+    - '### Counts are approximate'
+  is_isolated: true
+  relationships: {}
+- node_id: '62'
+  node_depth: 0
+  node_type: Node
+  content_length: 78
+  content: 'The following chart shows how the error varies before and after the threshold:'
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/79'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+    - '### Counts are approximate'
+  is_isolated: true
+  relationships: {}
+- node_id: '63'
+  node_depth: 0
+  node_type: Node
+  content_length: 402
+  content: |-
+    For all 3 thresholds, counts have been accurate up to the configured threshold. Although not guaranteed,
+    this is likely to be the case. Accuracy in practice depends on the dataset in question. In general,
+    most datasets show consistently good accuracy. Also note that even with a threshold as low as 100,
+    the error remains very low (1-6% as seen in the above graph) even when counting millions of items.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/80'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+    - '### Counts are approximate'
+  is_isolated: true
+  relationships: {}
+- node_id: '64'
+  node_depth: 0
+  node_type: Node
+  content_length: 165
+  content: |-
+    The HyperLogLog++ algorithm depends on the leading zeros of hashed values, the exact distributions of
+    hashes in a dataset can affect the accuracy of the cardinality.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/81'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+    - '### Counts are approximate'
+  is_isolated: true
+  relationships: {}
+- node_id: '65'
+  node_depth: 0
+  node_type: Node
+  content_length: 454
+  content: |-
+    The COUNT_DISTINCT function takes an optional second parameter to configure
+    the precision threshold. The precision_threshold options allows to trade memory
+    for accuracy, and defines a unique count below which counts are expected to be
+    close to accurate. Above this value, counts might become a bit more fuzzy. The
+    maximum supported value is 40000, thresholds above this number will have the
+    same effect as a threshold of 40000. The default value is 3000.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/82'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## COUNT_DISTINCT'
+    - '### Counts are approximate'
+  is_isolated: true
+  relationships: {}
+- node_id: '66'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: '## MAX'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/83'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MAX'
+  is_isolated: true
+  relationships: {}
+- node_id: '67'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: Syntax
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/84'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MAX'
+  is_isolated: true
+  relationships: {}
+- node_id: '68'
+  node_depth: 0
+  node_type: Node
+  content_length: 10
+  content: Parameters
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/85'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MAX'
+  is_isolated: true
+  relationships: {}
+- node_id: '69'
+  node_depth: 0
+  node_type: Node
+  content_length: 7
+  content: '- field'
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/10'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MAX'
+  is_isolated: true
+  relationships: {}
+- node_id: '70'
+  node_depth: 0
+  node_type: Node
+  content_length: 11
+  content: Description
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/87'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MAX'
+  is_isolated: true
+  relationships: {}
+- node_id: '71'
+  node_depth: 0
+  node_type: Node
+  content_length: 29
+  content: The maximum value of a field.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/88'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MAX'
+  is_isolated: true
+  relationships: {}
+- node_id: '72'
+  node_depth: 0
+  node_type: Node
+  content_length: 15
+  content: Supported types
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/89'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MAX'
+  is_isolated: true
+  relationships: {}
+- node_id: '73'
+  node_depth: 0
+  node_type: Node
+  content_length: 335
+  content: |-
+    | field      | result     |
+    |------------|------------|
+    | boolean    | boolean    |
+    | date       | date       |
+    | date_nanos | date_nanos |
+    | double     | double     |
+    | integer    | integer    |
+    | ip         | ip         |
+    | keyword    | keyword    |
+    | long       | long       |
+    | text       | keyword    |
+    | version    | version    |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/13'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MAX'
+  is_isolated: true
+  relationships: {}
+- node_id: '74'
+  node_depth: 0
+  node_type: Node
+  content_length: 8
+  content: Examples
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/90'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MAX'
+  is_isolated: true
+  relationships: {}
+- node_id: '75'
+  node_depth: 0
+  node_type: Node
+  content_length: 45
+  content: |-
+    ```
+    FROM employees
+    | STATS MAX(languages)
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/91'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MAX'
+  is_isolated: true
+  relationships: {}
+- node_id: '76'
+  node_depth: 0
+  node_type: Node
+  content_length: 86
+  content: |-
+    |   MAX(languages):integer |
+    |--------------------------|
+    |                        5 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/14'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MAX'
+  is_isolated: true
+  relationships: {}
+- node_id: '77'
+  node_depth: 0
+  node_type: Node
+  content_length: 217
+  content: The expression can use inline functions. For example, to calculate the
+    maximum over an average of a multivalued column, use MV_AVG to first average the
+    multiple values per row, and use the result with the MAX function
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/92'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MAX'
+  is_isolated: true
+  relationships: {}
+- node_id: '78'
+  node_depth: 0
+  node_type: Node
+  content_length: 81
+  content: |-
+    ```
+    FROM employees
+    | STATS max_avg_salary_change = MAX(MV_AVG(salary_change))
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/93'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MAX'
+  is_isolated: true
+  relationships: {}
+- node_id: '79'
+  node_depth: 0
+  node_type: Node
+  content_length: 104
+  content: |-
+    |   max_avg_salary_change:double |
+    |--------------------------------|
+    |                          13.75 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/15'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MAX'
+  is_isolated: true
+  relationships: {}
+- node_id: '80'
+  node_depth: 0
+  node_type: Node
+  content_length: 9
+  content: '## MEDIAN'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/94'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN'
+  is_isolated: true
+  relationships: {}
+- node_id: '81'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: Syntax
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/95'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN'
+  is_isolated: true
+  relationships: {}
+- node_id: '82'
+  node_depth: 0
+  node_type: Node
+  content_length: 10
+  content: Parameters
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/96'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN'
+  is_isolated: true
+  relationships: {}
+- node_id: '83'
+  node_depth: 0
+  node_type: Node
+  content_length: 73
+  content: |-
+    - number
+        - Expression that outputs values to calculate the median of.
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/12'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN'
+  is_isolated: true
+  relationships: {}
+- node_id: '84'
+  node_depth: 0
+  node_type: Node
+  content_length: 11
+  content: Description
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/99'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN'
+  is_isolated: true
+  relationships: {}
+- node_id: '85'
+  node_depth: 0
+  node_type: Node
+  content_length: 117
+  content: The value that is greater than half of all values and less than half of
+    all values, also known as the 50% PERCENTILE.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/100'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN'
+  is_isolated: true
+  relationships: {}
+- node_id: '86'
+  node_depth: 0
+  node_type: Node
+  content_length: 47
+  content: Like PERCENTILE, MEDIAN is usually approximate.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/101'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN'
+  is_isolated: true
+  relationships: {}
+- node_id: '87'
+  node_depth: 0
+  node_type: Node
+  content_length: 15
+  content: Supported types
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/102'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN'
+  is_isolated: true
+  relationships: {}
+- node_id: '88'
+  node_depth: 0
+  node_type: Node
+  content_length: 119
+  content: |-
+    | number   | result   |
+    |----------|----------|
+    | double   | double   |
+    | integer  | double   |
+    | long     | double   |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/16'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN'
+  is_isolated: true
+  relationships: {}
+- node_id: '89'
+  node_depth: 0
+  node_type: Node
+  content_length: 8
+  content: Examples
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/103'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN'
+  is_isolated: true
+  relationships: {}
+- node_id: '90'
+  node_depth: 0
+  node_type: Node
+  content_length: 69
+  content: |-
+    ```
+    FROM employees
+    | STATS MEDIAN(salary), PERCENTILE(salary, 50)
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/104'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN'
+  is_isolated: true
+  relationships: {}
+- node_id: '91'
+  node_depth: 0
+  node_type: Node
+  content_length: 185
+  content: |-
+    |   MEDIAN(salary):double |   PERCENTILE(salary, 50):double |
+    |-------------------------|---------------------------------|
+    |                   47003 |                           47003 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/17'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN'
+  is_isolated: true
+  relationships: {}
+- node_id: '92'
+  node_depth: 0
+  node_type: Node
+  content_length: 219
+  content: The expression can use inline functions. For example, to calculate the
+    median of the maximum values of a multivalued column, first use MV_MAX to get
+    the maximum value per row, and use the result with the MEDIAN function
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/105'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN'
+  is_isolated: true
+  relationships: {}
+- node_id: '93'
+  node_depth: 0
+  node_type: Node
+  content_length: 87
+  content: |-
+    ```
+    FROM employees
+    | STATS median_max_salary_change = MEDIAN(MV_MAX(salary_change))
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/106'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN'
+  is_isolated: true
+  relationships: {}
+- node_id: '94'
+  node_depth: 0
+  node_type: Node
+  content_length: 113
+  content: |-
+    |   median_max_salary_change:double |
+    |-----------------------------------|
+    |                              7.69 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/18'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN'
+  is_isolated: true
+  relationships: {}
+- node_id: '95'
+  node_depth: 0
+  node_type: Node
+  content_length: 104
+  content: |-
+    MEDIAN is also non-deterministic.
+    This means you can get slightly different results using the same data.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/107'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN'
+  is_isolated: true
+  relationships: {}
+- node_id: '96'
+  node_depth: 0
+  node_type: Node
+  content_length: 28
+  content: '## MEDIAN_ABSOLUTE_DEVIATION'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/108'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN_ABSOLUTE_DEVIATION'
+  is_isolated: true
+  relationships: {}
+- node_id: '97'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: Syntax
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/109'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN_ABSOLUTE_DEVIATION'
+  is_isolated: true
+  relationships: {}
+- node_id: '98'
+  node_depth: 0
+  node_type: Node
+  content_length: 10
+  content: Parameters
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/110'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN_ABSOLUTE_DEVIATION'
+  is_isolated: true
+  relationships: {}
+- node_id: '99'
+  node_depth: 0
+  node_type: Node
+  content_length: 8
+  content: '- number'
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/14'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN_ABSOLUTE_DEVIATION'
+  is_isolated: true
+  relationships: {}
+- node_id: '100'
+  node_depth: 0
+  node_type: Node
+  content_length: 11
+  content: Description
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/112'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN_ABSOLUTE_DEVIATION'
+  is_isolated: true
+  relationships: {}
+- node_id: '101'
+  node_depth: 0
+  node_type: Node
+  content_length: 455
+  content: "Returns the median absolute deviation, a measure of variability. It is\
+    \ a robust statistic, meaning that it is useful for describing data that may have\
+    \ outliers, or may not be normally distributed. For such data it can be more descriptive\
+    \ than standard deviation.  It is calculated as the median of each data point\u2019\
+    s deviation from the median of the entire sample. That is, for a random variable\
+    \ X, the median absolute deviation is median(|median(X) - X|)."
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/113'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN_ABSOLUTE_DEVIATION'
+  is_isolated: true
+  relationships: {}
+- node_id: '102'
+  node_depth: 0
+  node_type: Node
+  content_length: 66
+  content: Like PERCENTILE, MEDIAN_ABSOLUTE_DEVIATION is usually approximate.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/114'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN_ABSOLUTE_DEVIATION'
+  is_isolated: true
+  relationships: {}
+- node_id: '103'
+  node_depth: 0
+  node_type: Node
+  content_length: 15
+  content: Supported types
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/115'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN_ABSOLUTE_DEVIATION'
+  is_isolated: true
+  relationships: {}
+- node_id: '104'
+  node_depth: 0
+  node_type: Node
+  content_length: 119
+  content: |-
+    | number   | result   |
+    |----------|----------|
+    | double   | double   |
+    | integer  | double   |
+    | long     | double   |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/19'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN_ABSOLUTE_DEVIATION'
+  is_isolated: true
+  relationships: {}
+- node_id: '105'
+  node_depth: 0
+  node_type: Node
+  content_length: 8
+  content: Examples
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/116'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN_ABSOLUTE_DEVIATION'
+  is_isolated: true
+  relationships: {}
+- node_id: '106'
+  node_depth: 0
+  node_type: Node
+  content_length: 80
+  content: |-
+    ```
+    FROM employees
+    | STATS MEDIAN(salary), MEDIAN_ABSOLUTE_DEVIATION(salary)
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/117'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN_ABSOLUTE_DEVIATION'
+  is_isolated: true
+  relationships: {}
+- node_id: '107'
+  node_depth: 0
+  node_type: Node
+  content_length: 218
+  content: |-
+    |   MEDIAN(salary):double |   MEDIAN_ABSOLUTE_DEVIATION(salary):double |
+    |-------------------------|--------------------------------------------|
+    |                   47003 |                                    10096.5 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/20'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN_ABSOLUTE_DEVIATION'
+  is_isolated: true
+  relationships: {}
+- node_id: '108'
+  node_depth: 0
+  node_type: Node
+  content_length: 257
+  content: The expression can use inline functions. For example, to calculate the
+    median absolute deviation of the maximum values of a multivalued column, first
+    use MV_MAX to get the maximum value per row, and use the result with the MEDIAN_ABSOLUTE_DEVIATION
+    function
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/118'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN_ABSOLUTE_DEVIATION'
+  is_isolated: true
+  relationships: {}
+- node_id: '109'
+  node_depth: 0
+  node_type: Node
+  content_length: 105
+  content: |-
+    ```
+    FROM employees
+    | STATS m_a_d_max_salary_change = MEDIAN_ABSOLUTE_DEVIATION(MV_MAX(salary_change))
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/119'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN_ABSOLUTE_DEVIATION'
+  is_isolated: true
+  relationships: {}
+- node_id: '110'
+  node_depth: 0
+  node_type: Node
+  content_length: 110
+  content: |-
+    |   m_a_d_max_salary_change:double |
+    |----------------------------------|
+    |                             5.69 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/21'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN_ABSOLUTE_DEVIATION'
+  is_isolated: true
+  relationships: {}
+- node_id: '111'
+  node_depth: 0
+  node_type: Node
+  content_length: 123
+  content: |-
+    MEDIAN_ABSOLUTE_DEVIATION is also non-deterministic.
+    This means you can get slightly different results using the same data.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/120'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MEDIAN_ABSOLUTE_DEVIATION'
+  is_isolated: true
+  relationships: {}
+- node_id: '112'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: '## MIN'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/121'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MIN'
+  is_isolated: true
+  relationships: {}
+- node_id: '113'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: Syntax
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/122'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MIN'
+  is_isolated: true
+  relationships: {}
+- node_id: '114'
+  node_depth: 0
+  node_type: Node
+  content_length: 10
+  content: Parameters
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/123'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MIN'
+  is_isolated: true
+  relationships: {}
+- node_id: '115'
+  node_depth: 0
+  node_type: Node
+  content_length: 7
+  content: '- field'
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/16'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MIN'
+  is_isolated: true
+  relationships: {}
+- node_id: '116'
+  node_depth: 0
+  node_type: Node
+  content_length: 11
+  content: Description
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/125'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MIN'
+  is_isolated: true
+  relationships: {}
+- node_id: '117'
+  node_depth: 0
+  node_type: Node
+  content_length: 29
+  content: The minimum value of a field.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/126'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MIN'
+  is_isolated: true
+  relationships: {}
+- node_id: '118'
+  node_depth: 0
+  node_type: Node
+  content_length: 15
+  content: Supported types
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/127'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MIN'
+  is_isolated: true
+  relationships: {}
+- node_id: '119'
+  node_depth: 0
+  node_type: Node
+  content_length: 335
+  content: |-
+    | field      | result     |
+    |------------|------------|
+    | boolean    | boolean    |
+    | date       | date       |
+    | date_nanos | date_nanos |
+    | double     | double     |
+    | integer    | integer    |
+    | ip         | ip         |
+    | keyword    | keyword    |
+    | long       | long       |
+    | text       | keyword    |
+    | version    | version    |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/22'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MIN'
+  is_isolated: true
+  relationships: {}
+- node_id: '120'
+  node_depth: 0
+  node_type: Node
+  content_length: 8
+  content: Examples
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/128'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MIN'
+  is_isolated: true
+  relationships: {}
+- node_id: '121'
+  node_depth: 0
+  node_type: Node
+  content_length: 45
+  content: |-
+    ```
+    FROM employees
+    | STATS MIN(languages)
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/129'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MIN'
+  is_isolated: true
+  relationships: {}
+- node_id: '122'
+  node_depth: 0
+  node_type: Node
+  content_length: 86
+  content: |-
+    |   MIN(languages):integer |
+    |--------------------------|
+    |                        1 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/23'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MIN'
+  is_isolated: true
+  relationships: {}
+- node_id: '123'
+  node_depth: 0
+  node_type: Node
+  content_length: 217
+  content: The expression can use inline functions. For example, to calculate the
+    minimum over an average of a multivalued column, use MV_AVG to first average the
+    multiple values per row, and use the result with the MIN function
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/130'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MIN'
+  is_isolated: true
+  relationships: {}
+- node_id: '124'
+  node_depth: 0
+  node_type: Node
+  content_length: 81
+  content: |-
+    ```
+    FROM employees
+    | STATS min_avg_salary_change = MIN(MV_AVG(salary_change))
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/131'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MIN'
+  is_isolated: true
+  relationships: {}
+- node_id: '125'
+  node_depth: 0
+  node_type: Node
+  content_length: 104
+  content: |-
+    |   min_avg_salary_change:double |
+    |--------------------------------|
+    |                          -8.46 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/24'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## MIN'
+  is_isolated: true
+  relationships: {}
+- node_id: '126'
+  node_depth: 0
+  node_type: Node
+  content_length: 13
+  content: '## PERCENTILE'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/132'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+  is_isolated: true
+  relationships: {}
+- node_id: '127'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: Syntax
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/133'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+  is_isolated: true
+  relationships: {}
+- node_id: '128'
+  node_depth: 0
+  node_type: Node
+  content_length: 10
+  content: Parameters
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/134'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+  is_isolated: true
+  relationships: {}
+- node_id: '129'
+  node_depth: 0
+  node_type: Node
+  content_length: 21
+  content: |-
+    - number
+    - percentile
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/18'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+  is_isolated: true
+  relationships: {}
+- node_id: '130'
+  node_depth: 0
+  node_type: Node
+  content_length: 11
+  content: Description
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/137'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+  is_isolated: true
+  relationships: {}
+- node_id: '131'
+  node_depth: 0
+  node_type: Node
+  content_length: 207
+  content: Returns the value at which a certain percentage of observed values occur.
+    For example, the 95th percentile is the value which is greater than 95% of the
+    observed values and the 50th percentile is the MEDIAN.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/138'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+  is_isolated: true
+  relationships: {}
+- node_id: '132'
+  node_depth: 0
+  node_type: Node
+  content_length: 15
+  content: Supported types
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/139'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+  is_isolated: true
+  relationships: {}
+- node_id: '133'
+  node_depth: 0
+  node_type: Node
+  content_length: 428
+  content: |-
+    | number   | percentile   | result   |
+    |----------|--------------|----------|
+    | double   | double       | double   |
+    | double   | integer      | double   |
+    | double   | long         | double   |
+    | integer  | double       | double   |
+    | integer  | integer      | double   |
+    | integer  | long         | double   |
+    | long     | double       | double   |
+    | long     | integer      | double   |
+    | long     | long         | double   |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/25'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+  is_isolated: true
+  relationships: {}
+- node_id: '134'
+  node_depth: 0
+  node_type: Node
+  content_length: 8
+  content: Examples
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/140'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+  is_isolated: true
+  relationships: {}
+- node_id: '135'
+  node_depth: 0
+  node_type: Node
+  content_length: 122
+  content: |-
+    ```
+    FROM employees
+    | STATS p0 = PERCENTILE(salary,  0)
+     , p50 = PERCENTILE(salary, 50)
+     , p99 = PERCENTILE(salary, 99)
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/141'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+  is_isolated: true
+  relationships: {}
+- node_id: '136'
+  node_depth: 0
+  node_type: Node
+  content_length: 137
+  content: |-
+    |   p0:double |   p50:double |   p99:double |
+    |-------------|--------------|--------------|
+    |       25324 |        47003 |      74970.3 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/26'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+  is_isolated: true
+  relationships: {}
+- node_id: '137'
+  node_depth: 0
+  node_type: Node
+  content_length: 225
+  content: The expression can use inline functions. For example, to calculate a percentile
+    of the maximum values of a multivalued column, first use MV_MAX to get the maximum
+    value per row, and use the result with the PERCENTILE function
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/142'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+  is_isolated: true
+  relationships: {}
+- node_id: '138'
+  node_depth: 0
+  node_type: Node
+  content_length: 92
+  content: |-
+    ```
+    FROM employees
+    | STATS p80_max_salary_change = PERCENTILE(MV_MAX(salary_change), 80)
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/143'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+  is_isolated: true
+  relationships: {}
+- node_id: '139'
+  node_depth: 0
+  node_type: Node
+  content_length: 104
+  content: |-
+    |   p80_max_salary_change:double |
+    |--------------------------------|
+    |                         12.132 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/27'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+  is_isolated: true
+  relationships: {}
+- node_id: '140'
+  node_depth: 0
+  node_type: Node
+  content_length: 39
+  content: '### PERCENTILE is (usually) approximate'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/144'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+    - '### PERCENTILE is (usually) approximate'
+  is_isolated: true
+  relationships: {}
+- node_id: '141'
+  node_depth: 0
+  node_type: Node
+  content_length: 233
+  content: There are many different algorithms to calculate percentiles. The naive
+    implementation simply stores all the values in a sorted array. To find the 50th
+    percentile, you simply find the value that is at my_array[count(my_array) * 0.5].
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/145'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+    - '### PERCENTILE is (usually) approximate'
+  is_isolated: true
+  relationships: {}
+- node_id: '142'
+  node_depth: 0
+  node_type: Node
+  content_length: 257
+  content: "Clearly, the naive implementation does not scale \u2014 the sorted array\
+    \ grows linearly with the number of values in your dataset. To calculate percentiles\
+    \ across potentially billions of values in an Elasticsearch cluster, approximate\
+    \ percentiles are calculated."
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/146'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+    - '### PERCENTILE is (usually) approximate'
+  is_isolated: true
+  relationships: {}
+- node_id: '143'
+  node_depth: 0
+  node_type: Node
+  content_length: 138
+  content: The algorithm used by the percentile metric is called TDigest (introduced
+    by Ted Dunning in Computing Accurate Quantiles using T-Digests).
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/147'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+    - '### PERCENTILE is (usually) approximate'
+  is_isolated: true
+  relationships: {}
+- node_id: '144'
+  node_depth: 0
+  node_type: Node
+  content_length: 67
+  content: 'When using this metric, there are a few guidelines to keep in mind:'
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/148'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+    - '### PERCENTILE is (usually) approximate'
+  is_isolated: true
+  relationships: {}
+- node_id: '145'
+  node_depth: 0
+  node_type: Node
+  content_length: 565
+  content: |-
+    - Accuracy is proportional to q(1-q). This means that extreme percentiles (e.g. 99%) are more accurate than less extreme percentiles, such as the median
+    - For small sets of values, percentiles are highly accurate (and potentially 100% accurate if the data is small enough).
+    - As the quantity of values in a bucket grows, the algorithm begins to approximate the percentiles. It is effectively trading accuracy for memory savings. The exact level of inaccuracy is difficult to generalize, since it depends on your data distribution and volume of data being aggregated
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/20'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+    - '### PERCENTILE is (usually) approximate'
+  is_isolated: true
+  relationships: {}
+- node_id: '146'
+  node_depth: 0
+  node_type: Node
+  content_length: 144
+  content: 'The following chart shows the relative error on a uniform distribution
+    depending on the number of collected values and the requested percentile:'
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/152'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+    - '### PERCENTILE is (usually) approximate'
+  is_isolated: true
+  relationships: {}
+- node_id: '147'
+  node_depth: 0
+  node_type: Node
+  content_length: 320
+  content: It shows how precision is better for extreme percentiles. The reason why
+    error diminishes for large number of values is that the law of large numbers makes
+    the distribution of values more and more uniform and the t-digest tree can do
+    a better job at summarizing it. It would not be the case on more skewed distributions.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/153'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+    - '### PERCENTILE is (usually) approximate'
+  is_isolated: true
+  relationships: {}
+- node_id: '148'
+  node_depth: 0
+  node_type: Node
+  content_length: 108
+  content: |-
+    PERCENTILE is also non-deterministic.
+    This means you can get slightly different results using the same data.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/154'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## PERCENTILE'
+    - '### PERCENTILE is (usually) approximate'
+  is_isolated: true
+  relationships: {}
+- node_id: '149'
+  node_depth: 0
+  node_type: Node
+  content_length: 18
+  content: '## ST_CENTROID_AGG'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/155'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_CENTROID_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '150'
+  node_depth: 0
+  node_type: Node
+  content_length: 71
+  content: |-
+    Elastic Stack
+    Technical Preview
+
+
+
+    Serverless
+    Technical Preview
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/156'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_CENTROID_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '151'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: Syntax
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/157'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_CENTROID_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '152'
+  node_depth: 0
+  node_type: Node
+  content_length: 10
+  content: Parameters
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/158'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_CENTROID_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '153'
+  node_depth: 0
+  node_type: Node
+  content_length: 7
+  content: '- field'
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/21'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_CENTROID_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '154'
+  node_depth: 0
+  node_type: Node
+  content_length: 11
+  content: Description
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/160'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_CENTROID_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '155'
+  node_depth: 0
+  node_type: Node
+  content_length: 77
+  content: Calculate the spatial centroid over a field with spatial point geometry
+    type.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/161'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_CENTROID_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '156'
+  node_depth: 0
+  node_type: Node
+  content_length: 15
+  content: Supported types
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/162'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_CENTROID_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '157'
+  node_depth: 0
+  node_type: Node
+  content_length: 151
+  content: |-
+    | field           | result          |
+    |-----------------|-----------------|
+    | cartesian_point | cartesian_point |
+    | geo_point       | geo_point       |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/28'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_CENTROID_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '158'
+  node_depth: 0
+  node_type: Node
+  content_length: 7
+  content: Example
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/163'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_CENTROID_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '159'
+  node_depth: 0
+  node_type: Node
+  content_length: 64
+  content: |-
+    ```
+    FROM airports
+    | STATS centroid=ST_CENTROID_AGG(location)
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/164'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_CENTROID_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '160'
+  node_depth: 0
+  node_type: Node
+  content_length: 152
+  content: |-
+    | centroid:geo_point                             |
+    |------------------------------------------------|
+    | POINT(-0.030548143003023033 24.37553649504829) |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/29'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_CENTROID_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '161'
+  node_depth: 0
+  node_type: Node
+  content_length: 16
+  content: '## ST_EXTENT_AGG'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/165'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_EXTENT_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '162'
+  node_depth: 0
+  node_type: Node
+  content_length: 71
+  content: |-
+    Elastic Stack
+    Technical Preview
+
+
+
+    Serverless
+    Technical Preview
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/166'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_EXTENT_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '163'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: Syntax
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/167'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_EXTENT_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '164'
+  node_depth: 0
+  node_type: Node
+  content_length: 10
+  content: Parameters
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/168'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_EXTENT_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '165'
+  node_depth: 0
+  node_type: Node
+  content_length: 7
+  content: '- field'
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/23'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_EXTENT_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '166'
+  node_depth: 0
+  node_type: Node
+  content_length: 11
+  content: Description
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/170'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_EXTENT_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '167'
+  node_depth: 0
+  node_type: Node
+  content_length: 113
+  content: Calculate the spatial extent over a field with geometry type. Returns a
+    bounding box for all values of the field.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/171'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_EXTENT_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '168'
+  node_depth: 0
+  node_type: Node
+  content_length: 15
+  content: Supported types
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/172'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_EXTENT_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '169'
+  node_depth: 0
+  node_type: Node
+  content_length: 227
+  content: |-
+    | field           | result          |
+    |-----------------|-----------------|
+    | cartesian_point | cartesian_shape |
+    | cartesian_shape | cartesian_shape |
+    | geo_point       | geo_shape       |
+    | geo_shape       | geo_shape       |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/30'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_EXTENT_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '170'
+  node_depth: 0
+  node_type: Node
+  content_length: 7
+  content: Example
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/173'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_EXTENT_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '171'
+  node_depth: 0
+  node_type: Node
+  content_length: 89
+  content: |-
+    ```
+    FROM airports
+    | WHERE country == "India"
+    | STATS extent = ST_EXTENT_AGG(location)
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/174'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_EXTENT_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '172'
+  node_depth: 0
+  node_type: Node
+  content_length: 248
+  content: |-
+    | extent:geo_shape                                                               |
+    |--------------------------------------------------------------------------------|
+    | BBOX (70.77995480038226, 91.5882289968431, 33.9830909203738, 8.47650992218405) |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/31'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## ST_EXTENT_AGG'
+  is_isolated: true
+  relationships: {}
+- node_id: '173'
+  node_depth: 0
+  node_type: Node
+  content_length: 10
+  content: '## STD_DEV'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/175'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## STD_DEV'
+  is_isolated: true
+  relationships: {}
+- node_id: '174'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: Syntax
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/176'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## STD_DEV'
+  is_isolated: true
+  relationships: {}
+- node_id: '175'
+  node_depth: 0
+  node_type: Node
+  content_length: 10
+  content: Parameters
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/177'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## STD_DEV'
+  is_isolated: true
+  relationships: {}
+- node_id: '176'
+  node_depth: 0
+  node_type: Node
+  content_length: 8
+  content: '- number'
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/25'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## STD_DEV'
+  is_isolated: true
+  relationships: {}
+- node_id: '177'
+  node_depth: 0
+  node_type: Node
+  content_length: 11
+  content: Description
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/179'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## STD_DEV'
+  is_isolated: true
+  relationships: {}
+- node_id: '178'
+  node_depth: 0
+  node_type: Node
+  content_length: 53
+  content: The population standard deviation of a numeric field.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/180'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## STD_DEV'
+  is_isolated: true
+  relationships: {}
+- node_id: '179'
+  node_depth: 0
+  node_type: Node
+  content_length: 15
+  content: Supported types
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/181'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## STD_DEV'
+  is_isolated: true
+  relationships: {}
+- node_id: '180'
+  node_depth: 0
+  node_type: Node
+  content_length: 119
+  content: |-
+    | number   | result   |
+    |----------|----------|
+    | double   | double   |
+    | integer  | double   |
+    | long     | double   |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/32'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## STD_DEV'
+  is_isolated: true
+  relationships: {}
+- node_id: '181'
+  node_depth: 0
+  node_type: Node
+  content_length: 8
+  content: Examples
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/182'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## STD_DEV'
+  is_isolated: true
+  relationships: {}
+- node_id: '182'
+  node_depth: 0
+  node_type: Node
+  content_length: 46
+  content: |-
+    ```
+    FROM employees
+    | STATS STD_DEV(height)
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/183'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## STD_DEV'
+  is_isolated: true
+  relationships: {}
+- node_id: '183'
+  node_depth: 0
+  node_type: Node
+  content_length: 86
+  content: |-
+    |   STD_DEV(height):double |
+    |--------------------------|
+    |                  0.20637 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/33'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## STD_DEV'
+  is_isolated: true
+  relationships: {}
+- node_id: '184'
+  node_depth: 0
+  node_type: Node
+  content_length: 208
+  content: "The expression can use inline functions. For example, to calculate the\
+    \ population standard deviation of each employee\u2019s maximum salary changes,\
+    \ first use MV_MAX on each row, and then use STD_DEV on the result"
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/184'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## STD_DEV'
+  is_isolated: true
+  relationships: {}
+- node_id: '185'
+  node_depth: 0
+  node_type: Node
+  content_length: 84
+  content: |-
+    ```
+    FROM employees
+    | STATS stddev_salary_change = STD_DEV(MV_MAX(salary_change))
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/185'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## STD_DEV'
+  is_isolated: true
+  relationships: {}
+- node_id: '186'
+  node_depth: 0
+  node_type: Node
+  content_length: 101
+  content: |-
+    |   stddev_salary_change:double |
+    |-------------------------------|
+    |                       6.87583 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/34'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## STD_DEV'
+  is_isolated: true
+  relationships: {}
+- node_id: '187'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: '## SUM'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/186'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## SUM'
+  is_isolated: true
+  relationships: {}
+- node_id: '188'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: Syntax
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/187'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## SUM'
+  is_isolated: true
+  relationships: {}
+- node_id: '189'
+  node_depth: 0
+  node_type: Node
+  content_length: 10
+  content: Parameters
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/188'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## SUM'
+  is_isolated: true
+  relationships: {}
+- node_id: '190'
+  node_depth: 0
+  node_type: Node
+  content_length: 8
+  content: '- number'
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/27'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## SUM'
+  is_isolated: true
+  relationships: {}
+- node_id: '191'
+  node_depth: 0
+  node_type: Node
+  content_length: 11
+  content: Description
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/190'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## SUM'
+  is_isolated: true
+  relationships: {}
+- node_id: '192'
+  node_depth: 0
+  node_type: Node
+  content_length: 32
+  content: The sum of a numeric expression.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/191'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## SUM'
+  is_isolated: true
+  relationships: {}
+- node_id: '193'
+  node_depth: 0
+  node_type: Node
+  content_length: 15
+  content: Supported types
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/192'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## SUM'
+  is_isolated: true
+  relationships: {}
+- node_id: '194'
+  node_depth: 0
+  node_type: Node
+  content_length: 119
+  content: |-
+    | number   | result   |
+    |----------|----------|
+    | double   | double   |
+    | integer  | long     |
+    | long     | long     |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/35'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## SUM'
+  is_isolated: true
+  relationships: {}
+- node_id: '195'
+  node_depth: 0
+  node_type: Node
+  content_length: 8
+  content: Examples
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/193'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## SUM'
+  is_isolated: true
+  relationships: {}
+- node_id: '196'
+  node_depth: 0
+  node_type: Node
+  content_length: 45
+  content: |-
+    ```
+    FROM employees
+    | STATS SUM(languages)
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/194'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## SUM'
+  is_isolated: true
+  relationships: {}
+- node_id: '197'
+  node_depth: 0
+  node_type: Node
+  content_length: 77
+  content: |-
+    |   SUM(languages):long |
+    |-----------------------|
+    |                   281 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/36'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## SUM'
+  is_isolated: true
+  relationships: {}
+- node_id: '198'
+  node_depth: 0
+  node_type: Node
+  content_length: 180
+  content: "The expression can use inline functions. For example, to calculate the\
+    \ sum of each employee\u2019s maximum salary changes, apply the MV_MAX function\
+    \ to each row and then sum the results"
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/195'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## SUM'
+  is_isolated: true
+  relationships: {}
+- node_id: '199'
+  node_depth: 0
+  node_type: Node
+  content_length: 80
+  content: |-
+    ```
+    FROM employees
+    | STATS total_salary_changes = SUM(MV_MAX(salary_change))
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/196'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## SUM'
+  is_isolated: true
+  relationships: {}
+- node_id: '200'
+  node_depth: 0
+  node_type: Node
+  content_length: 101
+  content: |-
+    |   total_salary_changes:double |
+    |-------------------------------|
+    |                        446.75 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/37'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## SUM'
+  is_isolated: true
+  relationships: {}
+- node_id: '201'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: '## TOP'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/197'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## TOP'
+  is_isolated: true
+  relationships: {}
+- node_id: '202'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: Syntax
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/198'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## TOP'
+  is_isolated: true
+  relationships: {}
+- node_id: '203'
+  node_depth: 0
+  node_type: Node
+  content_length: 10
+  content: Parameters
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/199'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## TOP'
+  is_isolated: true
+  relationships: {}
+- node_id: '204'
+  node_depth: 0
+  node_type: Node
+  content_length: 182
+  content: |-
+    - field
+        - The field to collect the top values for.
+    - limit
+        - The maximum number of values to collect.
+    - order
+        - The order to calculate the top values. Either asc or desc.
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/29'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## TOP'
+  is_isolated: true
+  relationships: {}
+- node_id: '205'
+  node_depth: 0
+  node_type: Node
+  content_length: 11
+  content: Description
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/206'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## TOP'
+  is_isolated: true
+  relationships: {}
+- node_id: '206'
+  node_depth: 0
+  node_type: Node
+  content_length: 62
+  content: Collects the top values for a field. Includes repeated values.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/207'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## TOP'
+  is_isolated: true
+  relationships: {}
+- node_id: '207'
+  node_depth: 0
+  node_type: Node
+  content_length: 15
+  content: Supported types
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/208'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## TOP'
+  is_isolated: true
+  relationships: {}
+- node_id: '208'
+  node_depth: 0
+  node_type: Node
+  content_length: 429
+  content: |-
+    | field   | limit   | order   | result   |
+    |---------|---------|---------|----------|
+    | boolean | integer | keyword | boolean  |
+    | date    | integer | keyword | date     |
+    | double  | integer | keyword | double   |
+    | integer | integer | keyword | integer  |
+    | ip      | integer | keyword | ip       |
+    | keyword | integer | keyword | keyword  |
+    | long    | integer | keyword | long     |
+    | text    | integer | keyword | keyword  |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/38'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## TOP'
+  is_isolated: true
+  relationships: {}
+- node_id: '209'
+  node_depth: 0
+  node_type: Node
+  content_length: 7
+  content: Example
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/209'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## TOP'
+  is_isolated: true
+  relationships: {}
+- node_id: '210'
+  node_depth: 0
+  node_type: Node
+  content_length: 94
+  content: |-
+    ```
+    FROM employees
+    | STATS top_salaries = TOP(salary, 3, "desc"), top_salary = MAX(salary)
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/210'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## TOP'
+  is_isolated: true
+  relationships: {}
+- node_id: '211'
+  node_depth: 0
+  node_type: Node
+  content_length: 149
+  content: |-
+    | top_salaries:integer   |   top_salary:integer |
+    |------------------------|----------------------|
+    | [74999, 74970, 74572]  |                74999 |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/39'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## TOP'
+  is_isolated: true
+  relationships: {}
+- node_id: '212'
+  node_depth: 0
+  node_type: Node
+  content_length: 9
+  content: '## VALUES'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/211'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## VALUES'
+  is_isolated: true
+  relationships: {}
+- node_id: '213'
+  node_depth: 0
+  node_type: Node
+  content_length: 71
+  content: |-
+    Elastic Stack
+    Technical Preview
+
+
+
+    Serverless
+    Technical Preview
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/212'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## VALUES'
+  is_isolated: true
+  relationships: {}
+- node_id: '214'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: Syntax
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/213'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## VALUES'
+  is_isolated: true
+  relationships: {}
+- node_id: '215'
+  node_depth: 0
+  node_type: Node
+  content_length: 10
+  content: Parameters
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/214'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## VALUES'
+  is_isolated: true
+  relationships: {}
+- node_id: '216'
+  node_depth: 0
+  node_type: Node
+  content_length: 7
+  content: '- field'
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/33'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## VALUES'
+  is_isolated: true
+  relationships: {}
+- node_id: '217'
+  node_depth: 0
+  node_type: Node
+  content_length: 11
+  content: Description
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/216'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## VALUES'
+  is_isolated: true
+  relationships: {}
+- node_id: '218'
+  node_depth: 0
+  node_type: Node
+  content_length: 150
+  content: "Returns unique values as a multivalued field. The order of the returned\
+    \ values isn\u2019t guaranteed. If you need the values returned in order use MV_SORT."
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/217'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## VALUES'
+  is_isolated: true
+  relationships: {}
+- node_id: '219'
+  node_depth: 0
+  node_type: Node
+  content_length: 15
+  content: Supported types
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/218'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## VALUES'
+  is_isolated: true
+  relationships: {}
+- node_id: '220'
+  node_depth: 0
+  node_type: Node
+  content_length: 607
+  content: |-
+    | field           | result          |
+    |-----------------|-----------------|
+    | boolean         | boolean         |
+    | cartesian_point | cartesian_point |
+    | cartesian_shape | cartesian_shape |
+    | date            | date            |
+    | date_nanos      | date_nanos      |
+    | double          | double          |
+    | geo_point       | geo_point       |
+    | geo_shape       | geo_shape       |
+    | integer         | integer         |
+    | ip              | ip              |
+    | keyword         | keyword         |
+    | long            | long            |
+    | text            | keyword         |
+    | version         | version         |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/40'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## VALUES'
+  is_isolated: true
+  relationships: {}
+- node_id: '221'
+  node_depth: 0
+  node_type: Node
+  content_length: 7
+  content: Example
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/219'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## VALUES'
+  is_isolated: true
+  relationships: {}
+- node_id: '222'
+  node_depth: 0
+  node_type: Node
+  content_length: 157
+  content: |-
+    ```
+    FROM employees
+    | EVAL first_letter = SUBSTRING(first_name, 0, 1)
+    | STATS first_name = MV_SORT(VALUES(first_name)) BY first_letter
+    | SORT first_letter
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/220'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## VALUES'
+  is_isolated: true
+  relationships: {}
+- node_id: '281'
+  node_depth: 1
+  node_type: Node
+  content_length: 3301
+  content: |-
+    | first_name:keyword                                                                                | first_letter:keyword   |
+    |---------------------------------------------------------------------------------------------------|------------------------|
+    | [Alejandro, Amabile, Anneke, Anoosh, Arumugam]                                                    | A                      |
+    | [Basil, Berhard, Berni, Bezalel, Bojan, Breannda, Brendon]                                        | B                      |
+    | [Charlene, Chirstian, Claudi, Cristinel]                                                          | C                      |
+    | [Danel, Divier, Domenick, Duangkaew]                                                              | D                      |
+    | [Ebbe, Eberhardt, Erez]                                                                           | E                      |
+    | Florian                                                                                           | F        ...
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/41'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## VALUES'
+  relationships:
+    next: '282'
+    parent: '279'
+    previous: '280'
+- node_id: '224'
+  node_depth: 0
+  node_type: Node
+  content_length: 44
+  content: |-
+    Use TOP
+    if you need to keep repeated values.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/221'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## VALUES'
+  is_isolated: true
+  relationships: {}
+- node_id: '225'
+  node_depth: 0
+  node_type: Node
+  content_length: 280
+  content: "This can use a significant amount of memory and ES|QL doesn\u2019t yet\n\
+    grow aggregations beyond memory. So this aggregation will work until\nit is used\
+    \ to collect more values than can fit into memory. Once it\ncollects too many\
+    \ values it will fail the query with\na Circuit Breaker Error."
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/222'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## VALUES'
+  is_isolated: true
+  relationships: {}
+- node_id: '226'
+  node_depth: 0
+  node_type: Node
+  content_length: 15
+  content: '## WEIGHTED_AVG'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/223'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## WEIGHTED_AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '227'
+  node_depth: 0
+  node_type: Node
+  content_length: 6
+  content: Syntax
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/224'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## WEIGHTED_AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '228'
+  node_depth: 0
+  node_type: Node
+  content_length: 10
+  content: Parameters
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/225'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## WEIGHTED_AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '229'
+  node_depth: 0
+  node_type: Node
+  content_length: 64
+  content: |-
+    - number
+        - A numeric value.
+    - weight
+        - A numeric weight.
+  metadata:
+    docling_label: list
+    docling_ref: '#/groups/35'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## WEIGHTED_AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '230'
+  node_depth: 0
+  node_type: Node
+  content_length: 11
+  content: Description
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/230'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## WEIGHTED_AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '231'
+  node_depth: 0
+  node_type: Node
+  content_length: 45
+  content: The weighted average of a numeric expression.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/231'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## WEIGHTED_AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '232'
+  node_depth: 0
+  node_type: Node
+  content_length: 15
+  content: Supported types
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/232'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## WEIGHTED_AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '233'
+  node_depth: 0
+  node_type: Node
+  content_length: 384
+  content: |-
+    | number   | weight   | result   |
+    |----------|----------|----------|
+    | double   | double   | double   |
+    | double   | integer  | double   |
+    | double   | long     | double   |
+    | integer  | double   | double   |
+    | integer  | integer  | double   |
+    | integer  | long     | double   |
+    | long     | double   | double   |
+    | long     | integer  | double   |
+    | long     | long     | double   |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/42'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## WEIGHTED_AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '234'
+  node_depth: 0
+  node_type: Node
+  content_length: 7
+  content: Example
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/233'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## WEIGHTED_AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '235'
+  node_depth: 0
+  node_type: Node
+  content_length: 149
+  content: |-
+    ```
+    FROM employees
+    | STATS w_avg = WEIGHTED_AVG(salary, height) BY languages
+    | EVAL w_avg = ROUND(w_avg)
+    | KEEP w_avg, languages
+    | SORT languages
+    ```
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/234'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## WEIGHTED_AVG'
+  is_isolated: true
+  relationships: {}
+- node_id: '236'
+  node_depth: 0
+  node_type: Node
+  content_length: 327
+  content: |-
+    |   w_avg:double | languages:integer   |
+    |----------------|---------------------|
+    |          51464 | 1                   |
+    |          48477 | 2                   |
+    |          52379 | 3                   |
+    |          47990 | 4                   |
+    |          42119 | 5                   |
+    |          52142 | null                |
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/43'
+    headings:
+    - '# ES|QL aggregation functions'
+    - '## WEIGHTED_AVG'
+  is_isolated: true
+  relationships: {}

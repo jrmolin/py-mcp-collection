@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import UTC, datetime
 from typing import Self
 
@@ -19,12 +20,10 @@ class Timer(RunningTimer):
 class FinishedTimer(RunningTimer):
     end_time: datetime = Field(default_factory=lambda: datetime.now(tz=UTC), exclude=True)
 
-    def _duration(self) -> float:
-        return (self.end_time - self.start_time).total_seconds()
-
     @computed_field()
+    @property
     def duration(self) -> float:
-        return self._duration()
+        return (self.end_time - self.start_time).total_seconds()
 
 
 class TimerGroup(BaseModel):
@@ -60,12 +59,22 @@ class TimerGroup(BaseModel):
         return self
 
     @computed_field()
+    @property
     def times(self) -> dict[str, float]:
-        return {timer.name: timer._duration() for timer in self._finished_timers}
+        if not self._finished_timers:
+            return {}
+
+        timers_by_name: dict[str, float] = defaultdict(float)
+
+        for timer in self._finished_timers:
+            timers_by_name[timer.name] += timer.duration
+
+        return timers_by_name
 
     @computed_field()
+    @property
     def total_duration(self) -> float:
-        return sum(timer._duration() for timer in self._finished_timers)
+        return sum(self.times.values())
 
     def wall_clock_time(self) -> float:
         if not self._finished_timers:

@@ -568,10 +568,12 @@ class RecursiveAsyncWebReader(AsyncWebReader):
             # Yield documents as they are completed
             try:
                 while successful_request := await self._work_to_yield.get():
-                    logger.info(f"Yielding document from {successful_request.webpage.url}")
+                    url = successful_request.webpage.url
+                    duration = successful_request.request_duration
+                    logger.info(msg=f"Completed gathering: {url} in {duration}s. Sending for processing.")
                     yield await successful_request.webpage.to_document(extractors=self.extractors)
                     self._work_to_yield.task_done()
-                    logger.info(f"{self._work_to_yield.qsize()} buffered documents left to yield")
+                    # logger.info(f"{self._work_to_yield.qsize()} buffered documents left to yield")
 
             # If the queue is shut down, we're done
             except asyncio.QueueShutDown:

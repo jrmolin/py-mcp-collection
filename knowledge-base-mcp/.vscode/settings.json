@@ -1,10 +1,10 @@
 {
-    "python.testing.pytestArgs": [
-        "tests"
-    ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "cursorpyright.analysis.inlayHints.variableTypes": true,
     "python.analysis.typeCheckingMode": "recommended",
-    "cursorpyright.analysis.typeCheckingMode": "recommended"
+    "cursorpyright.analysis.typeCheckingMode": "recommended",
+    "python.testing.pytestArgs": [
+        "tests",
+    ]
 }

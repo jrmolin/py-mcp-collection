@@ -27,13 +27,7 @@ from llama_index.core.utils import get_tqdm_iterable  # pyright: ignore[reportUn
 from pydantic import Field, PrivateAttr
 
 from knowledge_base_mcp.llama_index.hierarchical_node_parsers.hierarchical_node_parser import (
-    GroupNode as LlamaGroupNode,
-)
-from knowledge_base_mcp.llama_index.hierarchical_node_parsers.hierarchical_node_parser import (
     HierarchicalNodeParser,
-)
-from knowledge_base_mcp.llama_index.hierarchical_node_parsers.hierarchical_node_parser import (
-    RootNode as LlamaRootNode,
 )
 from knowledge_base_mcp.utils.logging import BASE_LOGGER
 
@@ -156,6 +150,27 @@ def _document_iterable(
         yield item
 
 
+def trim_headings(headings: list[str]) -> list[str]:
+    """Trim all empty headings from anywhere in the list."""
+    return [heading for heading in headings if heading.strip()]
+
+
+def set_heading(headings: list[str], level: int, heading: str) -> list[str]:
+    """Pad the headings to the given level. If we get level 5, then there should be 5 entries, even if some are empty.
+
+    If we get a level 3, and we already have 5 entries, then we trim to 2 entries and add the new heading to the end."""
+
+    if len(headings) > level:
+        headings = headings[:level]
+
+    for _ in range(len(headings), level + 1):
+        headings.append("")
+
+    headings[level] = "#" * level + " " + _filter_nonlanguage_str(text=heading)
+
+    return headings
+
+
 class DoclingHierarchicalNodeParser(HierarchicalNodeParser):
     """
     Docling Hierarchical Node parser.
@@ -168,6 +183,9 @@ class DoclingHierarchicalNodeParser(HierarchicalNodeParser):
 
     format_options: dict[InputFormat, FormatOption] = Field(default_factory=dict)
     """The options to use for different input formats."""
+
+    minimum_chunk_size: int = Field(default=256)
+    """The minimum size of a chunk in characters. Smaller chunks may be produced but we will try to avoid them."""
 
     mutate_document_to_markdown: bool = Field(default=False)
     """Whether to mutate the body of the provided documents to markdown in addition to parsing out nodes."""
@@ -197,6 +215,16 @@ class DoclingHierarchicalNodeParser(HierarchicalNodeParser):
     ) -> list[LlamaBaseNode]:
         return self._parse_nodes(nodes=nodes, show_progress=show_progress, **kwargs)
 
+    def _convert_document_stream_to_docling_document(self, document_stream: DocumentStream) -> DoclingDocument:
+        """Converts a document stream to a docling document."""
+
+        conversion_result: ConversionResult = self._document_converter.convert(source=document_stream)
+        if conversion_result.status != ConversionStatus.SUCCESS:
+            msg = f"Conversion failed for document: {document_stream}"
+            raise ValueError(msg)
+
+        return conversion_result.document
+
     @override
     def _parse_nodes(
         self,
@@ -211,27 +239,15 @@ class DoclingHierarchicalNodeParser(HierarchicalNodeParser):
 
             docling_document: DoclingDocument = self._convert_document_stream_to_docling_document(document_stream=document_stream)
 
-            root_node: LlamaRootNode = self._convert_llama_document(llama_document=document, docling_document=docling_document)
-
-            all_nodes.extend(root_node.descendant_nodes())
+            all_nodes.extend(self._convert_llama_document(llama_document=document, docling_document=docling_document))
 
         return all_nodes
 
     def _mutate_document_to_markdown(self, llama_document: LlamaDocument, docling_document: DoclingDocument) -> None:
         llama_document.text_resource = MediaResource(text=docling_document.export_to_markdown(), mimetype="text/markdown")
 
-    def _convert_document_stream_to_docling_document(self, document_stream: DocumentStream) -> DoclingDocument:
-        """Convert a document stream to a docling document."""
-
-        conversion_result: ConversionResult = self._document_converter.convert(source=document_stream)
-        if conversion_result.status != ConversionStatus.SUCCESS:
-            msg = f"Conversion failed for document: {document_stream}"
-            raise ValueError(msg)
-
-        return conversion_result.document
-
-    def _convert_llama_document(self, llama_document: LlamaDocument, docling_document: DoclingDocument) -> LlamaRootNode:
-        """Convert a DoclingDocument to a LlamaDocument."""
+    def _convert_llama_document(self, llama_document: LlamaDocument, docling_document: DoclingDocument) -> Sequence[LlamaBaseNode]:
+        """Converts a Hierarchical DoclingDocument to a Hierarchical LlamaDocument."""
 
         serializer = self.serializer_provider.get_serializer(doc=docling_document)
 
@@ -240,7 +256,7 @@ class DoclingHierarchicalNodeParser(HierarchicalNodeParser):
         if self.mutate_document_to_markdown:
             llama_document.text_resource = MediaResource(text=markdown_text, mimetype="text/markdown")
 
-        member_nodes = self._process_docling_node_children(
+        root_nodes, all_nodes = self._process_docling_node_children(
             llama_document=llama_document,
             docling_document=docling_document,
             docling_doc_item=docling_document.body,
@@ -249,14 +265,9 @@ class DoclingHierarchicalNodeParser(HierarchicalNodeParser):
             visited=set(),
         )
 
-        root_node: LlamaRootNode = LlamaRootNode(
-            text_resource=MediaResource(text=markdown_text, mimetype="text/markdown"),
-            relationships={LlamaNodeRelationship.SOURCE: llama_document.as_related_node_info()},
-            extra_info=llama_document.metadata,
-            member_nodes=list(member_nodes),
-        )
+        self._establish_sibling_relationships(sibling_nodes=root_nodes)
 
-        return root_node
+        return all_nodes
 
     def _process_docling_node_children(
         self,
@@ -266,38 +277,53 @@ class DoclingHierarchicalNodeParser(HierarchicalNodeParser):
         headings: list[str],
         doc_serializer: BaseDocSerializer,
         visited: set[str],
-    ) -> Sequence[LlamaBaseNode]:
-        """Convert a DoclingGroup to a LlamaGroupNode."""
+    ) -> tuple[list[LlamaNode], list[LlamaNode]]:
+        """Converts a DoclingGroup to a Parent node and converts the docling node's children to child nodes recursively."
 
-        member_nodes: list[LlamaBaseNode] = []
+        Returns:
+            A tuple containing first the direct member nodes and then all nodes (including the member nodes).
+        """
+
+        member_nodes: list[LlamaNode] = []
+        all_nodes: list[LlamaNode] = []
+
+        # original_headings: list[str] = headings.copy()
 
         for item in docling_doc_item.children:
             if item.cref in visited:
                 continue
 
+            # The items we're iterating through are really references, get the actual item
             resolved_item: Any = item.resolve(doc=docling_document)  # pyright: ignore[reportAny]
 
+            # In Docling-lang, furniture is the stuff you don't want
             if isinstance(resolved_item, DoclingNodeItem) and resolved_item.content_layer == DoclingContentLayer.FURNITURE:
                 continue
 
+            # If this is a section, we'll make nodes recursively
             if isinstance(resolved_item, TitleItem | SectionHeaderItem):
                 level: int = 1 if isinstance(resolved_item, TitleItem) else resolved_item.level + 1
-                heading_string: str = "#" * level + " " + _filter_nonlanguage_str(text=resolved_item.text)
+                headings = set_heading(headings=headings, level=level, heading=resolved_item.text)
 
-                group_node: LlamaGroupNode | None = self._docling_node_item_to_llama_group_node(
+                parent_node, child_nodes = self._docling_node_item_to_llama_group_node(
                     llama_document=llama_document,
                     docling_document=docling_document,
                     docling_doc_item=resolved_item,
-                    headings=[*headings, heading_string],
+                    headings=headings,
                     doc_serializer=doc_serializer,
                     visited=visited,
                 )
 
-                if group_node:
-                    member_nodes.append(group_node)
+                if parent_node:
+                    member_nodes.append(parent_node)
+                    all_nodes.append(parent_node)
 
+                if child_nodes:
+                    all_nodes.extend(child_nodes)
+
+            # Otherwise we'll just make a single node for the item
             elif isinstance(resolved_item, DoclingGroupItem | DoclingDocItem):
-                member_node: LlamaBaseNode | None = self._docling_node_item_to_llama_item(
+                member_node: LlamaNode | None = self._docling_node_item_to_llama_item(
                     llama_document=llama_document,
                     docling_doc_item=resolved_item,
                     headings=headings,
@@ -306,12 +332,15 @@ class DoclingHierarchicalNodeParser(HierarchicalNodeParser):
                 )
                 if member_node:
                     member_nodes.append(member_node)
+                    all_nodes.append(member_node)
 
             else:
                 msg: str = f"Item is not a DoclingGroupItem or DoclingDocItem: {resolved_item}"
                 raise TypeError(msg)
 
-        return member_nodes
+        # headings = original_headings
+
+        return member_nodes, all_nodes
 
     def _docling_node_item_to_llama_group_node(
         self,
@@ -321,8 +350,8 @@ class DoclingHierarchicalNodeParser(HierarchicalNodeParser):
         headings: list[str],
         doc_serializer: BaseDocSerializer,
         visited: set[str],
-    ) -> LlamaGroupNode | None:
-        """Convert a DoclingItem to a LlamaGroupNode."""
+    ) -> tuple[LlamaNode | None, Sequence[LlamaNode]]:
+        """Converts a Docling item to a Parent node and converts the docling node's children to child nodes."""
 
         # We're serializing for a group node so we do not pass visited as it needs to contain a copy
         text: str = self.serialize_docling_item(
@@ -330,20 +359,32 @@ class DoclingHierarchicalNodeParser(HierarchicalNodeParser):
         )
 
         if not text or not text.strip():
-            return None
+            return None, []
 
+        # Don't bother building nodes recursively if the whole section is smaller than the minimum size
+        # or if there are zero/one children (i.e. no need to build a dedicated heading node or a parent/child stack)
+        if len(text) < self.minimum_chunk_size or len(docling_doc_item.children) <= 1:
+            return self._docling_node_item_to_llama_item(
+                llama_document=llama_document,
+                docling_doc_item=docling_doc_item,
+                headings=headings,
+                doc_serializer=doc_serializer,
+                visited=visited,
+            ), []
+
+        # We'll make the heading into its own node
         heading_node: LlamaBaseNode | None = LlamaNode(
             text_resource=MediaResource(text=headings[-1], mimetype="text/markdown"),
             relationships={LlamaNodeRelationship.SOURCE: llama_document.as_related_node_info()},
             extra_info={
                 "docling_ref": docling_doc_item.self_ref,
                 "docling_label": str(docling_doc_item.label),
-                "headings": headings,
+                "headings": trim_headings(headings=headings),
                 **llama_document.metadata,
             },
         )
 
-        member_nodes: Sequence[LlamaBaseNode] = self._process_docling_node_children(
+        member_nodes, all_nodes = self._process_docling_node_children(
             llama_document=llama_document,
             docling_document=docling_document,
             docling_doc_item=docling_doc_item,
@@ -352,17 +393,20 @@ class DoclingHierarchicalNodeParser(HierarchicalNodeParser):
             visited=visited,
         )
 
-        return LlamaGroupNode(
+        parent_node: LlamaNode = LlamaNode(
             text_resource=MediaResource(text=text, mimetype="text/markdown"),
             relationships={LlamaNodeRelationship.SOURCE: llama_document.as_related_node_info()},
             extra_info={
                 "docling_ref": docling_doc_item.self_ref,
                 "docling_label": str(docling_doc_item.label),
-                "headings": headings,
+                "headings": heading_node.metadata["headings"],
                 **llama_document.metadata,
             },
-            member_nodes=[heading_node, *member_nodes],
         )
+
+        self._establish_parent_child_relationships(parent=parent_node, child_nodes=[heading_node, *member_nodes])
+
+        return parent_node, [heading_node, *all_nodes]
 
     def _docling_node_item_to_llama_item(
         self,
@@ -371,8 +415,8 @@ class DoclingHierarchicalNodeParser(HierarchicalNodeParser):
         headings: list[str],
         doc_serializer: BaseDocSerializer,
         visited: set[str],
-    ) -> LlamaBaseNode | None:
-        """Convert a DoclingItem to a LlamaItem."""
+    ) -> LlamaNode | None:
+        """Convert a DoclingItem and all of its children to a LlamaItem."""
 
         text: str = self.serialize_docling_item(
             doc_serializer=doc_serializer, docling_doc_item=docling_doc_item, visited=visited, recursive=True
@@ -387,7 +431,7 @@ class DoclingHierarchicalNodeParser(HierarchicalNodeParser):
             extra_info={
                 "docling_ref": docling_doc_item.self_ref,
                 "docling_label": str(docling_doc_item.label),
-                "headings": headings,
+                "headings": trim_headings(headings=headings),
                 **llama_document.metadata,
             },
         )
