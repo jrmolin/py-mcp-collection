@@ -16,10 +16,18 @@ class AddMetadata(TransformComponent):
     metadata: dict[str, Any] = Field(default_factory=dict)
     """Metadata to add to the node."""
 
+    include_related_nodes: bool = Field(default=False)
+    """Whether to also add metadata to the RelatedNodeInfo object in relationships."""
+
     @override
     def __call__(self, nodes: Sequence[BaseNode], **kwargs: Any) -> Sequence[BaseNode]:  # pyright: ignore[reportAny]
         for node in nodes:
             node.metadata.update(self.metadata)
+
+            if self.include_related_nodes:
+                for relationship in node.relationships.values():
+                    if isinstance(relationship, RelatedNodeInfo):
+                        relationship.metadata.update(self.metadata)
 
         return nodes
 
@@ -92,6 +100,9 @@ class RenameMetadata(TransformComponent):
     renames: dict[str, str] = Field(default_factory=dict)
     """Dictionary of metadata keys to rename: old_key -> new_key."""
 
+    include_related_nodes: bool = Field(default=False)
+    """Whether to also rename metadata from the RelatedNodeInfo object in relationships."""
+
     @override
     def __call__(self, nodes: Sequence[BaseNode], **kwargs: Any) -> Sequence[BaseNode]:  # pyright: ignore[reportAny]
         for node in nodes:
@@ -99,6 +110,14 @@ class RenameMetadata(TransformComponent):
                 if old_key not in node.metadata:
                     continue
                 node.metadata[new_key] = node.metadata.pop(old_key)
+
+            if self.include_related_nodes:
+                for relationship in node.relationships.values():
+                    if isinstance(relationship, RelatedNodeInfo):
+                        for old_key, new_key in self.renames.items():
+                            if old_key not in relationship.metadata:
+                                continue
+                            relationship.metadata[new_key] = relationship.metadata.pop(old_key)
 
         return nodes
 
@@ -109,7 +128,7 @@ class RemoveMetadata(TransformComponent):
     removals: list[str] = Field(default_factory=list)
     """Metadata keys to remove from the node."""
 
-    include_related_nodes: bool = Field(default=True)
+    include_related_nodes: bool = Field(default=False)
     """Whether to also remove metadata from the RelatedNodeInfo object in relationships."""
 
     @override
@@ -130,7 +149,7 @@ class RemoveMetadata(TransformComponent):
 class FlattenMetadata(TransformComponent):
     """Flattens the provided metadata keys into the node content."""
 
-    include_related_nodes: bool = Field(default=True)
+    include_related_nodes: bool = Field(default=False)
     """Whether to also flatten metadata from the RelatedNodeInfo object in relationships."""
 
     @override

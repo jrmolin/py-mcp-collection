@@ -1,3 +1,4 @@
+from llama_index.core.base.response.schema import RESPONSE_TYPE
 from logging import Logger
 from typing import TYPE_CHECKING, Annotated
 
@@ -154,7 +155,7 @@ class KnowledgeBaseSearchServer(BaseKBModel):
 
     async def _get_summary(self, query: str, knowledge_base: list[str] | str | None = None) -> KnowledgeBaseSummary:
         """Identify result counts across selected knowledge bases"""
-        response = await self._summary_query_engine(knowledge_base=knowledge_base).aquery(query)
+        response: RESPONSE_TYPE = await self._summary_query_engine(knowledge_base=knowledge_base).aquery(query)
 
         return KnowledgeBaseSummary.from_nodes(response.source_nodes)
 
@@ -166,8 +167,13 @@ class KnowledgeBaseSearchServer(BaseKBModel):
     async def query(self, query: QueryStringField, knowledge_bases: QueryKnowledgeBasesField | None = None) -> SearchResponseWithSummary:
         """Query all knowledge bases with a question."""
         # response = await self._query_engine(knowledge_base=knowledge_base).aquery(query)
+        logger.info(f"Querying {knowledge_bases} with {query}")
         response = await self._query_engine(knowledge_base=knowledge_bases).aquery(query)
 
+        logger.info(f"Producing a summary for query {query}")
+
         summary: KnowledgeBaseSummary = await self._get_summary(query, knowledge_base=None)
+
+        logger.info(f"Returning {len(response.source_nodes)} results for query {query}")
 
         return SearchResponseWithSummary(query=query, summary=summary, results=TreeSearchResponse.from_nodes(nodes=response.source_nodes))

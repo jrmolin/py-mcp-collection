@@ -4,7 +4,7 @@ from typing import Any, override
 import pytest
 from llama_index.core.schema import BaseNode, Document, MediaResource, Node, NodeRelationship, RelatedNodeInfo
 
-from knowledge_base_mcp.llama_index.hierarchical_node_parsers.hierarchical_node_parser import GroupNode, HierarchicalNodeParser, RootNode
+from knowledge_base_mcp.llama_index.hierarchical_node_parsers.hierarchical_node_parser import HierarchicalNodeParser
 
 
 class SimpleHierarchicalNodeParser(HierarchicalNodeParser):

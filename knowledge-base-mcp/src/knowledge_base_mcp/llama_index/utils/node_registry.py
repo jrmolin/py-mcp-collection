@@ -1,8 +1,19 @@
 from collections import defaultdict
-from typing import ClassVar, Self, overload
+from typing import ClassVar, Literal, Self, overload
 
 from llama_index.core.schema import BaseNode, NodeRelationship, RelatedNodeInfo
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+import sys
+from knowledge_base_mcp.utils.logging import BASE_LOGGER
+
+logger = BASE_LOGGER.getChild(__name__)
+
+
+def is_debugging():
+    """
+    Checks if a Python debugger is currently active.
+    """
+    return hasattr(sys, "gettrace") and sys.gettrace() is not None
 
 
 def related_node_info_as_list(related_node_info: RelatedNodeInfo | list[RelatedNodeInfo]) -> list[RelatedNodeInfo]:
@@ -174,8 +185,11 @@ class NodeRegistry(BaseModel):
 
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, use_attribute_docstrings=True, extra="forbid")
 
-    verify: bool = Field(default=True)
+    verify: Literal["error", "warn", "ignore"] = "ignore" #Field(default="error" if is_debugging() else "warn")
     """Whether to verify the integrity of the registry after each operation."""
+
+    verify_references: bool = Field(default=False)
+    """Whether to verify the references of the registry after each operation."""
 
     _nodes_by_id: dict[str, BaseNode] = PrivateAttr(default_factory=dict)
     """The set of nodes in the registry."""
@@ -233,22 +247,23 @@ class NodeRegistry(BaseModel):
             if isinstance(ids, list):
                 return self._get_many(ids=ids)
 
-            return self._get_one(id=ids)
+            return self._get_one(get_id=ids)
 
         if refs is not None:
             if isinstance(refs, list):
                 return self._get_many(ids=[ref.node_id for ref in refs])
 
-            return self._get_one(id=refs.node_id)
+            return self._get_one(get_id=refs.node_id)
 
         return []
 
-    def _get_one(self, id: str) -> BaseNode:
-        if id not in self._nodes_by_id:
-            msg = f"Node {id} not found in the registry."
+    def _get_one(self, get_id: str) -> BaseNode:
+        """Get a node by id."""
+        if get_id not in self._nodes_by_id:
+            msg = f"Node {get_id} not found in the registry."
             raise ValueError(msg)
 
-        return self._nodes_by_id[id]
+        return self._nodes_by_id[get_id]
 
     def _get_many(self, ids: list[str]) -> list[BaseNode]:
         nodes: list[BaseNode] = []
@@ -333,7 +348,7 @@ class NodeRegistry(BaseModel):
             if id_to_remove in descendants_removed:
                 continue
 
-            this_node = self._get_one(id=id_to_remove)
+            this_node = self._get_one(get_id=id_to_remove)
             descendants = self.get_descendants(node=this_node)
 
             self._remove_node(node=this_node)
@@ -416,10 +431,12 @@ class NodeRegistry(BaseModel):
     def verify_integrity(self) -> None:
         """Verify the integrity of the registry."""
 
+        if self.verify == "ignore":
+            return
+
         node_refs_by_id: dict[str, RelatedNodeInfo] = {node.node_id: node.as_related_node_info() for node in self._nodes_by_id.values()}
 
-        if not self.verify:
-            return
+        out_of_date_refs: int = 0
 
         for node in self._nodes_by_id.values():
             for relationship_type, item_or_list in node.relationships.items():
@@ -430,12 +447,15 @@ class NodeRegistry(BaseModel):
 
                 for target in targets:
                     if target != node_refs_by_id[target.node_id]:
-                        msg = f"Node {node.node_id} has a ref to {target.node_id} for {relationship_type} that is out-of-date."
-                        raise ValueError(msg)
+                        out_of_date_refs += 1
 
                     if target.node_id not in self._nodes_by_id:
                         msg = f"Node {node.node_id} has a {relationship_type} that does not exist in the registry: {target.node_id}"
-                        raise ValueError(msg)
+                        if self.verify == "error":
+                            raise ValueError(msg)
+
+        if out_of_date_refs > 0 and self.verify_references:
+            logger.warning(msg=f"Found {out_of_date_refs} out-of-date refs in the registry.")
 
     def insert_after(self, node: BaseNode, next_nodes: list[BaseNode], upsert: bool = False) -> None:
         """Inserts a node after an existing node. The inserted node inherits the parent and next nodes of the existing node.

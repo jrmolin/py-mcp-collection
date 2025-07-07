@@ -29,6 +29,7 @@ dependencies = [
     "llama-index-storage-index-store-elasticsearch>=0.4.0",
     "llama-index>=0.12.45",
     "llama-index-core>=0.12.45",
+    "gitpython>=3.1.44",
 ]
 
 [tool.uv.sources]

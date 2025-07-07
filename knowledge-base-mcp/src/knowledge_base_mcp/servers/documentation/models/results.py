@@ -27,7 +27,7 @@ class TitleResult(BaseModel):
             for node in these_nodes:
                 heading = node.node.metadata.get("headings", "<no heading>")
 
-                node_text = node.get_content(metadata_mode=MetadataMode.LLM).strip()
+                node_text = node.get_content(metadata_mode=MetadataMode.NONE).strip()
 
                 by_heading[heading].append(node_text)
 
@@ -128,5 +128,5 @@ class DocumentResponse(BaseModel):
         return cls(
             source=node.metadata.get("source", "<no source>"),  #  pyright: ignore[reportAny]
             title=node.metadata.get("title", "<no title>"),  #  pyright: ignore[reportAny]
-            content=node.get_content(metadata_mode=MetadataMode.LLM).strip(),
+            content=node.get_content(metadata_mode=MetadataMode.NONE).strip(),
         )

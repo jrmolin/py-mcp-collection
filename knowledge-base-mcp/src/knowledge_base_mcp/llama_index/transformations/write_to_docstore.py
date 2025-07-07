@@ -22,8 +22,6 @@ class WriteToDocstore(TransformComponent):
 
     model_config: ClassVar[ConfigDict] = ConfigDict(use_attribute_docstrings=True, arbitrary_types_allowed=True)
 
-    embed_model: BaseEmbedding
-
     @override
     def __call__(self, nodes: Sequence[BaseNode], **kwargs: Any) -> Sequence[BaseNode]:  # pyright: ignore[reportAny]
         """Embed the leaf nodes."""

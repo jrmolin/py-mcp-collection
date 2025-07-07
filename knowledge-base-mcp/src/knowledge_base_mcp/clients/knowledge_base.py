@@ -2,9 +2,10 @@ from collections.abc import Sequence
 from functools import cached_property
 from typing import TYPE_CHECKING, Any
 
+from llama_index.core.embeddings import BaseEmbedding
 from llama_index.core.indices.vector_store import VectorIndexRetriever, VectorStoreIndex
 from llama_index.core.ingestion.pipeline import DocstoreStrategy, IngestionPipeline
-from llama_index.core.schema import BaseNode, RelatedNodeInfo
+from llama_index.core.schema import BaseNode, RelatedNodeInfo, TransformComponent
 from llama_index.core.storage.docstore.keyval_docstore import KVDocumentStore
 from llama_index.core.storage.kvstore.types import BaseKVStore
 from llama_index.core.vector_stores.types import FilterCondition, MetadataFilter, MetadataFilters
@@ -61,6 +62,10 @@ class KnowledgeBaseClient(BaseKBArbitraryModel):
             raise TypeError(msg)
 
         return doc_store
+
+    @property
+    def embed_model(self) -> BaseEmbedding:
+        return self.vector_store_index._embed_model  # pyright: ignore[reportPrivateUsage]
 
     @property
     def _kv_store(self) -> BaseKVStore:
@@ -194,109 +199,37 @@ class KnowledgeBaseClient(BaseKBArbitraryModel):
 
         return document
 
-    async def new_knowledge_base(
+    async def new_knowledge_base_pipelines(
         self,
         knowledge_base: str,
-        pre_vector_store_pipelines: Sequence[IngestionPipeline] | None = None,
-        pre_document_store_pipelines: Sequence[IngestionPipeline] | None = None,
-    ) -> tuple[PipelineGroup, PipelineGroup]:
+        pre_vector_store_transformations: Sequence[TransformComponent] | None = None,
+        # pre_document_store_transformations: Sequence[TransformComponent] | None = None,
+    ) -> IngestionPipeline:
         """Create a new knowledge base. Returns two pipeline groups, one for storing nodes and one for storing documents."""
 
         await self.delete_knowledge_base(knowledge_base)
 
-        vector_store_pipeline: PipelineGroup = PipelineGroup(
+        knowledge_base_pipeline: IngestionPipeline = IngestionPipeline(
             name=f"Ingesting Vectors into Knowledge Base {knowledge_base}",
-            pipelines=[
-                *(pre_vector_store_pipelines or []),
-                self._tag_nodes_for_kb(knowledge_base),
-                self._cleanup_for_kb,
-                self._embeddings_for_kb,
-                self._semantic_merger_for_kb,
-                self._store_in_kb,
-            ],
-        )
-
-        document_store_pipeline: PipelineGroup = PipelineGroup(
-            name=f"Ingesting Documents into Knowledge Base {knowledge_base}",
-            pipelines=[
-                *(pre_document_store_pipelines or []),
-                self._tag_nodes_for_kb(knowledge_base),
-                self._cleanup_for_kb,
-                self._store_in_docstore,
-            ],
-        )
-
-        return vector_store_pipeline, document_store_pipeline
-
-    def _tag_nodes_for_kb(self, knowledge_base: str) -> IngestionPipeline:
-        """Tag nodes for the vector store."""
-
-        return IngestionPipeline(
-            name="Tag knowledge_base",
             transformations=[
-                AddMetadata(metadata={"knowledge_base": knowledge_base}),
+                *(pre_vector_store_transformations or []),
+                # Clean-up
+                AddMetadata(metadata={"knowledge_base": knowledge_base}, include_related_nodes=True),
                 ExcludeMetadata(embed_keys=["knowledge_base"], llm_keys=["knowledge_base"]),
-            ],
-            # TODO https://github.com/run-llama/llama_index/issues/19277
-            disable_cache=True,
-        )
-
-    @cached_property
-    def _cleanup_for_kb(self) -> IngestionPipeline:
-        """Cleanup nodes for the vector store."""
-
-        return IngestionPipeline(
-            name="Flatten metadata",
-            transformations=[
                 FlattenMetadata(include_related_nodes=True),
+                # Embeddings
+                LargeNodeDetector.from_embed_model(embed_model=self.embed_model, node_type="leaf", extra_size=1024),
+                LeafNodeEmbedding(embed_model=self.embed_model),
+                LeafSemanticMergerNodeParser(embed_model=self.embed_model),
+                # Write to docstore
+                WriteToDocstore(docstore=self.docstore),
             ],
-            # TODO https://github.com/run-llama/llama_index/issues/19277
-            disable_cache=True,
-        )
-
-    @cached_property
-    def _store_in_docstore(self) -> IngestionPipeline:
-        """Write documents and nodes to the doc store."""
-
-        write_to_docstore: WriteToDocstore = WriteToDocstore(docstore=self.docstore, embed_model=self.vector_store_index._embed_model)  # pyright: ignore[reportPrivateUsage]
-
-        return IngestionPipeline(
-            name="Push to docstore",
-            transformations=[
-                write_to_docstore,
-            ],
-        )
-
-    @cached_property
-    def _embeddings_for_kb(self) -> IngestionPipeline:
-        """Embed nodes for the vector store."""
-        
-        return IngestionPipeline(
-            name="Embeddings",
-            transformations=[
-                LargeNodeDetector.from_embed_model(embed_model=self.vector_store_index._embed_model, node_type="leaf"),  # pyright: ignore[reportPrivateUsage]
-                LeafNodeEmbedding(embed_model=self.vector_store_index._embed_model)],  # pyright: ignore[reportPrivateUsage]
-        )
-
-    @cached_property
-    def _semantic_merger_for_kb(self) -> IngestionPipeline:
-        """Merge nodes for the vector store."""
-        
-        return IngestionPipeline(
-            name="Semantic Merging",
-            transformations=[LeafSemanticMergerNodeParser(embed_model=self.vector_store_index._embed_model)],  # pyright: ignore[reportPrivateUsage]
-        )
-
-    @cached_property
-    def _store_in_kb(self) -> IngestionPipeline:
-        """Create a new knowledge base."""
-
-        return IngestionPipeline(
-            name="Push to Vector Store",
-            transformations=[],
             vector_store=self.vector_store_index.vector_store,
-            docstore=self.vector_store_index.docstore,
-            docstore_strategy=DocstoreStrategy.DUPLICATES_ONLY,
+            # docstore=self.vector_store_index.docstore,
+            # docstore_strategy=DocstoreStrategy.DUPLICATES_ONLY,
             # TODO https://github.com/run-llama/llama_index/issues/19277
             disable_cache=True,
         )
+
+
+        return knowledge_base_pipeline

@@ -1,3 +1,5 @@
+from typing import override
+
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from llama_index.core.schema import NodeWithScore, QueryBundle
 
@@ -6,13 +8,15 @@ class DuplicateNodePostprocessor(BaseNodePostprocessor):
     """Duplicate Node processor."""
 
     @classmethod
+    @override
     def class_name(cls) -> str:
         return "DuplicateNodePostprocessor"
 
+    @override
     def _postprocess_nodes(
         self,
         nodes: list[NodeWithScore],
-        query_bundle: QueryBundle | None = None,  # noqa: ARG002
+        query_bundle: QueryBundle | None = None,
     ) -> list[NodeWithScore]:
         """Postprocess nodes."""
 

@@ -399,6 +399,8 @@ async def test_groups_of_nodes(
     mathematics_target_content = join_content(mathematics_child_nodes)
 
     parent_nodes = [warsaw_parent_node, football_parent_node, mathematics_parent_node]
+
+    reset_prev_next_relationships(sibling_nodes=parent_nodes)
     child_nodes = [*warsaw_child_nodes, *football_child_nodes, *mathematics_child_nodes]
 
     root_node = TextNode(

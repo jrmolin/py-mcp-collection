@@ -1,12 +1,10 @@
 import asyncio
 from asyncio import TaskGroup
 from asyncio.queues import QueueEmpty, QueueShutDown
-from collections.abc import AsyncIterator, Callable, Coroutine, Sequence
+from collections.abc import AsyncIterator, Callable, Coroutine
 from contextlib import asynccontextmanager
 from logging import Logger
 from typing import Any
-
-from pydantic import BaseModel
 
 from knowledge_base_mcp.utils.logging import BASE_LOGGER
 
@@ -14,8 +12,9 @@ logger: Logger = BASE_LOGGER.getChild(__name__)
 
 
 @asynccontextmanager
-async def worker_pool[WorkType: BaseModel | Sequence[BaseModel], ResultType: BaseModel | Sequence[BaseModel] | None = None](
+async def worker_pool[WorkType: Any, ResultType: Any | None = None](
     work_function: Callable[[WorkType], Coroutine[Any, Any, ResultType | None]],
+    pool_name: str | None = None,
     result_queue: asyncio.Queue[ResultType] | None = None,
     work_queue: asyncio.Queue[WorkType] | None = None,
     error_queue: asyncio.Queue[tuple[WorkType, Exception]] | None = None,
@@ -37,32 +36,45 @@ async def worker_pool[WorkType: BaseModel | Sequence[BaseModel], ResultType: Bas
     """
 
     if work_queue is None:
-        work_queue = asyncio.Queue()
+        work_queue = asyncio.Queue(maxsize=workers)
 
     if error_queue is None:
         error_queue = asyncio.Queue()
 
-    async def _worker() -> None:
+    async def _worker(worker_id: int) -> None:
         """A worker function that processes work items from the queue."""
 
         try:
+            logger.info(f"{pool_name} Worker {worker_id} started")
+
             while work_item := await work_queue.get():
                 result: ResultType | None = await work_function(work_item)
 
                 if result_queue is not None and result is not None:
                     await result_queue.put(item=result)
 
-                    work_queue.task_done()
+                work_queue.task_done()
+
         except QueueShutDown:
-            pass
+            logger.info(f"{pool_name} Worker {worker_id} shutting down")
 
     async with TaskGroup() as task_group:
-        for _ in range(workers):
-            _ = task_group.create_task(coro=_worker())
+        for i in range(workers):
+            _ = task_group.create_task(coro=_worker(worker_id=i))
 
         yield work_queue, error_queue
 
+
+        # The caller is trying to exit the context manager, wait for 
+        # work to be completed
+        logger.info(f"{pool_name} Signaled for shutdown, waiting for {work_queue.qsize()} work items to be processed")
         await work_queue.join()
+
+        logger.info(f"{pool_name} Shutting down queue")
+        # Shutdown the queue so that the workers exit and we can exit the context manager
+        work_queue.shutdown()
+
+    logger.info(f"{pool_name} Done with worker pool")
 
 
 @asynccontextmanager
@@ -110,6 +122,7 @@ async def batch_worker_pool[WorkType, ResultType](
         """A worker function that processes work items from the queue."""
 
         batch: list[WorkType] = []
+        batch_cost: float = 0.0
 
         async def process_batch() -> None:
             """Process a batch of work items."""
@@ -127,9 +140,9 @@ async def batch_worker_pool[WorkType, ResultType](
             while work_item := await work_queue.get():
                 batch.append(work_item)
 
-                cost: float = cost_function(work_item)
+                batch_cost += cost_function(work_item)
 
-                if cost < minimum_cost:
+                if batch_cost < minimum_cost:
                     # We have queued the work to be processed, and we aren't going to process it now,
                     # so we'll tell the queue it doesn't need to track the item anymore.
                     work_queue.task_done()
@@ -155,6 +168,7 @@ async def batch_worker_pool[WorkType, ResultType](
 
         await work_queue.join()
 
+        logger.info("Batch Worker Pool: Shutting down")
 
 
 async def gather_results_from_queue[ResultType](queue: asyncio.Queue[ResultType]) -> list[ResultType]:
