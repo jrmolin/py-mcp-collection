@@ -101,13 +101,13 @@ class BaseNode(BaseModel):
 
     @computed_field
     @property
-    def created_at(self) -> datetime:
-        return datetime.fromtimestamp(self._stat.st_ctime, tz=UTC)
+    def created_at(self) -> str:
+        return datetime.fromtimestamp(self._stat.st_ctime, tz=UTC).isoformat()
 
     @computed_field
     @property
-    def modified_at(self) -> datetime:
-        return datetime.fromtimestamp(self._stat.st_mtime, tz=UTC)
+    def modified_at(self) -> str:
+        return datetime.fromtimestamp(self._stat.st_mtime, tz=UTC).isoformat()
 
     def relative_to(self, node: "BaseNode") -> Path:
         """The relative path of the node from the given path or node."""
