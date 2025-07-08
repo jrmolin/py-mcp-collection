@@ -95,16 +95,35 @@ When running, the MCP server exposes the following tools:
 {
     "mcp": {
         "servers": {
-            "Knowledge Base Mcp": {
+            "Knowledge Base": {
                 "command": "uvx",
                 "args": [
-                    "https://github.com/strawgate/py-mcp-collection.git#subdirectory=knowledge_base_mcp",
+                    "git+https://github.com/strawgate/py-mcp-collection.git#subdirectory=knowledge_base_mcp",
                     "duckdb",
                     "persistent",
                     "run"
                 ]
             }
         }
+    }
+}
+```
+
+## Roo Code
+
+
+```json
+{
+    "mcpServers": {
+      "Knowledge Base": {
+          "command": "uvx",
+          "args": [
+              "git+https://github.com/strawgate/py-mcp-collection.git#subdirectory=knowledge_base_mcp",
+              "duckdb",
+              "persistent",
+              "run"
+          ]
+      }
     }
 }
 ```
