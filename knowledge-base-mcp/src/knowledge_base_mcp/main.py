@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import asyncclick as click
 from fastmcp import FastMCP
+from fastmcp.server.server import Transport
 from llama_index.core.base.embeddings.base import BaseEmbedding
 from llama_index.core.indices.loading import load_indices_from_storage  # pyright: ignore[reportUnknownVariableType]
 from llama_index.core.indices.vector_store import VectorStoreIndex
@@ -286,8 +287,9 @@ async def duckdb_persistent(ctx: click.Context, code_db_dir: Path, code_db_name:
 
 
 @duckdb_persistent.command()
+@click.option("--transport", type=click.Choice(["stdio", "http", "sse", "streamable-http"]), default="stdio")
 @click.pass_context
-async def run(ctx: click.Context):
+async def run(ctx: click.Context, transport: Transport):
     logger.info("Building Knowledge Base MCP Server")
 
     cli_ctx: CliContext = ctx.obj  # pyright: ignore[reportAny]
@@ -311,7 +313,7 @@ async def run(ctx: click.Context):
 
     [kbmcp.add_tool(tool) for tool in search_server.get_raw_tools()]
 
-    await kbmcp.run_async(transport="sse")
+    await kbmcp.run_async(transport=transport)
 
 
 duckdb_memory.add_command(cmd=run)
