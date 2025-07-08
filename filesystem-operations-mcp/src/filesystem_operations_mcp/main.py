@@ -42,21 +42,25 @@ async def cli(root_dir: str, mcp_transport: Literal["stdio", "sse", "streamable-
 
     file_system = FileSystem(Path(root_dir))
 
-    mcp.add_tool(FunctionTool.from_function(name="find_files", fn=customizable_file_materializer(file_system.afind_files)))
-    mcp.add_tool(FunctionTool.from_function(name="search_files", fn=customizable_file_materializer(file_system.asearch_files)))
-    mcp.add_tool(FunctionTool.from_function(fn=customizable_file_materializer(file_system.get_structure)))
+    mcp.add_tool(
+        FunctionTool.from_function(name="find_files", fn=customizable_file_materializer(file_system.afind_files), output_schema=None)
+    )
+    mcp.add_tool(
+        FunctionTool.from_function(name="search_files", fn=customizable_file_materializer(file_system.asearch_files), output_schema=None)
+    )
+    mcp.add_tool(FunctionTool.from_function(fn=customizable_file_materializer(file_system.get_structure), output_schema=None))
     mcp.add_tool(FunctionTool.from_function(fn=customizable_file(file_system.get_file), output_schema=None))
 
-    mcp.add_tool(FunctionTool.from_function(file_system.create_file))
-    mcp.add_tool(FunctionTool.from_function(file_system.append_file))
-    mcp.add_tool(FunctionTool.from_function(file_system.delete_file_lines))
-    mcp.add_tool(FunctionTool.from_function(file_system.replace_file_lines))
-    mcp.add_tool(FunctionTool.from_function(file_system.insert_file_lines))
-    mcp.add_tool(FunctionTool.from_function(file_system.delete_file))
-    mcp.add_tool(FunctionTool.from_function(file_system.read_file_lines))
+    mcp.add_tool(FunctionTool.from_function(file_system.create_file, output_schema=None))
+    mcp.add_tool(FunctionTool.from_function(file_system.append_file, output_schema=None))
+    mcp.add_tool(FunctionTool.from_function(file_system.delete_file_lines, output_schema=None))
+    mcp.add_tool(FunctionTool.from_function(file_system.replace_file_lines, output_schema=None))
+    mcp.add_tool(FunctionTool.from_function(file_system.insert_file_lines, output_schema=None))
+    mcp.add_tool(FunctionTool.from_function(file_system.delete_file, output_schema=None))
+    mcp.add_tool(FunctionTool.from_function(file_system.read_file_lines, output_schema=None))
 
-    mcp.add_tool(FunctionTool.from_function(file_system.create_directory))
-    mcp.add_tool(FunctionTool.from_function(file_system.delete_directory))
+    mcp.add_tool(FunctionTool.from_function(file_system.create_directory, output_schema=None))
+    mcp.add_tool(FunctionTool.from_function(file_system.delete_directory, output_schema=None))
     # mcp.add_tool(FunctionTool.from_function(caller_controlled_directory_fields(file_system.get_root)))
     # mcp.add_tool(FunctionTool.from_function(caller_controlled_directory_fields(file_system.get_structure)))
     # mcp.add_tool(FunctionTool.from_function(caller_controlled_file_fields(file_system.get_files)))
