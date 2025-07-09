@@ -25,15 +25,11 @@ DEFAULT_BATCH_SIZE = 128
 
 
 class DuckDBTableIncorrectColumnsError(Exception):
-    def __init__(
-        self, table_name: str, expected_columns: list[str], actual_columns: list[str]
-    ):
+    def __init__(self, table_name: str, expected_columns: list[str], actual_columns: list[str]):
         self.table_name = table_name
         self.expected_columns = expected_columns
         self.actual_columns = actual_columns
-        super().__init__(
-            f"Table {table_name} has incorrect columns. Expected {expected_columns}, got {actual_columns}."
-        )
+        super().__init__(f"Table {table_name} has incorrect columns. Expected {expected_columns}, got {actual_columns}.")
 
 
 class DuckDBKVStore(BaseKVStore):
@@ -81,9 +77,7 @@ class DuckDBKVStore(BaseKVStore):
         self.persist_dir = persist_dir
 
     @classmethod
-    def from_vector_store(
-        cls, duckdb_vector_store, table_name: str = "keyvalue"
-    ) -> "DuckDBKVStore":
+    def from_vector_store(cls, duckdb_vector_store, table_name: str = "keyvalue") -> "DuckDBKVStore":
         """
         Load a DuckDBKVStore from a DuckDB Client.
 
@@ -111,9 +105,7 @@ class DuckDBKVStore(BaseKVStore):
         return self._conn
 
     @classmethod
-    def _connect(
-        cls, database_name: str, persist_dir: str
-    ) -> duckdb.DuckDBPyConnection:
+    def _connect(cls, database_name: str, persist_dir: str) -> duckdb.DuckDBPyConnection:
         """Connect to the DuckDB database -- create the data persistence directory if it doesn't exist."""
         database_connection = database_name
 
@@ -136,9 +128,7 @@ class DuckDBKVStore(BaseKVStore):
         return self._table
 
     @classmethod
-    def _initialize_table(
-        cls, conn: duckdb.DuckDBPyConnection, table_name: str
-    ) -> duckdb.DuckDBPyRelation:
+    def _initialize_table(cls, conn: duckdb.DuckDBPyConnection, table_name: str) -> duckdb.DuckDBPyRelation:
         """Initialize the DuckDB Database, extensions, and documents table."""
         home_dir = Path.home()
         conn.execute(f"SET home_directory='{home_dir}';")
@@ -163,9 +153,7 @@ class DuckDBKVStore(BaseKVStore):
 
         for column in required_columns:
             if column not in table_columns:
-                raise DuckDBTableIncorrectColumnsError(
-                    table_name, required_columns, table_columns
-                )
+                raise DuckDBTableIncorrectColumnsError(table_name, required_columns, table_columns)
 
         return table
 
@@ -181,9 +169,7 @@ class DuckDBKVStore(BaseKVStore):
         """
         self.put_all([(key, val)], collection)
 
-    async def aput(
-        self, key: str, val: dict, collection: str = DEFAULT_COLLECTION
-    ) -> None:
+    async def aput(self, key: str, val: dict, collection: str = DEFAULT_COLLECTION) -> None:
         """
         Put a key-value pair into the store.
 
@@ -194,7 +180,6 @@ class DuckDBKVStore(BaseKVStore):
 
         """
         self.put(key, val, collection)
-
 
     async def aput_all(
         self,
@@ -213,7 +198,6 @@ class DuckDBKVStore(BaseKVStore):
         """
         self.put_all(kv_pairs, collection, batch_size)
 
-
     def put_all(
         self,
         kv_pairs: List[Tuple[str, dict]],
@@ -228,10 +212,10 @@ class DuckDBKVStore(BaseKVStore):
             collection (str): collection name
 
         """
-        rows = [
-            {"key": key, "collection": collection, "value": json.dumps(value)}
-            for key, value in kv_pairs
-        ]
+        if len(kv_pairs) == 0:
+            return
+
+        rows = [{"key": key, "collection": collection, "value": json.dumps(value)} for key, value in kv_pairs]
         arrow_table = pyarrow.Table.from_pylist(rows)
 
         _ = self.client.from_arrow(arrow_table).query(
@@ -256,20 +240,14 @@ class DuckDBKVStore(BaseKVStore):
             .__eq__(ConstantExpression(collection))
             .__and__(ColumnExpression("key").__eq__(ConstantExpression(key)))
         )
-        command = self.table.filter(expression).sql_query()
-
-        rows = self.client.execute(command).arrow().to_pylist()
-
-        row_result = next(iter(rows), None)
+        row_result = self.table.filter(filter_expr=expression).fetchone()
 
         if row_result is None:
             return None
 
-        return json.loads(row_result["value"])
+        return json.loads(row_result[2])
 
-    async def aget(
-        self, key: str, collection: str = DEFAULT_COLLECTION
-    ) -> Optional[dict]:
+    async def aget(self, key: str, collection: str = DEFAULT_COLLECTION) -> Optional[dict]:
         """
         Get a value from the store.
 
@@ -282,13 +260,9 @@ class DuckDBKVStore(BaseKVStore):
 
     def get_all(self, collection: str = DEFAULT_COLLECTION) -> Dict[str, dict]:
         """Get all values from the store."""
-        filter_expr: Expression = ColumnExpression("collection").__eq__(
-            ConstantExpression(collection)
-        )
+        filter_expr: Expression = ColumnExpression("collection").__eq__(ConstantExpression(collection))
 
-        table: pyarrow.Table = self.table.filter(
-            filter_expr=filter_expr
-        ).fetch_arrow_table()
+        table: pyarrow.Table = self.table.filter(filter_expr=filter_expr).fetch_arrow_table()
 
         as_list = table.to_pylist()
 

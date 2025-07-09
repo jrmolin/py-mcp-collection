@@ -94,6 +94,22 @@ async def test_extract_title_with_child_urls() -> None:
     assert "http://example.com/child2" in child_urls
 
 
+async def test_avoid_child_urls_to_images() -> None:
+    """Test the extract_title function."""
+    html = """
+    <a class="reference internal image-reference" href="/docs/reference/query-languages/esql/images/functions/st_xmax.svg" target="_blank">
+        <img loading="lazy"  alt="Embedded" src="/docs/reference/query-languages/esql/images/functions/st_xmax.svg" />
+    </a>
+    """
+    base_url = "http://example.com"
+
+    reader = AsyncWebReader(urls=[base_url])
+
+    _, child_urls = reader._extract_relevant_bits(html, base_url)  # pyright: ignore[reportPrivateUsage]
+
+    assert len(child_urls) == 0
+
+
 async def test_extract_no_title_with_child_urls():
     """Test the extract_child_urls function."""
     html = "<html><body><a href='/child1'>Child 1</a><a href='/child2'>Child 2</a></body></html>"

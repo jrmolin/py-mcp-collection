@@ -506,6 +506,10 @@ class TestIntegrationTests:
                     pipeline_cls=SimplePipeline,
                     backend=TrimmedHTMLDocumentBackend,
                 ),
+                InputFormat.MD: FormatOption(
+                    pipeline_cls=SimplePipeline,
+                    backend=GroupingMarkdownDocumentBackend,
+                ),
             }
             node_parser: DoclingHierarchicalNodeParser = DoclingHierarchicalNodeParser(format_options=format_options)
 

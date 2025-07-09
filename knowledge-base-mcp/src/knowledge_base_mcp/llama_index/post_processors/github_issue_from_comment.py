@@ -1,4 +1,5 @@
 from collections import defaultdict
+from collections.abc import Sequence
 from logging import Logger
 from typing import override
 
@@ -20,28 +21,56 @@ from knowledge_base_mcp.utils.logging import BASE_LOGGER
 logger: Logger = BASE_LOGGER.getChild(suffix=__name__)
 
 
-def get_nodes_size(nodes: list[NodeWithScore]) -> int:
-    """Get the size of the nodes."""
-    return sum(len(node.node.get_content(metadata_mode=MetadataMode.NONE).strip()) for node in nodes)
+def get_type_from_node(node: BaseNode) -> str:
+    """Get the type from a node."""
+
+    if type := node.metadata.get("type"):
+        if not isinstance(type, str):
+            msg = f"Type is not a string: {type}"
+            raise TypeError(msg)
+
+        return type
+
+    msg = f"Type is not found in the node metadata: {node.metadata}"
+    raise ValueError(msg)
 
 
-class ParentContextNodePostprocessor(BaseNodePostprocessor):
+def get_repository_from_node(node: BaseNode) -> str:
+    """Get the repository from a node."""
+
+    if repository := node.metadata.get("repository"):
+        if not isinstance(repository, str):
+            msg = f"Repository is not a string: {repository}"
+            raise TypeError(msg)
+
+        return repository
+
+    msg = f"Repository is not found in the node metadata: {node.metadata}"
+    raise ValueError(msg)
+
+
+def get_issue_from_node(node: BaseNode) -> int:
+    """Get the issue from a node."""
+
+    if issue := node.metadata.get("issue"):
+        if not isinstance(issue, int):
+            msg = f"Issue is not an integer: {issue}"
+            raise TypeError(msg)
+
+        return issue
+
+    msg = f"Issue is not found in the node metadata: {node.metadata}"
+    raise ValueError(msg)
+
+
+class GithubIssueFromCommentNodePostprocessor(BaseNodePostprocessor):
     doc_store: BaseDocumentStore
     """The document store to get the parent nodes from."""
-
-    rounds: int = Field(default=2)
-    """The number of rounds to expand the parent nodes."""
-
-    threshold: float = Field(default=0.25)
-    """The % of a parent node that must be present in the results to bring it in."""
-
-    maximum_size: int = Field(default=4096)
-    """The maximum size of the parent node to bring in."""
 
     @classmethod
     @override
     def class_name(cls) -> str:
-        return "ParentContextNodePostprocessor"
+        return "GithubIssueFromCommentNodePostprocessor"
 
     @override
     def _postprocess_nodes(
@@ -51,13 +80,46 @@ class ParentContextNodePostprocessor(BaseNodePostprocessor):
     ) -> list[NodeWithScore]:
         """Postprocess nodes."""
 
-        nodes_without_parents: list[NodeWithScore] = [node for node in nodes if not node.node.parent_node]
-        nodes_with_parents: list[NodeWithScore] = [node for node in nodes if node.node.parent_node]
+        # First we need to group the nodes by repository
 
-        nodes_with_parents = self._expand_nodes_with_parents(nodes_with_scores=nodes_with_parents)
-        nodes_without_parents = self._expand_parentless_nodes(nodes_with_scores=nodes_without_parents)
+        nodes_by_repository: dict[str, list[NodeWithScore]] = defaultdict(list)
 
-        return nodes_with_parents + nodes_without_parents
+        for node in nodes:
+            if node_repository := get_repository_from_node(node=node.node):
+                nodes_by_repository[node_repository].append(node)
+
+        # For each repository, we need to group the nodes by issue number
+
+        issue_documents_to_fetch: set[str] = set()
+
+        for _, nodes_in_repository in nodes_by_repository.items():
+            nodes_by_issue_number: dict[int, list[NodeWithScore]] = defaultdict(list)
+            scores_by_issue_number: dict[int, list[float]] = defaultdict(list)
+
+            for node_in_repository in nodes_in_repository:
+                if issue := get_issue_from_node(node=node_in_repository.node):
+                    nodes_by_issue_number[issue].append(node_in_repository)
+                    if node_in_repository.score:
+                        scores_by_issue_number[issue].append(node_in_repository.score)
+
+            # For each issue number, we need to determine if we have already have the document for the issue
+
+            for issue_number, nodes_in_issue in nodes_by_issue_number.items():
+                if not any(get_type_from_node(node=node.node) == "issue" for node in nodes_in_issue):
+                    issue_documents_to_fetch.add(issue_number)
+
+            # Now we need to fetch the issue documents
+            issue_documents: Sequence[BaseNode] = self.doc_store.get_nodes(node_ids=list(issue_documents_to_fetch))
+
+            # Now we give these new documents scores based on the scores of the comment nodes
+
+            for issue_document in issue_documents:
+                if issue_number := get_issue_from_node(node=issue_document):  # noqa: SIM102
+                    if issue_number in scores_by_issue_number:
+                        node_with_score: NodeWithScore = NodeWithScore(node=issue_document, score=sum(scores_by_issue_number[issue_number]) / len(scores_by_issue_number[issue_number]))
+                        nodes_in_repository.append(node_with_score)
+
+        return nodes
 
     def _expand_nodes_with_parents(self, nodes_with_scores: list[NodeWithScore]) -> list[NodeWithScore]:
         """Expand nodes with parents."""
@@ -207,9 +269,9 @@ class ParentContextNodePostprocessor(BaseNodePostprocessor):
 
         gathered_parent_node_ids: list[str] = [node.node_id for node in gathered_parents]
 
-        parent_nodes_to_gather: set[str] = {node_id for node_id in parent_nodes_ids if node_id not in gathered_parent_node_ids}
+        parent_nodes_to_gather: list[str] = [node_id for node_id in parent_nodes_ids if node_id not in gathered_parent_node_ids]
 
-        new_parent_nodes: list[BaseNode] = self.doc_store.get_nodes(node_ids=list(parent_nodes_to_gather))
+        new_parent_nodes: list[BaseNode] = self.doc_store.get_nodes(node_ids=parent_nodes_to_gather)
 
         gathered_parents.extend(new_parent_nodes)
 

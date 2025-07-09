@@ -393,7 +393,7 @@ requires-dist = [
     { name = "pytest-benchmark", specifier = ">=5.1.0" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "ripgrep", specifier = ">=14.1.0" },
-    { name = "rpygrep", specifier = ">=0.1.0" },
+    { name = "rpygrep", specifier = ">=0.1.1" },
     { name = "sumy", specifier = ">=0.11.0" },
     { name = "syrupy", specifier = ">=4.9.1" },
     { name = "tree-sitter", specifier = ">=0.24.0" },

@@ -122,8 +122,6 @@ def organize_nodes_for_snapshot(nodes: Sequence[BaseNode], extra_nodes: Sequence
         node for node in serialized_nodes if node["relationships"].get("parent") not in serialized_nodes_by_id
     ]
 
-    
-
     for node in serialized_nodes:
         if not (relationships := node.get("relationships")):
             continue

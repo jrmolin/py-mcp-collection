@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Iterable, Sequence
 from io import BytesIO
 from typing import TYPE_CHECKING, Any, Protocol, override, runtime_checkable
@@ -113,6 +114,9 @@ def _get_document_stream(document: LlamaDocument) -> DocumentStream:
             elif source_url := _get_str_from_metadata(node=document, key="url"):
                 fake_document_name = source_url.split("/")[-1]
 
+    # if fake_document_name == "llms.txt":
+    #     fake_document_name = "llms.md"
+
     return DocumentStream(
         name=fake_document_name,
         stream=BytesIO(initial_bytes=raw_body.encode(encoding="utf-8")),
@@ -213,7 +217,7 @@ class DoclingHierarchicalNodeParser(HierarchicalNodeParser):
         show_progress: bool = False,
         **kwargs: Any,  # pyright: ignore[reportAny]
     ) -> list[LlamaBaseNode]:
-        return self._parse_nodes(nodes=nodes, show_progress=show_progress, **kwargs)
+        return await asyncio.to_thread(self._parse_nodes, nodes=nodes, show_progress=show_progress, **kwargs)
 
     def _convert_document_stream_to_docling_document(self, document_stream: DocumentStream) -> DoclingDocument:
         """Converts a document stream to a docling document."""
@@ -237,7 +241,11 @@ class DoclingHierarchicalNodeParser(HierarchicalNodeParser):
         for document in _document_iterable(documents=nodes, show_progress=show_progress):
             document_stream: DocumentStream = _get_document_stream(document=document)
 
-            docling_document: DoclingDocument = self._convert_document_stream_to_docling_document(document_stream=document_stream)
+            try:
+                docling_document: DoclingDocument = self._convert_document_stream_to_docling_document(document_stream=document_stream)
+            except Exception:
+                logger.exception(f"Error converting document stream to docling document {document.metadata}")
+                continue
 
             all_nodes.extend(self._convert_llama_document(llama_document=document, docling_document=docling_document))
 

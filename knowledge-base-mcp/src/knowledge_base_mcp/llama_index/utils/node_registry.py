@@ -1,9 +1,10 @@
+import sys
 from collections import defaultdict
 from typing import ClassVar, Literal, Self, overload
 
 from llama_index.core.schema import BaseNode, NodeRelationship, RelatedNodeInfo
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
-import sys
+from pydantic import BaseModel, ConfigDict, PrivateAttr
+
 from knowledge_base_mcp.utils.logging import BASE_LOGGER
 
 logger = BASE_LOGGER.getChild(__name__)
@@ -185,11 +186,11 @@ class NodeRegistry(BaseModel):
 
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, use_attribute_docstrings=True, extra="forbid")
 
-    verify: Literal["error", "warn", "ignore"] = "ignore" #Field(default="error" if is_debugging() else "warn")
+    verification_level: Literal["full", "simple", "none"] = "simple"
     """Whether to verify the integrity of the registry after each operation."""
 
-    verify_references: bool = Field(default=False)
-    """Whether to verify the references of the registry after each operation."""
+    verification_issue_action: Literal["error", "warn"] = "error"
+    """Whether to verify the actions of the registry after each operation."""
 
     _nodes_by_id: dict[str, BaseNode] = PrivateAttr(default_factory=dict)
     """The set of nodes in the registry."""
@@ -365,14 +366,18 @@ class NodeRegistry(BaseModel):
         """Get the orphans (no parent node) of the registry."""
         return [node for node in self._nodes_by_id.values() if not node.parent_node]
 
-    def get_leaf_families(self) -> list[tuple[BaseNode, list[BaseNode]]]:
+    def get_solo_parents(self) -> list[BaseNode]:
+        """Get the solo parents (one child node) of the registry."""
+        return [node for node in self._nodes_by_id.values() if node.child_nodes and len(node.child_nodes) == 1]
+
+    def get_leaf_families(self) -> list[tuple[BaseNode | None, list[BaseNode]]]:
         """Get the leaf families of the registry.
 
         Returns a list of tuples, where the first element is the parent node and the second element is a list of child nodes.
         The child nodes are ordered by their prev/next relationships.
         """
 
-        child_nodes_by_parent_id: dict[str, list[BaseNode]] = defaultdict(list)
+        child_nodes_by_parent_id: dict[str | None, list[BaseNode]] = defaultdict(list)
 
         for node in self._nodes_by_id.values():
             if node.child_nodes:
@@ -380,8 +385,10 @@ class NodeRegistry(BaseModel):
 
             if node.parent_node:
                 child_nodes_by_parent_id[node.parent_node.node_id].append(node)
+            else:
+                child_nodes_by_parent_id[None].append(node)
 
-        return [(self.get(ids=parent_id), children) for parent_id, children in child_nodes_by_parent_id.items()]
+        return [(self.get(ids=parent_id) if parent_id else None, children) for parent_id, children in child_nodes_by_parent_id.items()]
 
     def get_children(self, parent: BaseNode, ordered: bool = True) -> list[BaseNode]:
         """Get the children of a parent node."""
@@ -424,19 +431,14 @@ class NodeRegistry(BaseModel):
             return
 
         # Insert the new children after the last current child
-        self.insert_after(node=current_children[-1], next_nodes=children)
+        self.insert_after(node=current_children[-1], next_nodes=children, verify=False)
 
         self.verify_integrity()
 
     def verify_integrity(self) -> None:
-        """Verify the integrity of the registry."""
-
-        if self.verify == "ignore":
+        """Verify the references of the registry."""
+        if self.verification_level == "none":
             return
-
-        node_refs_by_id: dict[str, RelatedNodeInfo] = {node.node_id: node.as_related_node_info() for node in self._nodes_by_id.values()}
-
-        out_of_date_refs: int = 0
 
         for node in self._nodes_by_id.values():
             for relationship_type, item_or_list in node.relationships.items():
@@ -446,18 +448,43 @@ class NodeRegistry(BaseModel):
                 targets: list[RelatedNodeInfo] = list(related_node_info_as_list(related_node_info=item_or_list))
 
                 for target in targets:
-                    if target != node_refs_by_id[target.node_id]:
-                        out_of_date_refs += 1
-
                     if target.node_id not in self._nodes_by_id:
                         msg = f"Node {node.node_id} has a {relationship_type} that does not exist in the registry: {target.node_id}"
-                        if self.verify == "error":
+                        if self.verification_issue_action == "error":
                             raise ValueError(msg)
 
-        if out_of_date_refs > 0 and self.verify_references:
+                        if self.verification_issue_action == "warn":
+                            logger.warning(msg=msg)
+
+        if self.verification_level == "simple":
+            return
+
+        self.verify_reference_hashes()
+
+    def verify_reference_hashes(self) -> None:
+        """Verify the reference hashes of the registry."""
+
+        out_of_date_refs: int = 0
+
+        recalculated_node_refs_by_id: dict[str, RelatedNodeInfo] = {
+            node.node_id: node.as_related_node_info() for node in self._nodes_by_id.values()
+        }
+
+        for node in self._nodes_by_id.values():
+            for relationship_type, item_or_list in node.relationships.items():
+                if relationship_type == NodeRelationship.SOURCE:
+                    continue
+
+                targets: list[RelatedNodeInfo] = list(related_node_info_as_list(related_node_info=item_or_list))
+
+                for target in targets:
+                    if target != recalculated_node_refs_by_id[target.node_id]:
+                        out_of_date_refs += 1
+
+        if out_of_date_refs > 0 and self.verification_issue_action == "warn":
             logger.warning(msg=f"Found {out_of_date_refs} out-of-date refs in the registry.")
 
-    def insert_after(self, node: BaseNode, next_nodes: list[BaseNode], upsert: bool = False) -> None:
+    def insert_after(self, node: BaseNode, next_nodes: list[BaseNode], upsert: bool = False, verify: bool = True) -> None:
         """Inserts a node after an existing node. The inserted node inherits the parent and next nodes of the existing node.
 
         Given: r1 <-> r2 [r2_1 <-> r2_2] <-> r3
@@ -487,7 +514,8 @@ class NodeRegistry(BaseModel):
                 children=self.get_children(parent=parent_node, ordered=False) + next_nodes,
             )
 
-        self.verify_integrity()
+        if verify:
+            self.verify_integrity()
 
     def collapse_node(self, node: BaseNode) -> None:
         """Collapse a node. The children of the node are added to the parent node. The node is removed from the registry.
@@ -500,7 +528,7 @@ class NodeRegistry(BaseModel):
         # If the node has children, we need to insert them after the node
         # r1 [r1_1 <-> r1_1_1 <-> r1_1_2 <-> r1_1_3] <-> r2
         if node.child_nodes:
-            self.insert_after(node=node, next_nodes=self.get(refs=node.child_nodes), upsert=True)
+            self.insert_after(node=node, next_nodes=self.get(refs=node.child_nodes), upsert=True, verify=False)
 
         # r1 [r1_1 | r1_1_1 <-> r1_1_2 <-> r1_1_3] <-> r2 (Remove r1_1 from the chain, it's now isolated under the parent node)
         self._remove_previous_next_relationships(node=node)

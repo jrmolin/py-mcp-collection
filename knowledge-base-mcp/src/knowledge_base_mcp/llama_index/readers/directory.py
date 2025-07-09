@@ -1,4 +1,4 @@
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator
 from pathlib import Path, PurePosixPath
 from typing import Any, cast, override
 
@@ -9,10 +9,6 @@ from llama_index.core.utils import get_tqdm_iterable  # pyright: ignore[reportUn
 
 class FastDirectoryReader(SimpleDirectoryReader):
     """A faster directory reader."""
-
-    def files_to_process_iter(self) -> Generator[Path, Any]:
-        """Get an iterator over the files to process."""
-        yield from self.input_files
 
     def count_files(self) -> int:
         """Count the number of files to process."""

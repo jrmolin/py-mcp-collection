@@ -24,9 +24,7 @@ class DuckDBIndexStore(KVIndexStore):
         collection_suffix: Optional[str] = None,
     ) -> None:
         """Init a DuckDBIndexStore."""
-        super().__init__(
-            duckdb_kvstore, namespace=namespace, collection_suffix=collection_suffix
-        )
+        super().__init__(duckdb_kvstore, namespace=namespace, collection_suffix=collection_suffix)
         # avoid conflicts with duckdb docstore
         if self._collection.endswith(DEFAULT_COLLECTION_SUFFIX):
             self._collection = f"{self._namespace}/index"

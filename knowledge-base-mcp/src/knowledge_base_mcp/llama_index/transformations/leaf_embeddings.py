@@ -8,7 +8,7 @@ from llama_index.core.schema import (
     Document,
     TransformComponent,
 )
-from pydantic import ConfigDict
+from pydantic import ConfigDict, Field
 
 from knowledge_base_mcp.utils.logging import BASE_LOGGER
 
@@ -20,17 +20,26 @@ class LeafNodeEmbedding(TransformComponent):
 
     model_config: ClassVar[ConfigDict] = ConfigDict(use_attribute_docstrings=True, arbitrary_types_allowed=True)
 
+    batch_size: int = Field(default=64, description="The number of nodes to embed in each batch.")
+
     embed_model: BaseEmbedding
+
+    def _get_batches(self, nodes: Sequence[BaseNode]) -> list[Sequence[BaseNode]]:
+        """Get batches of nodes."""
+
+        leaf_nodes: list[BaseNode] = [node for node in nodes if node.child_nodes is None and not isinstance(node, Document)]
+
+        if len(leaf_nodes) > 1000:
+            logger.warning(f"Large batch of {len(leaf_nodes)} leaf nodes, embedding in batches of {self.batch_size}")
+
+        return [leaf_nodes[i : i + self.batch_size] for i in range(0, len(leaf_nodes), self.batch_size)]
 
     @override
     def __call__(self, nodes: Sequence[BaseNode], **kwargs: Any) -> Sequence[BaseNode]:  # pyright: ignore[reportAny]
         """Embed the leaf nodes."""
 
-        leaf_nodes: list[BaseNode] = [node for node in nodes if node.child_nodes is None and not isinstance(node, Document)]
-
-        logger.info(f"Sync embedding {len(leaf_nodes)} leaf nodes")
-        _ = self.embed_model(nodes=leaf_nodes)
-        logger.info(f"Sync embedded {len(leaf_nodes)} leaf nodes")
+        for batch in self._get_batches(nodes=nodes):
+            _ = self.embed_model(nodes=batch)
 
         return nodes
 
@@ -38,15 +47,7 @@ class LeafNodeEmbedding(TransformComponent):
     async def acall(self, nodes: Sequence[BaseNode], **kwargs: Any) -> Sequence[BaseNode]:  # pyright: ignore[reportAny]
         """Async embed the leaf nodes."""
 
-        leaf_nodes: list[BaseNode] = [node for node in nodes if (node.child_nodes is None or len(node.child_nodes) == 0) and not isinstance(node, Document)]
-
-        if len(leaf_nodes) > 1000:
-            logger.warning(f"Async embedding {len(leaf_nodes)} leaf nodes")
-
-        #logger.info(f"Async embedding {len(leaf_nodes)} leaf nodes")
-        # Create batches of 128 nodes so we can do them sequentially vs llama doing them in parallel
-        batches = [leaf_nodes[i:i + 256] for i in range(0, len(leaf_nodes), 256)]
-        for batch in batches:
+        for batch in self._get_batches(nodes=nodes):
             _ = await self.embed_model.acall(nodes=batch)
 
         return nodes

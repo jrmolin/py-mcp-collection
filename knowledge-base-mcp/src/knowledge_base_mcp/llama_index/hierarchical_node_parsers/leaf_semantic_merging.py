@@ -1,4 +1,4 @@
-from collections.abc import Iterator, Sequence
+from collections.abc import Sequence
 from functools import cached_property
 from logging import Logger
 from typing import Any, ClassVar, Literal, override
@@ -15,53 +15,6 @@ from knowledge_base_mcp.utils.window import PeekableIterator
 logger: Logger = BASE_LOGGER.getChild(suffix=__name__)
 
 
-class NextNodeIterator(Iterator[BaseNode]):
-    """Iterator that returns the next node in the sequence."""
-
-    nodes_by_id: dict[str, BaseNode]
-    popped_nodes: set[str]
-
-    def __init__(self, nodes: Sequence[BaseNode]):
-        self.nodes_by_id = {node.node_id: node for node in nodes}
-        self.popped_nodes = set()
-
-    @override
-    def __next__(self) -> BaseNode:
-        # Get the first entry in nodes_by_id
-        if not self.nodes_by_id:
-            raise StopIteration
-
-        _, node = next(iter(self.nodes_by_id.items()))
-
-        self.pop_node(node=node)
-
-        return node
-
-    def next_node(self, node: BaseNode) -> BaseNode | None:
-        """Pop the next node for a node from the iterator."""
-
-        if node.next_node is None:
-            return None
-
-        next_node_id = node.next_node.node_id
-
-        if next_node_id not in self.nodes_by_id:
-            if next_node_id not in self.popped_nodes:
-                logger.error(msg=f"Next node {next_node_id} not found in nodes_by_id: {node}")
-            else:
-                logger.error(msg=f"Next node {next_node_id} was already popped from the iterator: {node}")
-            return None
-
-        return self.nodes_by_id[next_node_id]
-
-    def pop_node(self, node: BaseNode) -> None:
-        """Pop the next node for a node from the iterator."""
-
-        self.popped_nodes.add(node.node_id)
-
-        del self.nodes_by_id[node.node_id]
-
-
 class LeafSemanticMergerNodeParser(HierarchicalNodeParser):
     """Semantic node parser.
 
@@ -71,6 +24,8 @@ class LeafSemanticMergerNodeParser(HierarchicalNodeParser):
 
     embed_model: SerializeAsAny[BaseEmbedding] = Field(...)
     """The embedding model to use to for semantic comparison"""
+
+    verification_level: Literal["none", "simple", "full"] = Field(default="none")
 
     # TODO: Implement tokenizer-based token counting
     # tokenizer: Tokenizer = Field(
@@ -82,9 +37,6 @@ class LeafSemanticMergerNodeParser(HierarchicalNodeParser):
     """The maximum number of tokens to allow in a merged node.
         If None, the limit is retrieved from the embed_model.
         If the embed_model does not have a max_tokens limit, the default is 256."""
-
-    collapse_max_size: int = Field(default=384)
-    """The maximum size of a node to collapse. If a node is larger than this size, it will not be collapsed."""
 
     estimate_token_count: bool = Field(default=True)
     """If True, the token count of the accumulated nodes will be estimated by dividing
@@ -138,7 +90,7 @@ class LeafSemanticMergerNodeParser(HierarchicalNodeParser):
     ) -> list[BaseNode]:
         """Asynchronously parse document into nodes."""
 
-        node_registry: NodeRegistry = NodeRegistry(verify="error")
+        node_registry: NodeRegistry = NodeRegistry(verification_level=self.verification_level, verification_issue_action="warn")
 
         node_registry.add(nodes=list(nodes))
 
@@ -146,7 +98,6 @@ class LeafSemanticMergerNodeParser(HierarchicalNodeParser):
             # We cannot merge if there is only one child node
             if len(children) == 1:
                 continue
-
             # We will use a peekable iterator to iterate over the children
             # A peekable iterator lets us look ahead without consuming so we can determine if we want the node or not
             peekable_iterator: PeekableIterator[BaseNode] = PeekableIterator(items=children)

@@ -1,0 +1,217 @@
+from textwrap import dedent
+from typing import TYPE_CHECKING
+
+import pytest
+from llama_index.core.indices.vector_store import VectorStoreIndex
+from llama_index.core.schema import BaseNode, MetadataMode, RelatedNodeInfo
+from llama_index.core.storage import StorageContext
+from llama_index.embeddings.fastembed import FastEmbedEmbedding
+from llama_index.vector_stores.duckdb import DuckDBVectorStore
+from syrupy.assertion import SnapshotAssertion
+
+from knowledge_base_mcp.clients.knowledge_base import KnowledgeBaseClient
+from knowledge_base_mcp.servers.ingest.github import GitHubIngestServer
+from knowledge_base_mcp.servers.search.github import GitHubSearchServer, SearchResponseWithSummary
+from knowledge_base_mcp.vendored.storage.docstore.duckdb import DuckDBDocumentStore
+from knowledge_base_mcp.vendored.storage.kvstore.duckdb.base import DuckDBKVStore
+
+if TYPE_CHECKING:
+    from knowledge_base_mcp.servers.ingest.base import IngestResult
+
+DEFAULT_DOCS_CROSS_ENCODER_MODEL = "cross-encoder/ms-marco-MiniLM-L-2-v2"
+
+embedding_model: FastEmbedEmbedding | None = None
+try:
+    embedding_model = FastEmbedEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2", embedding_cache=None)
+    test = embedding_model._model.embed(["Hello, world!"])  # pyright: ignore[reportPrivateUsage]
+    fastembed_available = True
+except Exception:
+    fastembed_available = False
+
+
+@pytest.fixture
+def duckdb_vector_store():
+    return DuckDBVectorStore(
+        index_name="test",
+        embedding_model=embedding_model,
+        nodes=[],
+    )
+
+
+@pytest.fixture
+def duckdb_docstore(duckdb_vector_store: DuckDBVectorStore):
+    kv_store = DuckDBKVStore(client=duckdb_vector_store.client)
+    return DuckDBDocumentStore(duckdb_kvstore=kv_store)
+
+
+@pytest.fixture
+def vector_store_index(duckdb_vector_store: DuckDBVectorStore, duckdb_docstore: DuckDBDocumentStore):
+    storage_context = StorageContext.from_defaults(vector_store=duckdb_vector_store, docstore=duckdb_docstore)
+    return VectorStoreIndex(storage_context=storage_context, embed_model=embedding_model, nodes=[])
+
+
+@pytest.fixture
+def knowledge_base_client(vector_store_index: VectorStoreIndex):
+    return KnowledgeBaseClient(vector_store_index=vector_store_index)
+
+
+@pytest.fixture
+def github_ingest_server(knowledge_base_client: KnowledgeBaseClient):
+    return GitHubIngestServer(knowledge_base_client=knowledge_base_client)
+
+
+def prepare_nodes_for_snapshot(nodes: list[BaseNode]) -> list[BaseNode]:
+    node_guids_to_sequential: dict[str, int] = {}
+    for node in nodes:
+        node.embedding = None
+        new_id = len(node_guids_to_sequential)
+
+        node_guids_to_sequential[node.node_id] = new_id
+
+        node.node_id = str(new_id)
+
+    for node in nodes:
+        for relationship_members in node.relationships.values():
+            if isinstance(relationship_members, list):
+                for relationship_member in relationship_members:
+                    relationship_member.node_id = str(node_guids_to_sequential[relationship_member.node_id])
+            else:
+                relationship_members.node_id = str(node_guids_to_sequential[relationship_members.node_id])
+
+    return nodes
+
+
+class TestIngest:
+    async def test_ingest(
+        self, github_ingest_server: GitHubIngestServer, vector_store_index: VectorStoreIndex, yaml_snapshot: SnapshotAssertion
+    ):
+        ingest_result: IngestResult = await github_ingest_server.load_github_issues(
+            knowledge_base="test",
+            owner="strawgate",
+            repo="gemini-for-github-demo",
+        )
+
+        assert ingest_result.parsed_nodes == 15
+
+        nodes_by_id: dict[str, BaseNode] = vector_store_index.docstore.docs
+
+        nodes: list[BaseNode] = list(nodes_by_id.values())
+
+        # Sort nodes by their "number" field
+        nodes.sort(key=lambda x: x.metadata.get("number", 0))  # pyright: ignore[reportAny]
+
+        node_one: BaseNode = nodes[13]
+
+        node_one_content: str = node_one.get_content(metadata_mode=MetadataMode.NONE)
+
+        assert (
+            node_one_content
+            == "/gemini can you summarize this repository and tell me what it is all about anyway? Please inlude information about commits, prs, and issues. Suggest improvements."
+        )
+
+        node_one_embed_content: str = node_one.get_content(metadata_mode=MetadataMode.EMBED)
+
+        assert (
+            node_one_embed_content
+            == dedent("""
+        repository: strawgate/gemini-for-github-demo
+        title: Just what is this all about anyway?
+        user.association: NONE
+
+        /gemini can you summarize this repository and tell me what it is all about anyway? Please inlude information about commits, prs, and issues. Suggest improvements.""").strip()
+        )
+
+        assert node_one.metadata["knowledge_base"] == "test"
+        assert node_one.metadata["knowledge_base_type"] == "github_issues"
+        assert node_one.metadata["title"] == "Just what is this all about anyway?"
+        assert node_one.metadata["state"] == "open"
+
+        assert prepare_nodes_for_snapshot(nodes) == yaml_snapshot
+
+    async def test_ingest_comments(
+        self, github_ingest_server: GitHubIngestServer, vector_store_index: VectorStoreIndex, yaml_snapshot: SnapshotAssertion
+    ):
+        ingest_result: IngestResult = await github_ingest_server.load_github_issues(
+            knowledge_base="test",
+            owner="strawgate",
+            repo="gemini-for-github-demo",
+            include_comments=True,
+        )
+
+        assert ingest_result.parsed_nodes == 74
+
+        nodes_by_id: dict[str, BaseNode] = vector_store_index.docstore.docs
+
+        nodes: list[BaseNode] = list(nodes_by_id.values())
+
+        # Get the node with a "number" metadata field of 1
+        node_one: BaseNode = next(node for node in nodes if node.metadata.get("number") == 1)
+
+        assert node_one.metadata["knowledge_base"] == "test"
+        assert node_one.metadata["knowledge_base_type"] == "github_issues"
+        assert node_one.metadata["type"] == "issue"
+        assert node_one.metadata["number"] == 1
+
+        assert node_one.metadata["title"] == "The readme has nothing in it"
+        assert node_one.metadata["state"] == "open"
+
+        node_two: BaseNode = nodes[1]
+
+        node_two_content: str = node_two.get_content(metadata_mode=MetadataMode.NONE)
+
+        assert "/gemini can you read issue descriptions? Any thoughts about the description in this issue?" in node_two_content
+
+        assert node_two.metadata["knowledge_base"] == "test"
+        assert node_two.metadata["knowledge_base_type"] == "github_issues"
+        assert node_two.metadata["type"] == "comment"
+
+        assert prepare_nodes_for_snapshot(nodes) == yaml_snapshot
+
+
+class TestSearch:
+    @pytest.fixture(autouse=True)
+    async def vector_store_index_with_comments(self, github_ingest_server: GitHubIngestServer):
+        ingest_result: IngestResult = await github_ingest_server.load_github_issues(
+            knowledge_base="test",
+            owner="strawgate",
+            repo="gemini-for-github-demo",
+            include_comments=True,
+        )
+
+        assert ingest_result.parsed_nodes == 74
+
+    @pytest.fixture
+    def github_search_server(self, knowledge_base_client: KnowledgeBaseClient):
+        return GitHubSearchServer(knowledge_base_client=knowledge_base_client, reranker_model=DEFAULT_DOCS_CROSS_ENCODER_MODEL)
+
+    async def test_search(self, github_search_server: GitHubSearchServer, yaml_snapshot: SnapshotAssertion):
+        response: SearchResponseWithSummary = await github_search_server.query("What do you do as a feature request triager?")
+
+        assert response.query == "What do you do as a feature request triager?"
+
+        assert response.summary.root == {"test": 59}
+
+        assert len(response.results) == 10
+
+        # sort them by their "number" field
+        response.results = sorted(response.results, key=lambda x: x.number)
+
+        assert response.model_dump() == yaml_snapshot
+
+    @pytest.fixture
+    def github_search_server_keep_children(self, knowledge_base_client: KnowledgeBaseClient):
+        return GitHubSearchServer(knowledge_base_client=knowledge_base_client, reranker_model=DEFAULT_DOCS_CROSS_ENCODER_MODEL)
+
+    async def test_search_keep_children(self, github_search_server_keep_children: GitHubSearchServer, yaml_snapshot: SnapshotAssertion):
+        response: SearchResponseWithSummary = await github_search_server_keep_children.query("What do you do as a feature request triager?")
+
+        assert response.query == "What do you do as a feature request triager?"
+
+        assert response.summary.root == {"test": 59}
+
+        assert len(response.results) == 10
+
+        # sort them by their "number" field
+        response.results.sort(key=lambda x: x.number)
+
+        assert response.model_dump() == yaml_snapshot

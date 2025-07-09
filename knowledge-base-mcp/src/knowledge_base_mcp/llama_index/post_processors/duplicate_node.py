@@ -21,6 +21,7 @@ class DuplicateNodePostprocessor(BaseNodePostprocessor):
         """Postprocess nodes."""
 
         ids: set[str] = set()
+        hashes: set[str] = set()
 
         new_nodes: list[NodeWithScore] = []
 
@@ -28,7 +29,12 @@ class DuplicateNodePostprocessor(BaseNodePostprocessor):
             if node.node_id in ids:
                 continue
 
+            if node.node.hash in hashes:
+                continue
+
             ids.add(node.node_id)
+            hashes.add(node.node.hash)
+
             new_nodes.append(node)
 
         return new_nodes

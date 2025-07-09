@@ -418,9 +418,9 @@ async def test_groups_of_nodes(
 
     assert len(merged_nodes) == 7, "Number of returned nodes was not correct"
 
-    assert merged_nodes[4].get_content() == warsaw_target_content, "Warsaw nodes were not correctly merged"
+    assert merged_nodes[2].get_content() == warsaw_target_content, "Warsaw nodes were not correctly merged"
 
-    assert merged_nodes[5].get_content() == football_target_content, "Football nodes were not correctly merged"
+    assert merged_nodes[4].get_content() == football_target_content, "Football nodes were not correctly merged"
 
     assert merged_nodes[6].get_content() == mathematics_target_content, "Mathematics node was not correctly merged"
 

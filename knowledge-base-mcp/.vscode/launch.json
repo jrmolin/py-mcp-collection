@@ -14,7 +14,9 @@
             "envFile": "${workspaceFolder}/.env",
             "args": [
                 "elasticsearch",
-                "run"
+                "run",
+                "--transport",
+                "sse"
             ]
         },
         {
@@ -23,11 +25,13 @@
             "request": "launch",
             "module": "knowledge_base_mcp.main",
             "cwd": "${workspaceFolder}",
-            "justMyCode": True,
+            "justMyCode": false,
             "args": [
                 "duckdb",
                 "persistent",
-                "run"
+                "run",
+                "--transport",
+                "sse"
             ]
         },
         // Debug Tests config

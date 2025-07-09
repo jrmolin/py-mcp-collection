@@ -1,76 +1,111 @@
-import asyncio
-import multiprocessing
-import os
-import re
+from collections import defaultdict
+from collections.abc import Sequence
+from datetime import UTC, datetime
 from logging import Logger
-import warnings
-from concurrent.futures import ProcessPoolExecutor
-from enum import Enum
-from functools import partial, reduce
-from hashlib import sha256
-from itertools import repeat
-from pathlib import Path
-from typing import Any, Generator, List, Optional, Sequence, Union
+from typing import Any, Self
 
-from fsspec import AbstractFileSystem
-
-import llama_index.core.ingestion.pipeline as pipeline
-from llama_index.core.constants import (
-    DEFAULT_PIPELINE_NAME,
-    DEFAULT_PROJECT_NAME,
-)
-from llama_index.core.bridge.pydantic import BaseModel, Field, ConfigDict
-from llama_index.core.ingestion.cache import DEFAULT_CACHE_NAME, IngestionCache
-from llama_index.core.instrumentation import get_dispatcher
-from llama_index.core.node_parser import SentenceSplitter
-from llama_index.core.readers.base import ReaderConfig
+from llama_index.core.ingestion import pipeline
+from llama_index.core.ingestion.cache import IngestionCache
+from llama_index.core.ingestion.pipeline import get_transformation_hash
 from llama_index.core.schema import (
     BaseNode,
     Document,
-    MetadataMode,
     TransformComponent,
 )
-from llama_index.core.settings import Settings
-from llama_index.core.storage.docstore import (
-    BaseDocumentStore,
-    SimpleDocumentStore,
-)
-from llama_index.core.storage.storage_context import DOCSTORE_FNAME
-from llama_index.core.utils import concat_dirs
-from llama_index.core.vector_stores.types import BasePydanticVectorStore
-from knowledge_base_mcp.utils.timer import TimerGroup
+from pydantic import BaseModel, Field, PrivateAttr, computed_field
+
 from knowledge_base_mcp.utils.logging import BASE_LOGGER
 
 logger: Logger = BASE_LOGGER.getChild(__name__)
 
-def remove_unstable_values(s: str) -> str:
-    """
-    Remove unstable key/value pairs.
 
-    Examples include:
-    - <__main__.Test object at 0x7fb9f3793f50>
-    - <function test_fn at 0x7fb9f37a8900>
-    """
-    pattern = r"<[\w\s_\. ]+ at 0x[a-z0-9]+>"
-    return re.sub(pattern, "", s)
+class RunningTimer(BaseModel):
+    name: str
+    start_time: datetime = Field(default_factory=lambda: datetime.now(tz=UTC), exclude=True)
+
+    def stop(self) -> "FinishedTimer":
+        return FinishedTimer(name=self.name, start_time=self.start_time)
 
 
-def get_transformation_hash(nodes: Sequence[BaseNode], transformation: TransformComponent) -> str:
-    """Get the hash of a transformation."""
-    nodes_str = "".join([str(node.get_content(metadata_mode=MetadataMode.ALL)) for node in nodes])
+class Timer(RunningTimer):
+    pass
 
-    transformation_dict = transformation.to_dict()
-    transform_string = remove_unstable_values(str(transformation_dict))
 
-    return sha256((nodes_str + transform_string).encode("utf-8")).hexdigest()
+class FinishedTimer(RunningTimer):
+    end_time: datetime = Field(default_factory=lambda: datetime.now(tz=UTC), exclude=True)
+
+    @computed_field()
+    @property
+    def duration(self) -> float:
+        return (self.end_time - self.start_time).total_seconds()
+
+
+class TimerGroup(BaseModel):
+    name: str = Field(description="The name of the timer group")
+
+    _running_timer: RunningTimer | None = PrivateAttr(default=None)
+    _finished_timers: list[FinishedTimer] = PrivateAttr(default_factory=list)
+
+    def start_timer(self, name: str) -> Self:
+        if self._running_timer is not None:
+            msg = f"A timer is already running for {name}"
+            raise ValueError(msg)
+
+        new_timer = RunningTimer(name=name)
+        self._running_timer = new_timer
+
+        return self
+
+    def stop_timer(self) -> Self:
+        if self._running_timer is None:
+            msg = f"No running timer found for {self.name}"
+            raise ValueError(msg)
+
+        self._finished_timers.append(self._running_timer.stop())
+        self._running_timer = None
+
+        return self
+
+    def merge(self, other: "TimerGroup") -> Self:
+        """Merge another timer group into this one."""
+
+        self._finished_timers.extend(other._finished_timers)
+        return self
+
+    @computed_field()
+    @property
+    def times(self) -> dict[str, float]:
+        if not self._finished_timers:
+            return {}
+
+        timers_by_name: dict[str, float] = defaultdict(float)
+
+        for timer in self._finished_timers:
+            timers_by_name[timer.name] += timer.duration
+
+        return timers_by_name
+
+    @computed_field()
+    @property
+    def total_duration(self) -> float:
+        return sum(self.times.values())
+
+    def wall_clock_time(self) -> float:
+        if not self._finished_timers:
+            return 0
+
+        minimum_start_time = min(timer.start_time for timer in self._finished_timers)
+        maximum_end_time = max(timer.end_time for timer in self._finished_timers)
+
+        return (maximum_end_time - minimum_start_time).total_seconds()
 
 
 async def arun_transformations(
     nodes: Sequence[BaseNode],
     transformations: Sequence[TransformComponent],
     in_place: bool = True,
-    cache: Optional[IngestionCache] = None,
-    cache_collection: Optional[str] = None,
+    cache: IngestionCache | None = None,
+    cache_collection: str | None = None,
     **kwargs: Any,
 ) -> Sequence[BaseNode]:
     """
@@ -90,7 +125,17 @@ async def arun_transformations(
     starting_nodes = len(nodes)
     timer_group = TimerGroup(name="arun_transformations")
 
-    logger.info(f"Running {len(transformations)} transformations on {starting_nodes} nodes")
+    starting_document_count = len([node for node in nodes if isinstance(node, Document)])
+    starting_node_count = len([node for node in nodes if not isinstance(node, Document)])
+
+    node_counts: list[int] = [starting_node_count]
+    document_counts: list[int] = [starting_document_count]
+
+    transform_type = "doc -> node" if starting_document_count > 0 else "node -> node"
+    if len(nodes) > 1:
+        logger.info(
+            f"Running {len(transformations)} {transform_type} transformations on {starting_nodes} nodes ({starting_document_count} documents and {starting_node_count} nodes)"
+        )
 
     for transform in transformations:
         _ = timer_group.start_timer(name=transform.__class__.__name__)
@@ -107,13 +152,18 @@ async def arun_transformations(
         else:
             nodes = await transform.acall(nodes, **kwargs)
 
-        timer_group.stop_timer()
+        node_counts.append(len([node for node in nodes if not isinstance(node, Document)]))
 
-    ending_nodes = len(nodes)
+        _ = timer_group.stop_timer()
 
-    logger.info(f"Completed arun_transformations {starting_nodes} -> {ending_nodes} nodes in {timer_group.model_dump()}")
+    node_str = "Nodes" + " -> ".join([f"({count})" for count in node_counts])
+    document_str = "Documents" + " -> ".join([f"({count})" for count in document_counts])
+
+    if len(nodes) > 1:
+        logger.info(f"Completed {transform_type} transformations: {node_str} | {document_str} in {timer_group.model_dump()}")
 
     return nodes
+
 
 def apply_patches() -> None:
     """Apply the patches to the pipeline."""

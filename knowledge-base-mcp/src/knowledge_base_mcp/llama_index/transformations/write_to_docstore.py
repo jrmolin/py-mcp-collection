@@ -2,7 +2,6 @@ from collections.abc import Sequence
 from logging import Logger
 from typing import Any, ClassVar, override
 
-from llama_index.core.embeddings import BaseEmbedding
 from llama_index.core.schema import (
     BaseNode,
     TransformComponent,

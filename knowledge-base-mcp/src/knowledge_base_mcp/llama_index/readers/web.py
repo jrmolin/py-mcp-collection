@@ -26,6 +26,39 @@ from knowledge_base_mcp.utils.logging import BASE_LOGGER
 logger: Logger = BASE_LOGGER.getChild(suffix=__name__)
 
 
+ALWAYS_SKIP_EXTENSIONS: set[str] = {
+    "ai",
+    "avif",
+    "bmp",
+    "cdr",
+    "css",
+    "drw",
+    "dxf",
+    "eps",
+    "gif",
+    "h264",
+    "h265",
+    "heic",
+    "heif",
+    "hevc",
+    "ico",
+    "jpeg",
+    "jpg",
+    "js",
+    "json",
+    "mng",
+    "pct",
+    "png",
+    "ps",
+    "psp",
+    "pst",
+    "svg",
+    "tif",
+    "tiff",
+    "webp",
+}
+
+
 def build_url(base_url: str, relative_url: str) -> str:
     """Build a full URL from a base URL and a relative URL."""
     return urljoin(base=base_url, url=relative_url)
@@ -298,6 +331,11 @@ class AsyncWebReader(BasePydanticReader):
         urls: set[str] = set()
 
         for url in raw_urls:
+            extension = url.split(".")[-1]
+
+            if extension in ALWAYS_SKIP_EXTENSIONS:
+                continue
+
             if not url.startswith(("http", "https")):
                 urls.add(build_url(base_url, relative_url=url))
             else:
@@ -311,6 +349,7 @@ class AsyncWebReader(BasePydanticReader):
 
         title = lxml_xpath_text(document=html_element, query="//title/text()[1]")
         child_urls = self._extract_child_urls(html=html_element, base_url=base_url)
+
         return title, child_urls
 
     @override
@@ -337,6 +376,9 @@ class AsyncWebReader(BasePydanticReader):
             async with session.get(url) as response:
                 response.raise_for_status()
 
+                if not response.content_type.startswith("text/html"):
+                    return FailedRequest.from_start_request(start_request, f"Not an HTML page: {response.content_type}")
+
                 data: str = await response.text()
 
                 headers: dict[str, str] = {k: v for k, v in response.headers.items() if k in self.keep_headers}
@@ -350,7 +392,7 @@ class AsyncWebReader(BasePydanticReader):
 
                 successful_request = SuccessfulRequest.from_start_request(start_request, webpage=web_page)
 
-                logger.info(
+                logger.debug(
                     msg=f"Finished URL {url} in {successful_request.request_duration}s (queued for {successful_request.wait_duration}s)."
                 )
 
@@ -570,7 +612,7 @@ class RecursiveAsyncWebReader(AsyncWebReader):
                 while successful_request := await self._work_to_yield.get():
                     url = successful_request.webpage.url
                     duration = successful_request.request_duration
-                    logger.info(msg=f"Completed gathering: {url} in {duration}s. Sending for processing.")
+                    logger.debug(msg=f"Completed gathering: {url} in {duration}s. Sending for processing.")
                     yield await successful_request.webpage.to_document(extractors=self.extractors)
                     self._work_to_yield.task_done()
                     # logger.info(f"{self._work_to_yield.qsize()} buffered documents left to yield")
