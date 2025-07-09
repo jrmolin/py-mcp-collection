@@ -21,6 +21,11 @@ from magika.types.content_type_label import ContentTypeLabel
 from pydantic import BaseModel, Field, RootModel
 from pydantic.config import ConfigDict
 from pydantic.fields import computed_field
+from rpygrep import (
+    RipGrepFind,
+    RipGrepSearch,
+)
+from rpygrep.types import RIPGREP_TYPE_LIST, RipGrepContext, RipGrepSearchResult
 
 from filesystem_operations_mcp.filesystem.detection.file_type import init_magika
 from filesystem_operations_mcp.filesystem.errors import (
@@ -37,17 +42,38 @@ from filesystem_operations_mcp.filesystem.mappings.magika_to_tree_sitter import 
     text_mappings,
 )
 from filesystem_operations_mcp.filesystem.patches.file import FileMultiplePatchTypes, FilePatchTypes
-from filesystem_operations_mcp.filesystem.utils.ripgrep import (
-    DEFAULT_EXCLUDED_TYPES,
-    RIPGREP_TYPE_LIST,
-    RipGrepContext,
-    RipGrepFind,
-    RipGrepSearch,
-    RipGrepSearchResult,
-)
 from filesystem_operations_mcp.logging import BASE_LOGGER
 
 logger = BASE_LOGGER.getChild(__name__)
+
+EXCLUDE_BINARY_TYPES: list[RIPGREP_TYPE_LIST] = [
+    "avro",
+    "brotli",
+    "bzip2",
+    "cbor",
+    "flatbuffers",
+    "gzip",
+    "lz4",
+    "lzma",
+    "pdf",
+    "protobuf",
+    "thrift",
+    "xz",
+    "zstd",
+]
+
+EXCLUDE_EXTRA_TYPES: list[RIPGREP_TYPE_LIST] = [
+    "lock",
+    "minified",
+    "jupyter",
+    "log",
+    "postscript",
+    "svg",
+    "usd",
+]
+EXCLUDE_DATA_TYPES: list[RIPGREP_TYPE_LIST] = ["csv", "jsonl", "json", "xml", "yaml", "toml"]
+
+DEFAULT_EXCLUDED_TYPES: list[RIPGREP_TYPE_LIST] = sorted(EXCLUDE_BINARY_TYPES + EXCLUDE_EXTRA_TYPES + EXCLUDE_DATA_TYPES)
 
 
 magika = init_magika()
