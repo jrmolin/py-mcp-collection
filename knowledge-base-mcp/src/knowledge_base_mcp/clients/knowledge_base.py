@@ -5,7 +5,6 @@ from llama_index.core.embeddings import BaseEmbedding
 from llama_index.core.indices.vector_store import VectorStoreIndex
 from llama_index.core.indices.vector_store.retrievers import VectorIndexRetriever
 from llama_index.core.ingestion.pipeline import IngestionPipeline
-from llama_index.core.postprocessor.sbert_rerank import SentenceTransformerRerank
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from llama_index.core.schema import BaseNode, RelatedNodeInfo
 from llama_index.core.storage.docstore.keyval_docstore import KVDocumentStore

@@ -1,14 +1,11 @@
 import time
-from functools import cached_property
 from logging import Logger
 from typing import TYPE_CHECKING, Any, override
 
 from fastmcp.server.server import FastMCP
 from fastmcp.tools import Tool as FastMCPTool
-from llama_index.core.postprocessor import SentenceTransformerRerank
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
 
-from knowledge_base_mcp.llama_index.post_processors.flash_rerank import FlashRankRerank
 from knowledge_base_mcp.llama_index.post_processors.get_parent_nodes import GetParentNodesPostprocessor
 from knowledge_base_mcp.llama_index.post_processors.get_sibling_nodes import GetSiblingNodesPostprocessor
 from knowledge_base_mcp.llama_index.post_processors.remove_duplicate_nodes import RemoveDuplicateNodesPostprocessor
@@ -88,7 +85,7 @@ class DocumentationSearchServer(BaseSearchServer):
         """Query the documentation"""
 
         start_time = time.perf_counter()
-        raw_results: list[NodeWithScore] = await self.get_results(query, knowledge_bases=knowledge_bases)
+        raw_results: list[NodeWithScore] = await self.get_results(query, knowledge_bases=knowledge_bases, count=20)
         results: TreeSearchResponse = TreeSearchResponse.from_nodes(nodes=raw_results)
         results_time = time.perf_counter()
 

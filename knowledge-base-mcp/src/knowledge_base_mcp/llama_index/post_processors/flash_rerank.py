@@ -1,16 +1,37 @@
 from typing import Any, override
 
+import llama_index.core.instrumentation as instrument
 from flashrank import Ranker, RerankRequest
 from llama_index.core.bridge.pydantic import Field, PrivateAttr
-from llama_index.core.callbacks import CBEventType, EventPayload
+from llama_index.core.instrumentation.events import BaseEvent
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from llama_index.core.schema import MetadataMode, NodeWithScore, QueryBundle
+
+dispatcher = instrument.get_dispatcher(__name__)
+
+
+class FlashRerankingQueryEvent(BaseEvent):
+    """FlashRerankingQueryEvent."""
+
+    nodes: list[NodeWithScore] = Field(..., description="Nodes to rerank.")
+    model_name: str = Field(..., description="Model name.")
+    query_str: str = Field(..., description="Query string.")
+    top_k: int = Field(..., description="Top k nodes to return.")
+
+
+class FlashRerankEndEvent(BaseEvent):
+    """FlashRerankEndEvent."""
+
+    nodes: list[NodeWithScore] = Field(..., description="Nodes to rerank.")
 
 
 class FlashRankRerank(BaseNodePostprocessor):
     model: str = Field(description="FlashRank model name.", default="ms-marco-TinyBERT-L-2-v2")
     top_n: int = Field(description="Number of nodes to return sorted by score.", default=20)
-    max_length: int = Field(description="Maximum length of the query and nodes.", default=512)
+    max_length: int = Field(
+        description="Maximum length of passage text passed to the reranker.",
+        default=512,
+    )
 
     _reranker: Ranker = PrivateAttr()
 
@@ -23,6 +44,8 @@ class FlashRankRerank(BaseNodePostprocessor):
     def class_name(cls) -> str:
         return "FlashRankRerank"
 
+    @dispatcher.span
+    @override
     def _postprocess_nodes(
         self,
         nodes: list[NodeWithScore],
@@ -43,27 +66,26 @@ class FlashRankRerank(BaseNodePostprocessor):
                 for node in nodes
             ],
         )
+        ## you would need to define a custom event subclassing BaseEvent from llama_index_instrumentation
+        dispatcher.event(
+            FlashRerankingQueryEvent(
+                nodes=nodes,
+                model_name=self.model,
+                query_str=query_bundle.query_str,
+                top_k=self.top_n,
+            )
+        )
+        scores = self._reranker.rerank(query_and_nodes)
+        scores_by_id = {score["id"]: score["score"] for score in scores}
 
-        with self.callback_manager.event(
-            CBEventType.RERANKING,
-            payload={
-                EventPayload.NODES: nodes,
-                EventPayload.MODEL_NAME: self.model,
-                EventPayload.QUERY_STR: query_bundle.query_str,
-                EventPayload.TOP_K: self.top_n,
-            },
-        ) as event:
-            scores = self._reranker.rerank(query_and_nodes)
-            scores_by_id = {score["id"]: score["score"] for score in scores}
+        if len(scores) != len(nodes):
+            msg = "Number of scores and nodes do not match."
+            raise ValueError(msg)
 
-            if len(scores) != len(nodes):
-                msg = "Number of scores and nodes do not match."
-                raise ValueError(msg)
+        for node in nodes:
+            node.score = scores_by_id[node.node.id_]
 
-            for node in nodes:
-                node.score = scores_by_id[node.node.id_]
-
-            new_nodes = sorted(nodes, key=lambda x: -x.score if x.score else 0)[: self.top_n]
-            event.on_end(payload={EventPayload.NODES: new_nodes})
+        new_nodes = sorted(nodes, key=lambda x: -x.score if x.score else 0)[: self.top_n]
+        dispatcher.event(FlashRerankEndEvent(nodes=new_nodes))
 
         return new_nodes

@@ -47,7 +47,7 @@ class GithubIssueCommentsReader(BasePydanticReader):
                 "repository": f"{self.owner}/{self.repo}",
                 "id": comment.id,
                 "type": "comment",
-                "issue.number": issue_number,
+                "issue": issue_number,
                 "updated_at": comment.updated_at.isoformat(),
                 "created_at": comment.created_at.isoformat(),
                 **metadata,
@@ -141,7 +141,8 @@ class GithubIssuesReader(BasePydanticReader):
             text_resource=MediaResource(text=issue.body or ""),
             metadata={
                 "repository": f"{self.owner}/{self.repo}",
-                "number": issue.number,
+                "id": issue.id,
+                "issue": issue.number,
                 "type": "issue",
                 "title": issue.title,
                 "url": issue.url,

@@ -95,7 +95,7 @@ class TestIngest:
         nodes: list[BaseNode] = list(nodes_by_id.values())
 
         # Sort nodes by their "number" field
-        nodes.sort(key=lambda x: x.metadata.get("number", 0))  # pyright: ignore[reportAny]
+        nodes.sort(key=lambda x: x.metadata.get("issue", 0))  # pyright: ignore[reportAny]
 
         node_one: BaseNode = nodes[13]
 
@@ -141,22 +141,25 @@ class TestIngest:
 
         nodes: list[BaseNode] = list(nodes_by_id.values())
 
+        # Sort the nodes by the "id" field in the metadata
+        nodes = sorted(nodes, key=lambda x: x.metadata.get("id"))
+
         # Get the node with a "number" metadata field of 1
-        node_one: BaseNode = next(node for node in nodes if node.metadata.get("number") == 1)
+        node_one: BaseNode = next(node for node in nodes if node.metadata.get("issue") == 1 and node.metadata.get("type") == "issue")
 
         assert node_one.metadata["knowledge_base"] == "test"
         assert node_one.metadata["knowledge_base_type"] == "github_issues"
         assert node_one.metadata["type"] == "issue"
-        assert node_one.metadata["number"] == 1
+        assert node_one.metadata["issue"] == 1
 
         assert node_one.metadata["title"] == "The readme has nothing in it"
         assert node_one.metadata["state"] == "open"
 
-        node_two: BaseNode = nodes[1]
+        node_two: BaseNode = next(node for node in nodes if node.metadata.get("issue") == 1 and node.metadata.get("type") == "comment")
 
         node_two_content: str = node_two.get_content(metadata_mode=MetadataMode.NONE)
 
-        assert "/gemini can you read issue descriptions? Any thoughts about the description in this issue?" in node_two_content
+        assert "It appears that the `README.md` file is not empty" in node_two_content
 
         assert node_two.metadata["knowledge_base"] == "test"
         assert node_two.metadata["knowledge_base_type"] == "github_issues"

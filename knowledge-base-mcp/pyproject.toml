@@ -44,6 +44,7 @@ dependencies = [
 llama-index-storage-docstore-duckdb = {path = "/Users/bill.easton/repos/llama_index/llama-index-integrations/storage/docstore/llama-index-storage-docstore-duckdb"}
 llama-index-storage-kvstore-duckdb = {path = "/Users/bill.easton/repos/llama_index/llama-index-integrations/storage/kvstore/llama-index-storage-kvstore-duckdb"}
 llama-index-storage-index-store-duckdb = {path = "/Users/bill.easton/repos/llama_index/llama-index-integrations/storage/index_store/llama-index-storage-index-store-duckdb"}
+llama-index-vector-stores-duckdb = {path = "/Users/bill.easton/repos/llama_index/llama-index-integrations/vector_stores/llama-index-vector-stores-duckdb"}
 
 [tool.poetry]
 packages = [
