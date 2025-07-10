@@ -1,0 +1,237 @@
+- 'Node(id_=''0'', embedding=None, metadata={''repository'': ''strawgate/gemini-for-github-demo'',
+  ''id'': 3054444526, ''issue'': 1, ''type'': ''issue'', ''title'': ''The readme has
+  nothing in it'', ''url'': ''https://api.github.com/repos/strawgate/gemini-for-github-demo/issues/1'',
+  ''state'': ''open'', ''comment_count'': 5, ''created_at'': ''2025-05-10T18:23:23+00:00'',
+  ''updated_at'': ''2025-05-12T04:08:19+00:00'', ''user.login'': ''strawgate'', ''user.association'':
+  ''OWNER'', ''knowledge_base_type'': ''github_issues'', ''knowledge_base'': ''test''},
+  excluded_embed_metadata_keys=[''comment_count'', ''created_at'', ''id'', ''issue'',
+  ''knowledge_base'', ''knowledge_base_type'', ''state'', ''type'', ''updated_at'',
+  ''url'', ''user.login''], excluded_llm_metadata_keys=[''comment_count'', ''created_at'',
+  ''id'', ''issue'', ''knowledge_base'', ''knowledge_base_type'', ''repository'',
+  ''state'', ''title'', ''type'', ''updated_at'', ''url'', ''user.association'', ''user.login''],
+  relationships={<NodeRelationship.CHILD: ''5''>: []}, metadata_template=''{key}:
+  {value}'', metadata_separator=''\n'', text_resource=MediaResource(embeddings=None,
+  data=None, text=''The readme currently has nothing in it.'', path=None, url=None,
+  mimetype=None), image_resource=None, audio_resource=None, video_resource=None, text_template=''{metadata_str}\n\n{content}'')'
+- 'Node(id_=''1'', embedding=None, metadata={''repository'': ''strawgate/gemini-for-github-demo'',
+  ''id'': 3054529800, ''issue'': 2, ''type'': ''issue'', ''title'': ''Plan files `plan-*.md`
+  are not excluded from git'', ''url'': ''https://api.github.com/repos/strawgate/gemini-for-github-demo/issues/2'',
+  ''state'': ''open'', ''comment_count'': 4, ''created_at'': ''2025-05-10T21:29:51+00:00'',
+  ''updated_at'': ''2025-05-11T03:33:03+00:00'', ''user.login'': ''strawgate'', ''user.association'':
+  ''OWNER'', ''knowledge_base_type'': ''github_issues'', ''knowledge_base'': ''test''},
+  excluded_embed_metadata_keys=[''comment_count'', ''created_at'', ''id'', ''issue'',
+  ''knowledge_base'', ''knowledge_base_type'', ''state'', ''type'', ''updated_at'',
+  ''url'', ''user.login''], excluded_llm_metadata_keys=[''comment_count'', ''created_at'',
+  ''id'', ''issue'', ''knowledge_base'', ''knowledge_base_type'', ''repository'',
+  ''state'', ''title'', ''type'', ''updated_at'', ''url'', ''user.association'', ''user.login''],
+  relationships={<NodeRelationship.CHILD: ''5''>: []}, metadata_template=''{key}:
+  {value}'', metadata_separator=''\n'', text_resource=MediaResource(embeddings=None,
+  data=None, text='''', path=None, url=None, mimetype=None), image_resource=None,
+  audio_resource=None, video_resource=None, text_template=''{metadata_str}\n\n{content}'')'
+- 'Node(id_=''2'', embedding=None, metadata={''repository'': ''strawgate/gemini-for-github-demo'',
+  ''id'': 3054613824, ''issue'': 3, ''type'': ''issue'', ''title'': ''Fix: Exclude
+  plan-*.md from git'', ''url'': ''https://api.github.com/repos/strawgate/gemini-for-github-demo/issues/3'',
+  ''state'': ''open'', ''comment_count'': 0, ''created_at'': ''2025-05-11T00:49:20+00:00'',
+  ''updated_at'': ''2025-05-11T14:14:17+00:00'', ''user.login'': ''strawgate'', ''user.association'':
+  ''OWNER'', ''knowledge_base_type'': ''github_issues'', ''knowledge_base'': ''test''},
+  excluded_embed_metadata_keys=[''comment_count'', ''created_at'', ''id'', ''issue'',
+  ''knowledge_base'', ''knowledge_base_type'', ''state'', ''type'', ''updated_at'',
+  ''url'', ''user.login''], excluded_llm_metadata_keys=[''comment_count'', ''created_at'',
+  ''id'', ''issue'', ''knowledge_base'', ''knowledge_base_type'', ''repository'',
+  ''state'', ''title'', ''type'', ''updated_at'', ''url'', ''user.association'', ''user.login''],
+  relationships={<NodeRelationship.CHILD: ''5''>: []}, metadata_template=''{key}:
+  {value}'', metadata_separator=''\n'', text_resource=MediaResource(embeddings=None,
+  data=None, text=''This PR resolves issue #2 by adding `plan-*.md` to the `.gitignore`
+  file.'', path=None, url=None, mimetype=None), image_resource=None, audio_resource=None,
+  video_resource=None, text_template=''{metadata_str}\n\n{content}'')'
+- 'Node(id_=''3'', embedding=None, metadata={''repository'': ''strawgate/gemini-for-github-demo'',
+  ''id'': 3054643972, ''issue'': 6, ''type'': ''issue'', ''title'': "There''s not
+  an ASCII art of a cat in any of the markdown files", ''url'': ''https://api.github.com/repos/strawgate/gemini-for-github-demo/issues/6'',
+  ''state'': ''open'', ''comment_count'': 8, ''created_at'': ''2025-05-11T02:07:34+00:00'',
+  ''updated_at'': ''2025-05-12T13:20:59+00:00'', ''user.login'': ''strawgate'', ''user.association'':
+  ''OWNER'', ''knowledge_base_type'': ''github_issues'', ''knowledge_base'': ''test''},
+  excluded_embed_metadata_keys=[''comment_count'', ''created_at'', ''id'', ''issue'',
+  ''knowledge_base'', ''knowledge_base_type'', ''state'', ''type'', ''updated_at'',
+  ''url'', ''user.login''], excluded_llm_metadata_keys=[''comment_count'', ''created_at'',
+  ''id'', ''issue'', ''knowledge_base'', ''knowledge_base_type'', ''repository'',
+  ''state'', ''title'', ''type'', ''updated_at'', ''url'', ''user.association'', ''user.login''],
+  relationships={<NodeRelationship.CHILD: ''5''>: []}, metadata_template=''{key}:
+  {value}'', metadata_separator=''\n'', text_resource=MediaResource(embeddings=None,
+  data=None, text=''P0'', path=None, url=None, mimetype=None), image_resource=None,
+  audio_resource=None, video_resource=None, text_template=''{metadata_str}\n\n{content}'')'
+- 'Node(id_=''4'', embedding=None, metadata={''repository'': ''strawgate/gemini-for-github-demo'',
+  ''id'': 3054944387, ''issue'': 7, ''type'': ''issue'', ''title'': ''Missing main.go
+  file in project'', ''url'': ''https://api.github.com/repos/strawgate/gemini-for-github-demo/issues/7'',
+  ''state'': ''open'', ''comment_count'': 9, ''created_at'': ''2025-05-11T11:57:07+00:00'',
+  ''updated_at'': ''2025-05-11T17:38:55+00:00'', ''user.login'': ''JAndritsch'', ''user.association'':
+  ''COLLABORATOR'', ''knowledge_base_type'': ''github_issues'', ''knowledge_base'':
+  ''test''}, excluded_embed_metadata_keys=[''comment_count'', ''created_at'', ''id'',
+  ''issue'', ''knowledge_base'', ''knowledge_base_type'', ''state'', ''type'', ''updated_at'',
+  ''url'', ''user.login''], excluded_llm_metadata_keys=[''comment_count'', ''created_at'',
+  ''id'', ''issue'', ''knowledge_base'', ''knowledge_base_type'', ''repository'',
+  ''state'', ''title'', ''type'', ''updated_at'', ''url'', ''user.association'', ''user.login''],
+  relationships={<NodeRelationship.CHILD: ''5''>: []}, metadata_template=''{key}:
+  {value}'', metadata_separator=''\n'', text_resource=MediaResource(embeddings=None,
+  data=None, text=''The `main.go` file is missing from the repo. This file should
+  bootstrap an HTTP server running on port 8080 using Echo. It should also define
+  a root path in the API that renders a 200 response with "ok" as JSON.'', path=None,
+  url=None, mimetype=None), image_resource=None, audio_resource=None, video_resource=None,
+  text_template=''{metadata_str}\n\n{content}'')'
+- 'Node(id_=''5'', embedding=None, metadata={''repository'': ''strawgate/gemini-for-github-demo'',
+  ''id'': 3055020146, ''issue'': 8, ''type'': ''issue'', ''title'': ''Add ASCII art
+  of three cats to README'', ''url'': ''https://api.github.com/repos/strawgate/gemini-for-github-demo/issues/8'',
+  ''state'': ''open'', ''comment_count'': 2, ''created_at'': ''2025-05-11T14:22:21+00:00'',
+  ''updated_at'': ''2025-05-11T17:39:46+00:00'', ''user.login'': ''github-actions[bot]'',
+  ''user.association'': ''CONTRIBUTOR'', ''knowledge_base_type'': ''github_issues'',
+  ''knowledge_base'': ''test''}, excluded_embed_metadata_keys=[''comment_count'',
+  ''created_at'', ''id'', ''issue'', ''knowledge_base'', ''knowledge_base_type'',
+  ''state'', ''type'', ''updated_at'', ''url'', ''user.login''], excluded_llm_metadata_keys=[''comment_count'',
+  ''created_at'', ''id'', ''issue'', ''knowledge_base'', ''knowledge_base_type'',
+  ''repository'', ''state'', ''title'', ''type'', ''updated_at'', ''url'', ''user.association'',
+  ''user.login''], relationships={<NodeRelationship.CHILD: ''5''>: []}, metadata_template=''{key}:
+  {value}'', metadata_separator=''\n'', text_resource=MediaResource(embeddings=None,
+  data=None, text=''This PR addresses issue #6 by adding ASCII art of a small, medium,
+  and large cat to the end of the README.md file.'', path=None, url=None, mimetype=None),
+  image_resource=None, audio_resource=None, video_resource=None, text_template=''{metadata_str}\n\n{content}'')'
+- 'Node(id_=''6'', embedding=None, metadata={''repository'': ''strawgate/gemini-for-github-demo'',
+  ''id'': 3055037795, ''issue'': 9, ''type'': ''issue'', ''title'': ''missing shell
+  script to check if google.com is reachable'', ''url'': ''https://api.github.com/repos/strawgate/gemini-for-github-demo/issues/9'',
+  ''state'': ''open'', ''comment_count'': 6, ''created_at'': ''2025-05-11T14:56:50+00:00'',
+  ''updated_at'': ''2025-05-11T17:36:36+00:00'', ''user.login'': ''strawgate'', ''user.association'':
+  ''OWNER'', ''knowledge_base_type'': ''github_issues'', ''knowledge_base'': ''test''},
+  excluded_embed_metadata_keys=[''comment_count'', ''created_at'', ''id'', ''issue'',
+  ''knowledge_base'', ''knowledge_base_type'', ''state'', ''type'', ''updated_at'',
+  ''url'', ''user.login''], excluded_llm_metadata_keys=[''comment_count'', ''created_at'',
+  ''id'', ''issue'', ''knowledge_base'', ''knowledge_base_type'', ''repository'',
+  ''state'', ''title'', ''type'', ''updated_at'', ''url'', ''user.association'', ''user.login''],
+  relationships={<NodeRelationship.CHILD: ''5''>: []}, metadata_template=''{key}:
+  {value}'', metadata_separator=''\n'', text_resource=MediaResource(embeddings=None,
+  data=None, text='''', path=None, url=None, mimetype=None), image_resource=None,
+  audio_resource=None, video_resource=None, text_template=''{metadata_str}\n\n{content}'')'
+- 'Node(id_=''7'', embedding=None, metadata={''repository'': ''strawgate/gemini-for-github-demo'',
+  ''id'': 3055084083, ''issue'': 10, ''type'': ''issue'', ''title'': "There''s no
+  memecoin related to this project", ''url'': ''https://api.github.com/repos/strawgate/gemini-for-github-demo/issues/10'',
+  ''state'': ''open'', ''comment_count'': 2, ''created_at'': ''2025-05-11T16:31:49+00:00'',
+  ''updated_at'': ''2025-05-11T16:33:20+00:00'', ''user.login'': ''strawgate'', ''user.association'':
+  ''OWNER'', ''knowledge_base_type'': ''github_issues'', ''knowledge_base'': ''test''},
+  excluded_embed_metadata_keys=[''comment_count'', ''created_at'', ''id'', ''issue'',
+  ''knowledge_base'', ''knowledge_base_type'', ''state'', ''type'', ''updated_at'',
+  ''url'', ''user.login''], excluded_llm_metadata_keys=[''comment_count'', ''created_at'',
+  ''id'', ''issue'', ''knowledge_base'', ''knowledge_base_type'', ''repository'',
+  ''state'', ''title'', ''type'', ''updated_at'', ''url'', ''user.association'', ''user.login''],
+  relationships={<NodeRelationship.CHILD: ''5''>: []}, metadata_template=''{key}:
+  {value}'', metadata_separator=''\n'', text_resource=MediaResource(embeddings=None,
+  data=None, text='''', path=None, url=None, mimetype=None), image_resource=None,
+  audio_resource=None, video_resource=None, text_template=''{metadata_str}\n\n{content}'')'
+- 'Node(id_=''8'', embedding=None, metadata={''repository'': ''strawgate/gemini-for-github-demo'',
+  ''id'': 3055084690, ''issue'': 11, ''type'': ''issue'', ''title'': ''What does this
+  demo anyway?'', ''url'': ''https://api.github.com/repos/strawgate/gemini-for-github-demo/issues/11'',
+  ''state'': ''open'', ''comment_count'': 8, ''created_at'': ''2025-05-11T16:33:00+00:00'',
+  ''updated_at'': ''2025-05-12T02:31:49+00:00'', ''user.login'': ''strawgate'', ''user.association'':
+  ''OWNER'', ''knowledge_base_type'': ''github_issues'', ''knowledge_base'': ''test''},
+  excluded_embed_metadata_keys=[''comment_count'', ''created_at'', ''id'', ''issue'',
+  ''knowledge_base'', ''knowledge_base_type'', ''state'', ''type'', ''updated_at'',
+  ''url'', ''user.login''], excluded_llm_metadata_keys=[''comment_count'', ''created_at'',
+  ''id'', ''issue'', ''knowledge_base'', ''knowledge_base_type'', ''repository'',
+  ''state'', ''title'', ''type'', ''updated_at'', ''url'', ''user.association'', ''user.login''],
+  relationships={<NodeRelationship.CHILD: ''5''>: []}, metadata_template=''{key}:
+  {value}'', metadata_separator=''\n'', text_resource=MediaResource(embeddings=None,
+  data=None, text='''', path=None, url=None, mimetype=None), image_resource=None,
+  audio_resource=None, video_resource=None, text_template=''{metadata_str}\n\n{content}'')'
+- 'Node(id_=''9'', embedding=None, metadata={''repository'': ''strawgate/gemini-for-github-demo'',
+  ''id'': 3055117362, ''issue'': 12, ''type'': ''issue'', ''title'': ''Add script
+  to check google.com reachability'', ''url'': ''https://api.github.com/repos/strawgate/gemini-for-github-demo/issues/12'',
+  ''state'': ''open'', ''comment_count'': 0, ''created_at'': ''2025-05-11T17:36:32+00:00'',
+  ''updated_at'': ''2025-05-11T17:36:32+00:00'', ''user.login'': ''github-actions[bot]'',
+  ''user.association'': ''CONTRIBUTOR'', ''knowledge_base_type'': ''github_issues'',
+  ''knowledge_base'': ''test''}, excluded_embed_metadata_keys=[''comment_count'',
+  ''created_at'', ''id'', ''issue'', ''knowledge_base'', ''knowledge_base_type'',
+  ''state'', ''type'', ''updated_at'', ''url'', ''user.login''], excluded_llm_metadata_keys=[''comment_count'',
+  ''created_at'', ''id'', ''issue'', ''knowledge_base'', ''knowledge_base_type'',
+  ''repository'', ''state'', ''title'', ''type'', ''updated_at'', ''url'', ''user.association'',
+  ''user.login''], relationships={<NodeRelationship.CHILD: ''5''>: []}, metadata_template=''{key}:
+  {value}'', metadata_separator=''\n'', text_resource=MediaResource(embeddings=None,
+  data=None, text=''This PR adds the `check_google.sh` script to address issue #9.
+  The script pings google.com and reports whether it is reachable.'', path=None, url=None,
+  mimetype=None), image_resource=None, audio_resource=None, video_resource=None, text_template=''{metadata_str}\n\n{content}'')'
+- 'Node(id_=''10'', embedding=None, metadata={''repository'': ''strawgate/gemini-for-github-demo'',
+  ''id'': 3055118487, ''issue'': 13, ''type'': ''issue'', ''title'': ''feat: Add main.go
+  file to bootstrap server (#7)'', ''url'': ''https://api.github.com/repos/strawgate/gemini-for-github-demo/issues/13'',
+  ''state'': ''open'', ''comment_count'': 7, ''created_at'': ''2025-05-11T17:38:50+00:00'',
+  ''updated_at'': ''2025-05-12T03:10:17+00:00'', ''user.login'': ''github-actions[bot]'',
+  ''user.association'': ''CONTRIBUTOR'', ''knowledge_base_type'': ''github_issues'',
+  ''knowledge_base'': ''test''}, excluded_embed_metadata_keys=[''comment_count'',
+  ''created_at'', ''id'', ''issue'', ''knowledge_base'', ''knowledge_base_type'',
+  ''state'', ''type'', ''updated_at'', ''url'', ''user.login''], excluded_llm_metadata_keys=[''comment_count'',
+  ''created_at'', ''id'', ''issue'', ''knowledge_base'', ''knowledge_base_type'',
+  ''repository'', ''state'', ''title'', ''type'', ''updated_at'', ''url'', ''user.association'',
+  ''user.login''], relationships={<NodeRelationship.CHILD: ''5''>: []}, metadata_template=''{key}:
+  {value}'', metadata_separator=''\n'', text_resource=MediaResource(embeddings=None,
+  data=None, text=''This PR adds the missing `main.go` file as requested in issue
+  #7. This file sets up a basic HTTP server using the Echo framework, listening on
+  port 8080 and providing a root endpoint that returns a JSON response of `{"status":
+  "ok"}`.'', path=None, url=None, mimetype=None), image_resource=None, audio_resource=None,
+  video_resource=None, text_template=''{metadata_str}\n\n{content}'')'
+- 'Node(id_=''11'', embedding=None, metadata={''repository'': ''strawgate/gemini-for-github-demo'',
+  ''id'': 3055118892, ''issue'': 14, ''type'': ''issue'', ''title'': ''Add a bigger
+  cat to README'', ''url'': ''https://api.github.com/repos/strawgate/gemini-for-github-demo/issues/14'',
+  ''state'': ''open'', ''comment_count'': 5, ''created_at'': ''2025-05-11T17:39:41+00:00'',
+  ''updated_at'': ''2025-05-12T03:08:30+00:00'', ''user.login'': ''github-actions[bot]'',
+  ''user.association'': ''CONTRIBUTOR'', ''knowledge_base_type'': ''github_issues'',
+  ''knowledge_base'': ''test''}, excluded_embed_metadata_keys=[''comment_count'',
+  ''created_at'', ''id'', ''issue'', ''knowledge_base'', ''knowledge_base_type'',
+  ''state'', ''type'', ''updated_at'', ''url'', ''user.login''], excluded_llm_metadata_keys=[''comment_count'',
+  ''created_at'', ''id'', ''issue'', ''knowledge_base'', ''knowledge_base_type'',
+  ''repository'', ''state'', ''title'', ''type'', ''updated_at'', ''url'', ''user.association'',
+  ''user.login''], relationships={<NodeRelationship.CHILD: ''5''>: []}, metadata_template=''{key}:
+  {value}'', metadata_separator=''\n'', text_resource=MediaResource(embeddings=None,
+  data=None, text=''This PR adds a bigger cat ASCII art to the README.md file as requested
+  in issue #8.'', path=None, url=None, mimetype=None), image_resource=None, audio_resource=None,
+  video_resource=None, text_template=''{metadata_str}\n\n{content}'')'
+- 'Node(id_=''12'', embedding=None, metadata={''repository'': ''strawgate/gemini-for-github-demo'',
+  ''id'': 3055449402, ''issue'': 15, ''type'': ''issue'', ''title'': ''Is demo maybe
+  an acronym for something?'', ''url'': ''https://api.github.com/repos/strawgate/gemini-for-github-demo/issues/15'',
+  ''state'': ''open'', ''comment_count'': 2, ''created_at'': ''2025-05-12T02:21:58+00:00'',
+  ''updated_at'': ''2025-05-12T02:23:46+00:00'', ''user.login'': ''strawgate'', ''user.association'':
+  ''OWNER'', ''knowledge_base_type'': ''github_issues'', ''knowledge_base'': ''test''},
+  excluded_embed_metadata_keys=[''comment_count'', ''created_at'', ''id'', ''issue'',
+  ''knowledge_base'', ''knowledge_base_type'', ''state'', ''type'', ''updated_at'',
+  ''url'', ''user.login''], excluded_llm_metadata_keys=[''comment_count'', ''created_at'',
+  ''id'', ''issue'', ''knowledge_base'', ''knowledge_base_type'', ''repository'',
+  ''state'', ''title'', ''type'', ''updated_at'', ''url'', ''user.association'', ''user.login''],
+  relationships={<NodeRelationship.CHILD: ''5''>: []}, metadata_template=''{key}:
+  {value}'', metadata_separator=''\n'', text_resource=MediaResource(embeddings=None,
+  data=None, text=''Maybe demo is an acronym?'', path=None, url=None, mimetype=None),
+  image_resource=None, audio_resource=None, video_resource=None, text_template=''{metadata_str}\n\n{content}'')'
+- 'Node(id_=''13'', embedding=None, metadata={''repository'': ''strawgate/gemini-for-github-demo'',
+  ''id'': 3057399769, ''issue'': 17, ''type'': ''issue'', ''title'': ''Just what is
+  this all about anyway?'', ''url'': ''https://api.github.com/repos/strawgate/gemini-for-github-demo/issues/17'',
+  ''state'': ''open'', ''comment_count'': 3, ''created_at'': ''2025-05-12T15:42:05+00:00'',
+  ''updated_at'': ''2025-05-12T19:10:35+00:00'', ''user.login'': ''norrietaylor'',
+  ''user.association'': ''NONE'', ''knowledge_base_type'': ''github_issues'', ''knowledge_base'':
+  ''test''}, excluded_embed_metadata_keys=[''comment_count'', ''created_at'', ''id'',
+  ''issue'', ''knowledge_base'', ''knowledge_base_type'', ''state'', ''type'', ''updated_at'',
+  ''url'', ''user.login''], excluded_llm_metadata_keys=[''comment_count'', ''created_at'',
+  ''id'', ''issue'', ''knowledge_base'', ''knowledge_base_type'', ''repository'',
+  ''state'', ''title'', ''type'', ''updated_at'', ''url'', ''user.association'', ''user.login''],
+  relationships={<NodeRelationship.CHILD: ''5''>: []}, metadata_template=''{key}:
+  {value}'', metadata_separator=''\n'', text_resource=MediaResource(embeddings=None,
+  data=None, text=''/gemini can you summarize this repository and tell me what it
+  is all about anyway? Please inlude information about commits, prs, and issues. Suggest
+  improvements.'', path=None, url=None, mimetype=None), image_resource=None, audio_resource=None,
+  video_resource=None, text_template=''{metadata_str}\n\n{content}'')'
+- 'Node(id_=''14'', embedding=None, metadata={''repository'': ''strawgate/gemini-for-github-demo'',
+  ''id'': 3060357111, ''issue'': 18, ''type'': ''issue'', ''title'': ''Im having issues
+  invoking this project via python -m main.py'', ''url'': ''https://api.github.com/repos/strawgate/gemini-for-github-demo/issues/18'',
+  ''state'': ''open'', ''comment_count'': 0, ''created_at'': ''2025-05-13T14:51:47+00:00'',
+  ''updated_at'': ''2025-05-13T14:51:47+00:00'', ''user.login'': ''strawgate'', ''user.association'':
+  ''OWNER'', ''knowledge_base_type'': ''github_issues'', ''knowledge_base'': ''test''},
+  excluded_embed_metadata_keys=[''comment_count'', ''created_at'', ''id'', ''issue'',
+  ''knowledge_base'', ''knowledge_base_type'', ''state'', ''type'', ''updated_at'',
+  ''url'', ''user.login''], excluded_llm_metadata_keys=[''comment_count'', ''created_at'',
+  ''id'', ''issue'', ''knowledge_base'', ''knowledge_base_type'', ''repository'',
+  ''state'', ''title'', ''type'', ''updated_at'', ''url'', ''user.association'', ''user.login''],
+  relationships={<NodeRelationship.CHILD: ''5''>: []}, metadata_template=''{key}:
+  {value}'', metadata_separator=''\n'', text_resource=MediaResource(embeddings=None,
+  data=None, text=''any ideas?'', path=None, url=None, mimetype=None), image_resource=None,
+  audio_resource=None, video_resource=None, text_template=''{metadata_str}\n\n{content}'')'

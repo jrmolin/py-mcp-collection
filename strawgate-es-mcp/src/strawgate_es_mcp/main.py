@@ -1,4 +1,5 @@
 import asyncio
+from typing import Literal
 
 import asyncclick as click
 from dotenv import load_dotenv
@@ -12,7 +13,8 @@ load_dotenv()
 @click.command()
 @click.option("--es-host", type=str, envvar="ES_HOST", required=False, help="the host of the elasticsearch cluster")
 @click.option("--api-key", type=str, envvar="ES_API_KEY", required=False, help="the api key of the elasticsearch cluster")
-async def cli(es_host: str, api_key: str):
+@click.option("--transport", type=click.Choice(["stdio", "sse"]), default="stdio", help="the transport to use for the MCP")
+async def cli(es_host: str, api_key: str, transport: Literal["stdio", "sse"]):
     es = AsyncElasticsearch(es_host, api_key=api_key)
 
     await es.ping()
@@ -56,6 +58,8 @@ async def cli(es_host: str, api_key: str):
     mcp.add_tool(FunctionTool.from_function(es.indices.get_data_stream))
     mcp.add_tool(FunctionTool.from_function(es.indices.data_streams_stats))
     mcp.add_tool(FunctionTool.from_function(es.indices.resolve_index))
+    mcp.add_tool(FunctionTool.from_function(es.indices.get))
+    mcp.add_tool(FunctionTool.from_function(es.indices.get_mapping))
     mcp.add_tool(FunctionTool.from_function(es.ilm.get_lifecycle))
     mcp.add_tool(FunctionTool.from_function(es.ilm.explain_lifecycle))
     mcp.add_tool(FunctionTool.from_function(es.ilm.get_status))
@@ -64,8 +68,9 @@ async def cli(es_host: str, api_key: str):
     mcp.add_tool(FunctionTool.from_function(es.slm.get_status))
     mcp.add_tool(FunctionTool.from_function(es.shutdown.get_node))
     mcp.add_tool(FunctionTool.from_function(es.search))
+    mcp.add_tool(FunctionTool.from_function(es.esql.query))
 
-    await mcp.run_async()
+    await mcp.run_async(transport=transport)
 
 
 def run_mcp():

@@ -1,0 +1,168 @@
+- node_id: '0'
+  node_depth: 0
+  node_type: Node
+  content_length: 8
+  content: '# Queues'
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/0'
+    headings:
+    - '# Queues'
+  is_isolated: true
+  relationships: {}
+- node_id: '1'
+  node_depth: 0
+  node_type: Node
+  content_length: 167
+  content: |-
+    Pydantic is quite helpful for validating data that goes into and comes out of queues. Below,
+    we'll explore how to validate / serialize data with various queue systems.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/1'
+    headings:
+    - '# Queues'
+  is_isolated: true
+  relationships: {}
+- node_id: '2'
+  node_depth: 0
+  node_type: Node
+  content_length: 14
+  content: '## Redis queue'
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/2'
+    headings:
+    - '# Queues'
+    - '## Redis queue'
+  is_isolated: true
+  relationships: {}
+- node_id: '3'
+  node_depth: 0
+  node_type: Node
+  content_length: 50
+  content: Redis is a popular in-memory data structure store.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/3'
+    headings:
+    - '# Queues'
+    - '## Redis queue'
+  is_isolated: true
+  relationships: {}
+- node_id: '4'
+  node_depth: 0
+  node_type: Node
+  content_length: 106
+  content: |-
+    In order to run this example locally, you'll first need to install Redis
+    and start your server up locally.
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/4'
+    headings:
+    - '# Queues'
+    - '## Redis queue'
+  is_isolated: true
+  relationships: {}
+- node_id: '5'
+  node_depth: 0
+  node_type: Node
+  content_length: 159
+  content: |-
+    Here's a simple example of how you can use Pydantic to:
+    1. Serialize data to push to the queue
+    2. Deserialize and validate data when it's popped from the queue
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/5'
+    headings:
+    - '# Queues'
+    - '## Redis queue'
+  is_isolated: true
+  relationships: {}
+- node_id: '13'
+  node_depth: 1
+  node_type: Node
+  content_length: 1131
+  content: |-
+    ```
+    import redis
+
+    from pydantic import BaseModel, EmailStr
+
+
+    class User(BaseModel):
+      id: int
+      name: str
+      email: EmailStr
+
+
+    r = redis.Redis(host='localhost', port=6379, db=0)
+    QUEUE_NAME = 'user_queue'
+
+
+    def push_to_queue(user_data: User) -> None:
+      serialized_data = user_data.model_dump_json()
+      r.rpush(QUEUE_NAME, user_data.model_dump_json())
+      print(f'Added to queue: {serialized_data}')
+
+
+    user1 = User(id=1, name='John Doe', email='john@example.com')
+    user2 = User(id=2, name='Jane Doe', email='jane@example.com')
+
+    push_to_queue(user1)
+    #> Added to queue: {"id":1,"name":"John Doe","email":"john@example.com"}
+
+    push_to_queue(user2)
+    #> Added to queue: {"id":2,"name":"Jane Doe","email":"jane@example.com"}
+
+
+    def pop_from_queue() -> None:
+      data = r.lpop(QUEUE_NAME)
+
+      if data:
+          user = User.model_validate_json(data)
+          print(f'Validated user: {repr(user)}')
+      else:
+          print('Queue is empty')
+
+
+    pop_from_queue()
+    #> Validated user: User(id=1, name='John Doe', email='john@example.com')...
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/6'
+    headings:
+    - '# Queues'
+    - '## Redis queue'
+  relationships:
+    next: '14'
+    parent: '11'
+    previous: '12'
+- node_id: '7'
+  node_depth: 0
+  node_type: Node
+  content_length: 25
+  content: Thanks for your feedback!
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/7'
+    headings:
+    - '# Queues'
+    - '## Redis queue'
+  is_isolated: true
+  relationships: {}
+- node_id: '8'
+  node_depth: 0
+  node_type: Node
+  content_length: 25
+  content: Thanks for your feedback!
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/8'
+    headings:
+    - '# Queues'
+    - '## Redis queue'
+  is_isolated: true
+  relationships: {}

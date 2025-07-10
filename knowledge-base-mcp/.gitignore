@@ -1,0 +1,4 @@
+storage/*
+./playground
+*.db
+secrets

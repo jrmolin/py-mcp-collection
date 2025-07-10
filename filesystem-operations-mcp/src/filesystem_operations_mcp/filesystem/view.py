@@ -1,34 +1,32 @@
+import asyncio
 import inspect
 import json
-from collections.abc import Awaitable, Callable
-from typing import Annotated, Any
+import time
+from collections.abc import AsyncIterator, Awaitable, Callable
+from typing import Annotated, Any, ClassVar, Self
 
-from makefun import wraps as makefun_wraps
-from pydantic import BaseModel, ConfigDict, Field
+from makefun import wraps as makefun_wraps  # pyright: ignore[reportUnknownVariableType]
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
+from pydantic.fields import computed_field
 
-from filesystem_operations_mcp.filesystem.errors import FilesystemServerResponseTooLargeError, FilesystemServerTooBigToSummarizeError
-from filesystem_operations_mcp.filesystem.mappings.magika_to_tree_sitter import code_mappings
-from filesystem_operations_mcp.filesystem.nodes.directory import DirectoryEntry
-from filesystem_operations_mcp.filesystem.nodes.file import FileEntry
+from filesystem_operations_mcp.filesystem.nodes import FileEntry, FileEntryTypeEnum, FileEntryWithMatches
 from filesystem_operations_mcp.filesystem.summarize.code import summarize_code
+from filesystem_operations_mcp.filesystem.summarize.markdown import summarize_markdown
 from filesystem_operations_mcp.filesystem.summarize.text import summarize_text
+from filesystem_operations_mcp.filesystem.utils.workers import gather_results_from_queue, worker_pool
 from filesystem_operations_mcp.logging import BASE_LOGGER
 
 logger = BASE_LOGGER.getChild("view")
 
-TOO_BIG_TO_SUMMARIZE_ITEMS_THRESHOLD = 300
-TOO_BIG_TO_SUMMARIZE_BYTES_THRESHOLD = 1_000_000
-TOO_BIG_TO_RETURN_BYTES_THRESHOLD = 1_000_000
-TOO_MANY_NAMES_THRESHOLD = 10
+
+MAX_SUMMARY_BYTES = 2000
+ASYNC_READ_THRESHOLD = 1000
 
 
 class FileExportableField(BaseModel):
     """The fields of a file that can be included in the response. Enabling a field will include the field in the response."""
 
-    model_config = ConfigDict(use_attribute_docstrings=True)
-
-    file_path: bool = Field(default=True)
-    """Relative path of the file. For example, `src/mycoolproject/main.py`."""
+    model_config: ClassVar[ConfigDict] = ConfigDict(use_attribute_docstrings=True)
 
     basename: bool = Field(default=False)
     """Basename of the file. For example, `main`."""
@@ -36,45 +34,33 @@ class FileExportableField(BaseModel):
     extension: bool = Field(default=False)
     """Extension of the file. For example, `.py`."""
 
-    file_type: bool = Field(default=True)
-    """File type of the file. For example, `python`."""
+    type: bool = Field(default=True)
+    """Type of the file. For example, `binary`, `text`, `code`, `data`, `unknown`."""
 
     mime_type: bool = Field(default=False)
     """Mime type of the file. For example, `text/plain`."""
 
-    is_binary: bool = Field(default=False)
-    """Include whether the file is binary."""
-
     size: bool = Field(default=True)
     """Size of the file in bytes. """
-
-    read_text: bool = Field(default=False)
-    """Read the contents of the file only if it is text. Do not use if you plan to apply edits to specific lines of the file."""
 
     read: bool = Field(default=False)
     """Read the file as a set of lines. The response will be a dictionary of line numbers to lines of text.
     Will not be included if the file is binary."""
 
-    read_binary_base64: bool = Field(default=False)
-    """Read the contents of the file as base64 encoded binary."""
+    read_lines: int = Field(default=100)
+    """Limit the number of lines to read from the target files."""
 
     preview: bool = Field(default=False)
-    """Include a preview of the file only if it is text."""
+    """Include a preview of the file only if it is text . Preview will be ignored if read or summarize is enabled."""
 
-    limit_preview: int = Field(default=250)
-    """Limit the number of bytes to include in the preview."""
+    preview_lines: int = Field(default=5)
+    """Limit the number of lines to preview from the target files."""
 
-    code_summary: bool = Field(default=False)
-    """Include a summary of the code in the file. Control the number of bytes to include with `limit_summaries`.
-    Code summaries are not supported for calls that return more than 300 results or with files larger than 1MB."""
-
-    text_summary: bool = Field(default=False)
-    """Include a summary of the text in the file. Control the number of bytes to include with `limit_summaries`.
-    Text summaries are not supported for calls that return more than 300 results or with files larger than 1MB.
-    """
-
-    limit_summaries: int = Field(default=2000)
-    """Limit the number of bytes to include in the summaries."""
+    summarize: bool = Field(default=False)
+    """Include a summary of the file.
+    Text summaries will summarize the first 100 lines of the file.
+    Code summaries will summarize the first 2000 lines of the file.
+    Summaries will never return more than 2000 bytes."""
 
     created_at: bool = Field(default=False)
     """Whether to include the creation time of the file."""
@@ -88,248 +74,320 @@ class FileExportableField(BaseModel):
     group: bool = Field(default=False)
     """Whether to include the group of the file."""
 
-    async def _apply_summaries(self, node: FileEntry) -> dict[str, Any]:
-        model = {}
-        if self.code_summary and node.is_code and node.magika_content_type:
-            if await node.size() > TOO_BIG_TO_SUMMARIZE_BYTES_THRESHOLD:
-                model["code_summary"] = None
-                model["code_summary_skipped"] = "Exceeded size limit"
-            else:
-                content_type_to_language = code_mappings.get(node.magika_content_type.label)
-                if content_type_to_language is not None:
-                    summary = summarize_code(content_type_to_language.value, await node.read_text())
-                    as_json = json.dumps(summary)
-                    if len(as_json) > self.limit_summaries:
-                        model["code_summary"] = as_json[: self.limit_summaries]
-                    else:
-                        model["code_summary"] = summary
+    @model_validator(mode="after")
+    def validate_read_limit(self) -> Self:
+        if self.read and self.preview:
+            self.preview = False
 
-        if self.text_summary and node.is_text and node.magika_content_type:
-            if await node.size() > TOO_BIG_TO_SUMMARIZE_BYTES_THRESHOLD:
-                model["text_summary"] = None
-                model["text_summary_skipped"] = "Exceeded size limit"
-            else:
-                summary = summarize_text(await node.read_text())
-                model["text_summary"] = summary[: self.limit_summaries]
+        if self.summarize and self.preview:
+            self.preview = False
 
-        return model
+        return self
 
-    async def _apply_owner_and_group(self, node: FileEntry) -> dict[str, Any]:
-        model = {}
-        if self.owner:
-            model["owner"] = await node.owner()
-        if self.group:
-            model["group"] = await node.group()
-        return model
+    def to_model_dump_include(self) -> set[str]:
+        include: set[str] = set()
 
-    async def _apply_read_preview(self, node: FileEntry) -> dict[str, Any]:
-        model = {}
-        if self.preview and not node.is_binary:
-            model["preview"] = await node.preview_contents(head=self.limit_preview)
-        if self.read_text and not node.is_binary:
-            model["read_text"] = await node.read_text()
-        if self.read and not node.is_binary:
-            model["read"] = (await node.read_lines()).model_dump()
-        if self.read_binary_base64 and node.is_binary:
-            model["read_binary_base64"] = await node.read_binary_base64()
-
-        return model
-
-    async def _apply_file_type(self, node: FileEntry) -> dict[str, Any]:
-        model = {}
-        if self.file_type:
-            model["file_type"] = node.magika_content_type_label
-        if self.mime_type:
-            model["mime_type"] = node.mime_type
-        if self.is_binary:
-            model["is_binary"] = node.is_binary
-        return model
-
-    async def apply(self, node: FileEntry) -> dict[str, Any]:
-        model = {}
-
-        logger.info(f"Applying file fields to {node.file_path}")
-
-        if self.file_path:
-            model["file_path"] = node.file_path
         if self.basename:
-            model["basename"] = node.name
+            include.add("stem")
+
         if self.extension:
-            model["extension"] = node.extension
+            include.add("extension")
+
+        if self.type:
+            include.add("type")
+
+        if self.mime_type:
+            include.add("mime_type")
+
         if self.size:
-            model["size"] = await node.size()
+            include.add("size")
+
+        if self.owner:
+            include.add("owner")
+
+        if self.group:
+            include.add("group")
 
         if self.created_at:
-            model["created_at"] = await node.created_at()
+            include.add("created_at")
+
         if self.modified_at:
-            model["modified_at"] = await node.modified_at()
+            include.add("modified_at")
 
-        model.update(await self._apply_file_type(node))
-        model.update(await self._apply_summaries(node))
-        model.update(await self._apply_owner_and_group(node))
-        model.update(await self._apply_read_preview(node))
+        return include
 
-        # remove null or empty values
-        return {k: v for k, v in model.items() if v not in ("", [], {}, None)}
+    def _apply_code_summary(self, node: FileEntry, lines: list[str]) -> dict[str, Any]:
+        if not node.tree_sitter_language:
+            return {"code_summary_skipped": "Not a summarizable language"}
+
+        summary = summarize_code(node.tree_sitter_language.value, "\n".join(lines))
+        as_json = json.dumps(summary)
+
+        if len(as_json) > MAX_SUMMARY_BYTES:
+            return {"summary": as_json[:MAX_SUMMARY_BYTES]}
+
+        return {"summary": summary}
+
+    def _apply_text_summary(self, lines: list[str]) -> dict[str, Any]:
+        summary = summarize_text("\n".join(lines))
+        return {"summary": summary[:MAX_SUMMARY_BYTES]}
+
+    def _apply_markdown_summary(self, lines: list[str]) -> dict[str, Any]:
+        summary = summarize_markdown("\n".join(lines))
+
+        summary = summarize_text(summary)
+
+        return {"summary": summary[:MAX_SUMMARY_BYTES]}
+
+    def _apply_asciidoc_summary(self, lines: list[str]) -> dict[str, Any]:
+        # Keep lines which start with an alpha character and are not the start of hyperlinks
+        lines = [
+            stripped_line
+            for line in lines
+            if (stripped_line := line.strip()) and stripped_line[0].isalpha() and not stripped_line.startswith("http")  # No wrapping please
+        ]
+
+        if not lines:
+            return {}
+
+        summary = summarize_text("\n".join(lines))
+        return {"summary": summary[:MAX_SUMMARY_BYTES]}
+
+    # def apply(self, node: FileEntry | FileEntryWithMatches) -> dict[str, Any]:
+    #     """Apply the file fields to a file entry."""
+    #     includes: set[str] = self.to_model_dump_include() | {"relative_path_str", "matches", "matches_limit_reached"}
+
+    #     return dict(node.model_dump(include=includes, exclude_none=True).items())
+
+    def apply_read_lines_count(self, node: FileEntry | FileEntryWithMatches) -> int | None:
+        """Get the lines to read from the file."""
+        if node.type == FileEntryTypeEnum.BINARY:
+            return None
+
+        counts: list[int] = []
+
+        if self.summarize and node.type == FileEntryTypeEnum.CODE:
+            counts.append(2000)
+
+        if self.summarize and node.type == FileEntryTypeEnum.TEXT:
+            counts.append(100)
+
+        if self.read:
+            counts.append(self.read_lines)
+
+        if self.preview:
+            counts.append(self.preview_lines)
+
+        return max(counts) if counts else None
+
+    # async def get_lines_for_file(self, node: FileEntry | FileEntryWithMatches, line_count: int) -> FileLines:
+    #     """Get the lines to read from the file."""
+    #     counts: list[int] = []
+
+    #     if self.summarize and node.type == FileEntryTypeEnum.CODE:
+    #         counts.append(1000)
+
+    #     if self.summarize and node.type == FileEntryTypeEnum.TEXT:
+    #         counts.append(100)
+
+    #     if self.read:
+    #         counts.append(self.read_limit)
+
+    #     if self.preview:
+    #         counts.append(self.preview_limit)
+
+    #     return await node.afile_lines(count=line_count)
+
+    def apply(self, node: FileEntry | FileEntryWithMatches) -> tuple[dict[str, Any], int | None]:
+        """Apply the file fields to a file entry."""
+
+        includes: set[str] = self.to_model_dump_include() | {"relative_path_str", "matches", "matches_limit_reached"}
+
+        model = node.model_dump(include=includes, exclude_none=True)
+
+        return model, self.apply_read_lines_count(node)
+
+    async def aapply(self, node: FileEntry | FileEntryWithMatches) -> dict[str, Any]:
+        lines_to_read = self.apply_read_lines_count(node)
+
+        if lines_to_read and lines_to_read < ASYNC_READ_THRESHOLD:
+            file_lines = node.file_lines(count=lines_to_read)
+        else:
+            file_lines = await node.afile_lines(count=lines_to_read)
+
+        if node.type == FileEntryTypeEnum.BINARY or not file_lines:
+            return {}
+
+        model: dict[str, Any] = {
+            "relative_path_str": node.relative_path_str,
+        }
+
+        if self.read:
+            model.update({"read": file_lines.first(self.read_lines).model_dump()})
+
+        if self.preview:
+            model.update({"preview": file_lines.first(self.preview_lines).model_dump()})
+
+        if self.summarize and node.type == FileEntryTypeEnum.CODE:
+            model.update(self._apply_code_summary(node, lines=file_lines.first(1000).lines()))
+
+        if self.summarize and node.type == FileEntryTypeEnum.TEXT:
+            if node.mime_type == "text/markdown":
+                model.update(self._apply_markdown_summary(lines=file_lines.first(100).lines()))
+            elif node.extension == ".asciidoc":
+                model.update(self._apply_asciidoc_summary(lines=file_lines.first(100).lines()))
+            else:
+                model.update(self._apply_text_summary(lines=file_lines.first(100).lines()))
+
+        return model
 
 
-def caller_controlled_file_fields(
-    func: Callable[..., Awaitable[FileEntry | list[FileEntry]]],
-) -> Callable[..., Awaitable[dict[str, Any]]]:
+class ResponseModel(BaseModel):
+    """The response model for the customizable file materializer."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(arbitrary_types_allowed=True, use_attribute_docstrings=True)
+
+    errors: list[str] | bool = Field(default=False, description="An optional error message to include in the response.")
+
+    max_results: int = Field(..., description="The maximum number of results to return.", exclude=True)
+
+    duration: float = Field(default=0, description="The duration of the request in seconds.")
+
+    files: dict[str, Any] = Field(default_factory=dict, description="The files in the response.")
+    """The files in the response."""
+
+    @field_serializer("files")
+    def serialize_files(self, files: dict[str, Any]) -> dict[str, Any]:
+        return dict(sorted(files.items(), key=lambda x: x[0]))
+
+    @computed_field
+    @property
+    def files_count(self) -> int:
+        return len(self.files)
+
+    @computed_field
+    @property
+    def limit_reached(self) -> bool | None:
+        """Whether the limit was reached. If the limit was not reached, return None."""
+        if self.files_count < self.max_results:
+            return None
+
+        return self.files_count >= self.max_results
+
+
+def customizable_file_materializer(
+    func: Callable[..., AsyncIterator[FileEntry | FileEntryWithMatches]],
+) -> Callable[..., Awaitable[ResponseModel]]:
     @makefun_wraps(
         func,
         append_args=[
-            inspect.Parameter("file_fields", inspect.Parameter.KEYWORD_ONLY, default=FileExportableField(), annotation=FileExportableField),
             inspect.Parameter(
-                "include_summaries",
+                "file_fields",
                 inspect.Parameter.KEYWORD_ONLY,
-                default=False,
-                annotation=Annotated[bool, Field(description="Whether to include summaries of each file in the response.")],
+                default=FileExportableField(),
+                annotation=FileExportableField,
+            ),
+            inspect.Parameter(
+                "max_results",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=50,
+                annotation=Annotated[int, Field(description="The maximum number of results to return.")],
             ),
         ],
     )
     async def wrapper(
         file_fields: FileExportableField,
-        include_summaries: bool,
-        *args: Any,
-        **kwargs: Any,
-    ) -> dict[str, Any]:
-        result = await func(*args, **kwargs)
+        max_results: int,
+        *args: Any,  # pyright: ignore[reportAny]
+        **kwargs: Any,  # pyright: ignore[reportAny]
+    ) -> ResponseModel:
+        logger.info(f"Handling request to {func.__name__} with args: {args} and kwargs: {kwargs}")
+        timers: dict[str, float] = {
+            "start": time.perf_counter(),
+        }
 
-        if include_summaries and isinstance(result, list) and len(result) > TOO_BIG_TO_SUMMARIZE_ITEMS_THRESHOLD:
-            raise FilesystemServerTooBigToSummarizeError(result_set_size=len(result), max_size=TOO_BIG_TO_SUMMARIZE_ITEMS_THRESHOLD)
+        errors: list[str] = []
 
-        if include_summaries:
-            file_fields.code_summary = True
-            file_fields.text_summary = True
+        work_queue: asyncio.Queue[FileEntry | FileEntryWithMatches] = asyncio.Queue()
 
-        return_result = {}
+        result_iter: AsyncIterator[FileEntry | FileEntryWithMatches] = func(*args, **kwargs)
 
-        if isinstance(result, list):
-            result = sorted(result, key=lambda x: x.file_path)
-            for node in result:
-                return_result[node.file_path] = await file_fields.apply(node)
-                return_result[node.file_path].pop("file_path", None)
-        else:
-            return_result = await file_fields.apply(result)
+        results_by_path: dict[str, Any] = {}
 
-        if len(json.dumps(return_result)) > TOO_BIG_TO_RETURN_BYTES_THRESHOLD:
-            raise FilesystemServerResponseTooLargeError(
-                response_size=len(json.dumps(return_result)), max_size=TOO_BIG_TO_RETURN_BYTES_THRESHOLD
-            )
+        async for node in result_iter:
+            if max_results and len(results_by_path) >= max_results:
+                logger.info(f"Reached max results: {max_results} for call to {func.__name__} with args: {args} and kwargs: {kwargs}")
+                errors.append(f"Reached max_results {max_results} results. To get more results, refine the query or increase max_results.")
+                break
 
-        return return_result
+            model, line_count = file_fields.apply(node)
+
+            if line_count:
+                work_queue.put_nowait(node)
+
+            results_by_path[node.relative_path_str] = model
+
+        if work_queue.qsize() > 0:
+            result_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+
+            async with worker_pool(file_fields.aapply, work_queue=work_queue, result_queue=result_queue, workers=4) as (
+                work_queue,
+                error_queue,
+            ):
+                pass
+
+            error_results = await gather_results_from_queue(error_queue)
+            errors.extend([str(f"{error_result[0].relative_path_str}: {error_result[1]}") for error_result in error_results])
+
+            for result in await gather_results_from_queue(result_queue):
+                results_by_path.get(result["relative_path_str"], {}).update(result)  # pyright: ignore[reportAny]
+
+        for result in results_by_path.values():  # pyright: ignore[reportAny]
+            _ = result.pop("relative_path_str")  # pyright: ignore[reportAny]
+
+        total_time = time.perf_counter() - timers["start"]
+
+        logger.info(f"Time taken to gather and prepare {len(results_by_path)} files: {total_time} seconds")
+
+        return ResponseModel(files=results_by_path, errors=errors, max_results=max_results, duration=total_time)
 
     return wrapper
 
 
-class DirectoryExportableField(BaseModel):
-    """The fields of a directory that can be included in the response."""
-
-    directory_path: bool = Field(default=True)
-    """The relative path of the directory. For example, `src/mycoolproject`."""
-
-    basename: bool = Field(default=False)
-    """The basename of the directory. For example, `mycoolproject`."""
-
-    files_count: bool = Field(default=False)
-    """The number of files in the directory."""
-
-    directories_count: bool = Field(default=True)
-    """The number of directories in the directory."""
-
-    children_count: bool = Field(default=False)
-    """The number of children of the directory."""
-
-    children: bool = Field(default=False)
-    """The children of the directory. The response will be a list of FileEntry and DirectoryEntry objects."""
-
-    file_names: bool = Field(default=True)
-    """The first 100 names of the files in the directory. The response will be a list of strings."""
-
-    directory_names: bool = Field(default=False)
-    """The first 100 names of the directories in the directory. The response will be a list of strings."""
-
-    created_at: bool = Field(default=False)
-    """The creation time of the directory. For example, `2021-01-01 12:00:00`."""
-
-    modified_at: bool = Field(default=False)
-    """The modification time of the directory. For example, `2021-01-01 12:00:00`."""
-
-    owner: bool = Field(default=False)
-    """The owner of the directory. For example, UID `1000`."""
-
-    group: bool = Field(default=False)
-    """The group of the directory. For example, GID `1000`."""
-
-    async def apply(self, node: DirectoryEntry) -> dict[str, Any]:
-        model = {}
-
-        logger.info(f"Applying directory fields to {node.directory_path}")
-
-        needs_children = any(
-            [self.files_count, self.directories_count, self.children_count, self.children, self.file_names, self.directory_names]
-        )
-        if needs_children:
-            children = await node.children()
-            children = sorted(children, key=lambda x: x.name)
-
-        if self.directory_path:
-            model["directory_path"] = node.directory_path
-        if self.basename:
-            model["basename"] = node.name
-        if self.files_count:
-            model["files_count"] = len([child for child in children if child.is_file])
-        if self.directories_count:
-            model["directories_count"] = len([child for child in children if child.is_dir])
-        if self.children_count:
-            model["children_count"] = len(children)
-        if self.children:
-            model["children"] = children
-        if self.file_names:
-            file_names = [child.name for child in children if child.is_file]
-            model["file_names"] = file_names[:TOO_MANY_NAMES_THRESHOLD]
-            if len(file_names) > TOO_MANY_NAMES_THRESHOLD:
-                model["file_names_error"] = f"Only showing names for {TOO_MANY_NAMES_THRESHOLD} of {len(file_names)} files"
-        if self.directory_names:
-            directory_names = [child.name for child in children if child.is_dir]
-            model["directory_names"] = directory_names[:TOO_MANY_NAMES_THRESHOLD]
-            if len(directory_names) > TOO_MANY_NAMES_THRESHOLD:
-                model["directory_names_error"] = f"Only showing names for {TOO_MANY_NAMES_THRESHOLD} of {len(directory_names)} directories"
-        if self.created_at:
-            model["created_at"] = await node.created_at()
-        if self.modified_at:
-            model["modified_at"] = await node.modified_at()
-        if self.owner:
-            model["owner"] = await node.owner()
-        if self.group:
-            model["group"] = await node.group()
-
-        # remove null or empty values
-        return {k: v for k, v in model.items() if v not in ("", [], {}, None)}
-
-
-def caller_controlled_directory_fields(
-    func: Callable[..., Awaitable[DirectoryEntry | list[DirectoryEntry]]],
+def customizable_file(
+    func: Callable[..., FileEntry | FileEntryWithMatches],
 ) -> Callable[..., Awaitable[dict[str, Any]]]:
     @makefun_wraps(
         func,
-        append_args=inspect.Parameter(
-            "directory_fields", inspect.Parameter.KEYWORD_ONLY, default=DirectoryExportableField(), annotation=DirectoryExportableField
-        ),
+        append_args=[
+            inspect.Parameter(
+                "file_fields",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=FileExportableField(),
+                annotation=FileExportableField,
+            ),
+        ],
     )
-    async def wrapper(directory_fields: DirectoryExportableField, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        result = await func(*args, **kwargs)
+    async def wrapper(
+        file_fields: FileExportableField,
+        *args: Any,  # pyright: ignore[reportAny]
+        **kwargs: Any,  # pyright: ignore[reportAny]
+    ) -> dict[str, Any]:
+        start_time = time.perf_counter()
 
-        if isinstance(result, list):
-            result = sorted(result, key=lambda x: x.directory_path)
-            return_result = {}
-            for node in result:
-                return_result[node.directory_path] = await directory_fields.apply(node)
-                return_result[node.directory_path].pop("directory_path", None)
+        result = func(*args, **kwargs)
 
-            return return_result
+        model, line_count = file_fields.apply(result)
 
-        return await directory_fields.apply(result)
+        if line_count:
+            model = await file_fields.aapply(result)
+
+        model["name"] = result.name
+        model.pop("relative_path_str")
+
+        end_time = time.perf_counter()
+        logger.info(f"Time taken to apply file fields: {end_time - start_time} seconds")
+
+        return model
 
     return wrapper

@@ -1,0 +1,1636 @@
+- node_id: '0'
+  node_depth: 0
+  node_type: Node
+  content_length: 35053
+  content: "# BaseModel\n\nPydantic models are simply classes which inherit from BaseModel\
+    \ and define fields as annotated attributes.\n\n## pydantic.BaseModel\n\xB6\n\n\
+    Usage Documentation\n\nModels\n\nA base class for creating Pydantic models.\n\n\
+    Attributes:\n\n| Name                          | Type                        \
+    \               | Description                                                \
+    \                                                                            \
+    \                           |\n|-------------------------------|--------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|\n\
+    | __class_vars__                | set[str]                                   |\
+    \ The names of the class variables defined on the model.                     \
+    \                                                                            \
+    \           |\n| __private_attributes__        | Dict[..."
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/0'
+    headings:
+    - '# BaseModel'
+  relationships:
+    children:
+    - '1'
+    - '2'
+    - '53'
+- node_id: '1'
+  node_depth: 1
+  node_type: Node
+  content_length: 119
+  content: |-
+    # BaseModel
+
+    Pydantic models are simply classes which inherit from BaseModel and define fields as annotated attributes.
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/0'
+    headings:
+    - '# BaseModel'
+  relationships:
+    next: '2'
+    parent: '0'
+- node_id: '2'
+  node_depth: 1
+  node_type: Node
+  content_length: 29832
+  content: "## pydantic.BaseModel\n\xB6\n\nUsage Documentation\n\nModels\n\nA base\
+    \ class for creating Pydantic models.\n\nAttributes:\n\n| Name               \
+    \           | Type                                       | Description       \
+    \                                                                            \
+    \                                                                    |\n|-------------------------------|--------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|\n\
+    | __class_vars__                | set[str]                                   |\
+    \ The names of the class variables defined on the model.                     \
+    \                                                                            \
+    \           |\n| __private_attributes__        | Dict[str, ModelPrivateAttr] \
+    \               | Metadata about the private attributes of the model.        \
+    \                      ..."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/2'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+  relationships:
+    children:
+    - '3'
+    - '4'
+    - '5'
+    - '6'
+    - '8'
+    - '10'
+    - '12'
+    - '14'
+    - '18'
+    - '21'
+    - '25'
+    - '29'
+    - '33'
+    - '36'
+    - '38'
+    - '42'
+    - '46'
+    - '50'
+    next: '53'
+    parent: '0'
+    previous: '1'
+- node_id: '3'
+  node_depth: 2
+  node_type: Node
+  content_length: 107
+  content: |-
+    ## pydantic.BaseModel
+
+    Usage Documentation
+
+    Models
+
+    A base class for creating Pydantic models.
+
+    Attributes:
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/2'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+  relationships:
+    next: '4'
+    parent: '2'
+- node_id: '4'
+  node_depth: 2
+  node_type: Node
+  content_length: 4859
+  content: |-
+    | Name                          | Type                                       | Description                                                                                                                                                       |
+    |-------------------------------|--------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+    | __class_vars__                | set[str]                                   | The names of the class variables defined on the model.                                                                                                            |
+    | __private_attributes__        | Dict[str, ModelPrivateAttr]                | Metadata about the private attributes of the model.                                                                                                               |
+    | __signature__             ...
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/0'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+  relationships:
+    next: '5'
+    parent: '2'
+    previous: '3'
+- node_id: '5'
+  node_depth: 2
+  node_type: Node
+  content_length: 564
+  content: "Source code in pydantic/main.py\n\n### __init__\n\xB6\n\n```\n__init__(**data:\
+    \ Any) -> None\n```\n\nRaises ValidationError if the input data cannot be\nvalidated\
+    \ to form a valid model.\n\nself is explicitly positional-only to allow self as\
+    \ a field name.\n\nSource code in pydantic/main.py\n\n### model_config\n\nclass-attribute\n\
+    \n\xB6\n\n```\nmodel_config: ConfigDict = ConfigDict()\n```\n\nConfiguration for\
+    \ the model, should be a dictionary conforming to ConfigDict.\n\n### __pydantic_core_schema__\n\
+    \nclass-attribute\n\n\xB6\n\n```\n__pydantic_core_schema__: CoreSchema\n```\n\n\
+    The core schema of the model."
+  metadata:
+    docling_label: section
+    docling_ref: '#/groups/0'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+  relationships:
+    next: '6'
+    parent: '2'
+    previous: '4'
+- node_id: '6'
+  node_depth: 2
+  node_type: Node
+  content_length: 350
+  content: "### model_fields\n\nclassmethod\n\n\xB6\n\n```\nmodel_fields() -> dict[str,\
+    \ FieldInfo]\n```\n\nA mapping of field names to their respective FieldInfo instances.\n\
+    \nWarning\n\nAccessing this attribute from a model instance is deprecated, and\
+    \ will not work in Pydantic V3.\nInstead, you should access this attribute from\
+    \ the model class.\n\nSource code in pydantic/main.py"
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/16'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_fieldsclassmethod'
+  relationships:
+    children:
+    - '7'
+    next: '8'
+    parent: '2'
+    previous: '5'
+- node_id: '7'
+  node_depth: 3
+  node_type: Node
+  content_length: 345
+  content: |-
+    ### model_fieldsclassmethod
+
+    ```
+    model_fields() -> dict[str, FieldInfo]
+    ```
+
+    A mapping of field names to their respective FieldInfo instances.
+
+    Warning
+
+    Accessing this attribute from a model instance is deprecated, and will not work in Pydantic V3.
+    Instead, you should access this attribute from the model class.
+
+    Source code in pydantic/main.py
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/16'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_fieldsclassmethod'
+  relationships:
+    parent: '6'
+- node_id: '8'
+  node_depth: 2
+  node_type: Node
+  content_length: 393
+  content: "### model_computed_fields\n\nclassmethod\n\n\xB6\n\n```\nmodel_computed_fields()\
+    \ -> dict[str, ComputedFieldInfo]\n```\n\nA mapping of computed field names to\
+    \ their respective ComputedFieldInfo instances.\n\nWarning\n\nAccessing this attribute\
+    \ from a model instance is deprecated, and will not work in Pydantic V3.\nInstead,\
+    \ you should access this attribute from the model class.\n\nSource code in pydantic/main.py"
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/22'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_computed_fieldsclassmethod'
+  relationships:
+    children:
+    - '9'
+    next: '10'
+    parent: '2'
+    previous: '6'
+- node_id: '9'
+  node_depth: 3
+  node_type: Node
+  content_length: 388
+  content: |-
+    ### model_computed_fieldsclassmethod
+
+    ```
+    model_computed_fields() -> dict[str, ComputedFieldInfo]
+    ```
+
+    A mapping of computed field names to their respective ComputedFieldInfo instances.
+
+    Warning
+
+    Accessing this attribute from a model instance is deprecated, and will not work in Pydantic V3.
+    Instead, you should access this attribute from the model class.
+
+    Source code in pydantic/main.py
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/22'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_computed_fieldsclassmethod'
+  relationships:
+    parent: '8'
+- node_id: '10'
+  node_depth: 2
+  node_type: Node
+  content_length: 439
+  content: "### model_extra\n\nproperty\n\n\xB6\n\n```\nmodel_extra: dict[str, Any]\
+    \ | None\n```\n\nGet extra fields set during validation.\n\nReturns:\n\n| Type\
+    \                  | Description                                             \
+    \                     |\n|-----------------------|------------------------------------------------------------------------------|\n\
+    | dict[str, Any] | None | A dictionary of extra fields, or None if config.extra\
+    \ is not set to \"allow\". |"
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/31'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_extraproperty'
+  relationships:
+    children:
+    - '11'
+    next: '12'
+    parent: '2'
+    previous: '8'
+- node_id: '11'
+  node_depth: 3
+  node_type: Node
+  content_length: 434
+  content: |-
+    ### model_extraproperty
+
+    ```
+    model_extra: dict[str, Any] | None
+    ```
+
+    Get extra fields set during validation.
+
+    Returns:
+
+    | Type                  | Description                                                                  |
+    |-----------------------|------------------------------------------------------------------------------|
+    | dict[str, Any] | None | A dictionary of extra fields, or None if config.extra is not set to "allow". |
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/31'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_extraproperty'
+  relationships:
+    parent: '10'
+- node_id: '12'
+  node_depth: 2
+  node_type: Node
+  content_length: 512
+  content: "### model_fields_set\n\nproperty\n\n\xB6\n\n```\nmodel_fields_set: set[str]\n\
+    ```\n\nReturns the set of fields that have been explicitly set on this model instance.\n\
+    \nReturns:\n\n| Type     | Description                                       \
+    \                                                    |\n|----------|-------------------------------------------------------------------------------------------------------|\n\
+    | set[str] | A set of strings representing the fields that have been set, i.e.\
+    \ that were not filled from defaults. |"
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/35'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_fields_setproperty'
+  relationships:
+    children:
+    - '13'
+    next: '14'
+    parent: '2'
+    previous: '10'
+- node_id: '13'
+  node_depth: 3
+  node_type: Node
+  content_length: 507
+  content: |-
+    ### model_fields_setproperty
+
+    ```
+    model_fields_set: set[str]
+    ```
+
+    Returns the set of fields that have been explicitly set on this model instance.
+
+    Returns:
+
+    | Type     | Description                                                                                           |
+    |----------|-------------------------------------------------------------------------------------------------------|
+    | set[str] | A set of strings representing the fields that have been set, i.e. that were not filled from defaults. |
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/35'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_fields_setproperty'
+  relationships:
+    parent: '12'
+- node_id: '14'
+  node_depth: 2
+  node_type: Node
+  content_length: 2200
+  content: "### model_construct\n\nclassmethod\n\n\xB6\n\n```\nmodel_construct(\n\
+    \  _fields_set: set[str] | None = None, **values: Any\n) -> Self\n```\n\nCreates\
+    \ a new instance of the Model class with validated data.\n\nCreates a new model\
+    \ setting __dict__ and __pydantic_fields_set__ from trusted or pre-validated data.\n\
+    Default values are respected, but no other validation is performed.\n\nNote\n\n\
+    model_construct() generally respects the model_config.extra setting on the provided\
+    \ model.\nThat is, if model_config.extra == 'allow', then all extra passed values\
+    \ are added to the model instance's __dict__\nand __pydantic_extra__ fields. If\
+    \ model_config.extra == 'ignore' (the default), then all extra passed values are\
+    \ ignored.\nBecause no validation is performed with a call to model_construct(),\
+    \ having model_config.extra == 'forbid' does not result in\nan error if extra\
+    \ values are passed, but they will be ignored.\n\nParameters:\n\n| Name      \
+    \  | Type            | Description                                           \
+    \               ..."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/39'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_constructclassmethod'
+  relationships:
+    children:
+    - '15'
+    - '16'
+    - '17'
+    next: '18'
+    parent: '2'
+    previous: '12'
+- node_id: '15'
+  node_depth: 3
+  node_type: Node
+  content_length: 890
+  content: |-
+    ### model_constructclassmethod
+
+    ```
+    model_construct(
+      _fields_set: set[str] | None = None, **values: Any
+    ) -> Self
+    ```
+
+    Creates a new instance of the Model class with validated data.
+
+    Creates a new model setting __dict__ and __pydantic_fields_set__ from trusted or pre-validated data.
+    Default values are respected, but no other validation is performed.
+
+    Note
+
+    model_construct() generally respects the model_config.extra setting on the provided model.
+    That is, if model_config.extra == 'allow', then all extra passed values are added to the model instance's __dict__
+    and __pydantic_extra__ fields. If model_config.extra == 'ignore' (the default), then all extra passed values are ignored.
+    Because no validation is performed with a call to model_construct(), having model_config.extra == 'forbid' does not result in
+    an error if extra values are passed, but they will be ignored.
+
+    Parameters:
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/39'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_constructclassmethod'
+  relationships:
+    next: '16'
+    parent: '14'
+- node_id: '16'
+  node_depth: 3
+  node_type: Node
+  content_length: 1055
+  content: |-
+    | Name        | Type            | Description                                                                                                                                                                                                             | Default   |
+    |-------------|-----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
+    | _fields_set | set[str] | None | A set of field names that were originally explicitly set during instantiation. If provided, this is directly used for the model_fields_set attribute. Otherwise, the field names from the values argument will be used. | None      |
+    | values      | Any             | Trusted or pre-validated data dictionary.                                                                                                                                     ...
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/7'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_constructclassmethod'
+  relationships:
+    next: '17'
+    parent: '14'
+    previous: '15'
+- node_id: '17'
+  node_depth: 3
+  node_type: Node
+  content_length: 246
+  content: |-
+    Returns:
+
+    | Type   | Description                                            |
+    |--------|--------------------------------------------------------|
+    | Self   | A new instance of the Model class with validated data. |
+
+    Source code in pydantic/main.py
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/46'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_constructclassmethod'
+  relationships:
+    parent: '14'
+    previous: '16'
+- node_id: '18'
+  node_depth: 2
+  node_type: Node
+  content_length: 1262
+  content: "### model_copy\n\xB6\n\n```\nmodel_copy(\n  *,\n  update: Mapping[str,\
+    \ Any] | None = None,\n  deep: bool = False\n) -> Self\n```\n\nUsage Documentation\n\
+    \nmodel_copy\n\nReturns a copy of the model.\n\nNote\n\nThe underlying instance's\
+    \ __dict__ attribute is copied. This\nmight have unexpected side effects if you\
+    \ store anything in it, on top of the model\nfields (e.g. the value of cached\
+    \ properties).\n\nParameters:\n\n| Name   | Type                     | Description\
+    \                                                                            \
+    \                                           | Default   |\n|--------|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------|-----------|\n\
+    | update | Mapping[str, Any] | None | Values to change/add in the new model. Note:\
+    \ the data is not validated before creating the new model. You should trust this\
+    \ data. | None      |\n| deep   | bool                     | Set to True to make\
+    \ a de..."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/48'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_copy'
+  relationships:
+    children:
+    - '19'
+    - '20'
+    next: '21'
+    parent: '2'
+    previous: '14'
+- node_id: '19'
+  node_depth: 3
+  node_type: Node
+  content_length: 388
+  content: |-
+    ### model_copy
+
+    ```
+    model_copy(
+      *,
+      update: Mapping[str, Any] | None = None,
+      deep: bool = False
+    ) -> Self
+    ```
+
+    Usage Documentation
+
+    model_copy
+
+    Returns a copy of the model.
+
+    Note
+
+    The underlying instance's __dict__ attribute is copied. This
+    might have unexpected side effects if you store anything in it, on top of the model
+    fields (e.g. the value of cached properties).
+
+    Parameters:
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/48'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_copy'
+  relationships:
+    next: '20'
+    parent: '18'
+- node_id: '20'
+  node_depth: 3
+  node_type: Node
+  content_length: 870
+  content: |-
+    | Name   | Type                     | Description                                                                                                                       | Default   |
+    |--------|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------|-----------|
+    | update | Mapping[str, Any] | None | Values to change/add in the new model. Note: the data is not validated before creating the new model. You should trust this data. | None      |
+    | deep   | bool                     | Set to True to make a deep copy of the model.                                                                                     | False     |
+
+    Returns:
+
+    | Type   | Description         |
+    |--------|---------------------|
+    | Self   | New model instance. |
+
+    Source code in pydantic/main.py
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/10'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_copy'
+  relationships:
+    parent: '18'
+    previous: '19'
+- node_id: '21'
+  node_depth: 2
+  node_type: Node
+  content_length: 4714
+  content: "### model_dump\n\xB6\n\n```\nmodel_dump(\n  *,\n  mode: Literal[\"json\"\
+    , \"python\"] | str = \"python\",\n  include: IncEx | None = None,\n  exclude:\
+    \ IncEx | None = None,\n  context: Any | None = None,\n  by_alias: bool | None\
+    \ = None,\n  exclude_unset: bool = False,\n  exclude_defaults: bool = False,\n\
+    \  exclude_none: bool = False,\n  round_trip: bool = False,\n  warnings: (\n \
+    \     bool | Literal[\"none\", \"warn\", \"error\"]\n  ) = True,\n  fallback:\
+    \ Callable[[Any], Any] | None = None,\n  serialize_as_any: bool = False\n) ->\
+    \ dict[str, Any]\n```\n\nUsage Documentation\n\nmodel_dump\n\nGenerate a dictionary\
+    \ representation of the model, optionally specifying which fields to include or\
+    \ exclude.\n\nParameters:\n\n| Name             | Type                       \
+    \             | Description                                                  \
+    \                                                                            \
+    \                                                          | Default   |\n|------------------|----------------------------------..."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/58'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_dump'
+  relationships:
+    children:
+    - '22'
+    - '23'
+    - '24'
+    next: '25'
+    parent: '2'
+    previous: '18'
+- node_id: '22'
+  node_depth: 3
+  node_type: Node
+  content_length: 670
+  content: |-
+    ### model_dump
+
+    ```
+    model_dump(
+      *,
+      mode: Literal["json", "python"] | str = "python",
+      include: IncEx | None = None,
+      exclude: IncEx | None = None,
+      context: Any | None = None,
+      by_alias: bool | None = None,
+      exclude_unset: bool = False,
+      exclude_defaults: bool = False,
+      exclude_none: bool = False,
+      round_trip: bool = False,
+      warnings: (
+          bool | Literal["none", "warn", "error"]
+      ) = True,
+      fallback: Callable[[Any], Any] | None = None,
+      serialize_as_any: bool = False
+    ) -> dict[str, Any]
+    ```
+
+    Usage Documentation
+
+    model_dump
+
+    Generate a dictionary representation of the model, optionally specifying which fields to include or exclude.
+
+    Parameters:
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/58'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_dump'
+  relationships:
+    next: '23'
+    parent: '21'
+- node_id: '23'
+  node_depth: 3
+  node_type: Node
+  content_length: 3807
+  content: |-
+    | Name             | Type                                    | Description                                                                                                                                                                                        | Default   |
+    |------------------|-----------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
+    | mode             | Literal['json', 'python'] | str         | The mode in which to_python should run. If mode is 'json', the output will only contain JSON serializable types. If mode is 'python', the output may contain non-JSON-serializable Python objects. | 'python'  |
+    | include          | IncEx | None                            | A set of fields to include in the output.                                                                                ...
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/13'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_dump'
+  relationships:
+    next: '24'
+    parent: '21'
+    previous: '22'
+- node_id: '24'
+  node_depth: 3
+  node_type: Node
+  content_length: 231
+  content: |-
+    Returns:
+
+    | Type           | Description                               |
+    |----------------|-------------------------------------------|
+    | dict[str, Any] | A dictionary representation of the model. |
+
+    Source code in pydantic/main.py
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/64'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_dump'
+  relationships:
+    parent: '21'
+    previous: '23'
+- node_id: '25'
+  node_depth: 2
+  node_type: Node
+  content_length: 4240
+  content: "### model_dump_json\n\xB6\n\n```\nmodel_dump_json(\n  *,\n  indent: int\
+    \ | None = None,\n  ensure_ascii: bool = False,\n  include: IncEx | None = None,\n\
+    \  exclude: IncEx | None = None,\n  context: Any | None = None,\n  by_alias: bool\
+    \ | None = None,\n  exclude_unset: bool = False,\n  exclude_defaults: bool = False,\n\
+    \  exclude_none: bool = False,\n  round_trip: bool = False,\n  warnings: (\n \
+    \     bool | Literal[\"none\", \"warn\", \"error\"]\n  ) = True,\n  fallback:\
+    \ Callable[[Any], Any] | None = None,\n  serialize_as_any: bool = False\n) ->\
+    \ str\n```\n\nUsage Documentation\n\nmodel_dump_json\n\nGenerates a JSON representation\
+    \ of the model using Pydantic's to_json method.\n\nParameters:\n\n| Name     \
+    \        | Type                                    | Description             \
+    \                                                                            \
+    \                                                | Default   |\n|------------------|-----------------------------------------|-----------------------------------------------------------..."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/66'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_dump_json'
+  relationships:
+    children:
+    - '26'
+    - '27'
+    - '28'
+    next: '29'
+    parent: '2'
+    previous: '21'
+- node_id: '26'
+  node_depth: 3
+  node_type: Node
+  content_length: 650
+  content: |-
+    ### model_dump_json
+
+    ```
+    model_dump_json(
+      *,
+      indent: int | None = None,
+      ensure_ascii: bool = False,
+      include: IncEx | None = None,
+      exclude: IncEx | None = None,
+      context: Any | None = None,
+      by_alias: bool | None = None,
+      exclude_unset: bool = False,
+      exclude_defaults: bool = False,
+      exclude_none: bool = False,
+      round_trip: bool = False,
+      warnings: (
+          bool | Literal["none", "warn", "error"]
+      ) = True,
+      fallback: Callable[[Any], Any] | None = None,
+      serialize_as_any: bool = False
+    ) -> str
+    ```
+
+    Usage Documentation
+
+    model_dump_json
+
+    Generates a JSON representation of the model using Pydantic's to_json method.
+
+    Parameters:
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/66'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_dump_json'
+  relationships:
+    next: '27'
+    parent: '25'
+- node_id: '27'
+  node_depth: 3
+  node_type: Node
+  content_length: 3374
+  content: |-
+    | Name             | Type                                    | Description                                                                                                                                         | Default   |
+    |------------------|-----------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
+    | indent           | int | None                              | Indentation to use in the JSON output. If None is passed, the output will be compact.                                                               | None      |
+    | ensure_ascii     | bool                                    | If True, the output is guaranteed to have all incoming non-ASCII characters escaped. If False (the default), these characters will be output as-is. | False     |
+    | include          | IncEx | None                            | Field(s) to include in the JSON outpu...
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/16'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_dump_json'
+  relationships:
+    next: '28'
+    parent: '25'
+    previous: '26'
+- node_id: '28'
+  node_depth: 3
+  node_type: Node
+  content_length: 210
+  content: |-
+    Returns:
+
+    | Type   | Description                                |
+    |--------|--------------------------------------------|
+    | str    | A JSON string representation of the model. |
+
+    Source code in pydantic/main.py
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/72'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_dump_json'
+  relationships:
+    parent: '25'
+    previous: '27'
+- node_id: '29'
+  node_depth: 2
+  node_type: Node
+  content_length: 1746
+  content: "### model_json_schema\n\nclassmethod\n\n\xB6\n\n```\nmodel_json_schema(\n\
+    \  by_alias: bool = True,\n  ref_template: str = DEFAULT_REF_TEMPLATE,\n  schema_generator:\
+    \ type[\n      GenerateJsonSchema\n  ] = GenerateJsonSchema,\n  mode: JsonSchemaMode\
+    \ = \"validation\",\n) -> dict[str, Any]\n```\n\nGenerates a JSON schema for a\
+    \ model class.\n\nParameters:\n\n| Name             | Type                   \
+    \  | Description                                                             \
+    \                                                    | Default              |\n\
+    |------------------|--------------------------|-----------------------------------------------------------------------------------------------------------------------------|----------------------|\n\
+    | by_alias         | bool                     | Whether to use attribute aliases\
+    \ or not.                                                                    \
+    \                | True                 |\n| ref_template     | str          \
+    \            | The reference template.         ..."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/74'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_json_schemaclassmethod'
+  relationships:
+    children:
+    - '30'
+    - '31'
+    - '32'
+    next: '33'
+    parent: '2'
+    previous: '25'
+- node_id: '30'
+  node_depth: 3
+  node_type: Node
+  content_length: 322
+  content: |-
+    ### model_json_schemaclassmethod
+
+    ```
+    model_json_schema(
+      by_alias: bool = True,
+      ref_template: str = DEFAULT_REF_TEMPLATE,
+      schema_generator: type[
+          GenerateJsonSchema
+      ] = GenerateJsonSchema,
+      mode: JsonSchemaMode = "validation",
+    ) -> dict[str, Any]
+    ```
+
+    Generates a JSON schema for a model class.
+
+    Parameters:
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/74'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_json_schemaclassmethod'
+  relationships:
+    next: '31'
+    parent: '29'
+- node_id: '31'
+  node_depth: 3
+  node_type: Node
+  content_length: 1181
+  content: |-
+    | Name             | Type                     | Description                                                                                                                 | Default              |
+    |------------------|--------------------------|-----------------------------------------------------------------------------------------------------------------------------|----------------------|
+    | by_alias         | bool                     | Whether to use attribute aliases or not.                                                                                    | True                 |
+    | ref_template     | str                      | The reference template.                                                                                                     | DEFAULT_REF_TEMPLATE |
+    | schema_generator | type[GenerateJsonSchema] | To override the logic used to generate the JSON schema, as a subclass of GenerateJsonSchema with your desired modifications | GenerateJsonSchema   |
+    | mode         ...
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/19'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_json_schemaclassmethod'
+  relationships:
+    next: '32'
+    parent: '29'
+    previous: '30'
+- node_id: '32'
+  node_depth: 3
+  node_type: Node
+  content_length: 234
+  content: |-
+    Returns:
+
+    | Type           | Description                                |
+    |----------------|--------------------------------------------|
+    | dict[str, Any] | The JSON schema for the given model class. |
+
+    Source code in pydantic/main.py
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/78'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_json_schemaclassmethod'
+  relationships:
+    parent: '29'
+    previous: '31'
+- node_id: '33'
+  node_depth: 2
+  node_type: Node
+  content_length: 1531
+  content: "### model_parametrized_name\n\nclassmethod\n\n\xB6\n\n```\nmodel_parametrized_name(\n\
+    \  params: tuple[type[Any], ...]\n) -> str\n```\n\nCompute the class name for\
+    \ parametrizations of generic classes.\n\nThis method can be overridden to achieve\
+    \ a custom naming scheme for generic BaseModels.\n\nParameters:\n\n| Name   |\
+    \ Type                  | Description                                        \
+    \                                                                            \
+    \                                      | Default   |\n|--------|-----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|\n\
+    | params | tuple[type[Any], ...] | Tuple of types of the class. Given a generic\
+    \ class Model with 2 type variables and a concrete model Model[str, int], the\
+    \ value (str, int) would be passed to params. | required  |\n\nReturns:\n\n| Type\
+    \   | Description                                      ..."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/80'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_parametrized_nameclassmethod'
+  relationships:
+    children:
+    - '34'
+    - '35'
+    next: '36'
+    parent: '2'
+    previous: '29'
+- node_id: '34'
+  node_depth: 3
+  node_type: Node
+  content_length: 933
+  content: |-
+    ### model_parametrized_nameclassmethod
+
+    ```
+    model_parametrized_name(
+      params: tuple[type[Any], ...]
+    ) -> str
+    ```
+
+    Compute the class name for parametrizations of generic classes.
+
+    This method can be overridden to achieve a custom naming scheme for generic BaseModels.
+
+    Parameters:
+
+    | Name   | Type                  | Description                                                                                                                                                          | Default   |
+    |--------|-----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
+    | params | tuple[type[Any], ...] | Tuple of types of the class. Given a generic class Model with 2 type variables and a concrete model Model[str, int], the value (str, int) would be passed to params. | required  |
+
+    Returns:
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/80'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_parametrized_nameclassmethod'
+  relationships:
+    next: '35'
+    parent: '33'
+- node_id: '35'
+  node_depth: 3
+  node_type: Node
+  content_length: 591
+  content: |-
+    | Type   | Description                                                                         |
+    |--------|-------------------------------------------------------------------------------------|
+    | str    | String representing the new class where params are passed to cls as type variables. |
+
+    Raises:
+
+    | Type      | Description                                                           |
+    |-----------|-----------------------------------------------------------------------|
+    | TypeError | Raised when trying to generate concrete names for non-generic models. |
+
+    Source code in pydantic/main.py
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/23'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_parametrized_nameclassmethod'
+  relationships:
+    parent: '33'
+    previous: '34'
+- node_id: '36'
+  node_depth: 2
+  node_type: Node
+  content_length: 295
+  content: "### model_post_init\n\xB6\n\n```\nmodel_post_init(context: Any) -> None\n\
+    ```\n\nOverride this method to perform additional initialization after __init__\
+    \ and model_construct.\nThis is useful if you want to do some validation that\
+    \ requires the entire model to be initialized.\n\nSource code in pydantic/main.py"
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/88'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_post_init'
+  relationships:
+    children:
+    - '37'
+    next: '38'
+    parent: '2'
+    previous: '33'
+- node_id: '37'
+  node_depth: 3
+  node_type: Node
+  content_length: 293
+  content: |-
+    ### model_post_init
+
+    ```
+    model_post_init(context: Any) -> None
+    ```
+
+    Override this method to perform additional initialization after __init__ and model_construct.
+    This is useful if you want to do some validation that requires the entire model to be initialized.
+
+    Source code in pydantic/main.py
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/88'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_post_init'
+  relationships:
+    parent: '36'
+- node_id: '38'
+  node_depth: 2
+  node_type: Node
+  content_length: 1771
+  content: "### model_rebuild\n\nclassmethod\n\n\xB6\n\n```\nmodel_rebuild(\n  *,\n\
+    \  force: bool = False,\n  raise_errors: bool = True,\n  _parent_namespace_depth:\
+    \ int = 2,\n  _types_namespace: MappingNamespace | None = None\n) -> bool | None\n\
+    ```\n\nTry to rebuild the pydantic-core schema for the model.\n\nThis may be necessary\
+    \ when one of the annotations is a ForwardRef which could not be resolved during\n\
+    the initial attempt to build the schema, and automatic rebuilding fails.\n\nParameters:\n\
+    \n| Name                    | Type                    | Description          \
+    \                                                   | Default   |\n|-------------------------|-------------------------|-------------------------------------------------------------------------|-----------|\n\
+    | force                   | bool                    | Whether to force the rebuilding\
+    \ of the model schema, defaults to False. | False     |\n| raise_errors      \
+    \      | bool                    | Whether to raise errors, defaults to True.\
+    \                    ..."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/92'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_rebuildclassmethod'
+  relationships:
+    children:
+    - '39'
+    - '40'
+    - '41'
+    next: '42'
+    parent: '2'
+    previous: '36'
+- node_id: '39'
+  node_depth: 3
+  node_type: Node
+  content_length: 457
+  content: |-
+    ### model_rebuildclassmethod
+
+    ```
+    model_rebuild(
+      *,
+      force: bool = False,
+      raise_errors: bool = True,
+      _parent_namespace_depth: int = 2,
+      _types_namespace: MappingNamespace | None = None
+    ) -> bool | None
+    ```
+
+    Try to rebuild the pydantic-core schema for the model.
+
+    This may be necessary when one of the annotations is a ForwardRef which could not be resolved during
+    the initial attempt to build the schema, and automatic rebuilding fails.
+
+    Parameters:
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/92'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_rebuildclassmethod'
+  relationships:
+    next: '40'
+    parent: '38'
+- node_id: '40'
+  node_depth: 3
+  node_type: Node
+  content_length: 849
+  content: |-
+    | Name                    | Type                    | Description                                                             | Default   |
+    |-------------------------|-------------------------|-------------------------------------------------------------------------|-----------|
+    | force                   | bool                    | Whether to force the rebuilding of the model schema, defaults to False. | False     |
+    | raise_errors            | bool                    | Whether to raise errors, defaults to True.                              | True      |
+    | _parent_namespace_depth | int                     | The depth level of the parent namespace, defaults to 2.                 | 2         |
+    | _types_namespace        | MappingNamespace | None | The types namespace, defaults to None.                                  | None      |
+
+    Returns:
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/27'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_rebuildclassmethod'
+  relationships:
+    next: '41'
+    parent: '38'
+    previous: '39'
+- node_id: '41'
+  node_depth: 3
+  node_type: Node
+  content_length: 456
+  content: |-
+    | Type        | Description                                                                             |
+    |-------------|-----------------------------------------------------------------------------------------|
+    | bool | None | Returns None if the schema is already "complete" and rebuilding was not required.       |
+    | bool | None | If rebuilding was required, returns True if rebuilding was successful, otherwise False. |
+
+    Source code in pydantic/main.py
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/28'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_rebuildclassmethod'
+  relationships:
+    parent: '38'
+    previous: '40'
+- node_id: '42'
+  node_depth: 2
+  node_type: Node
+  content_length: 1701
+  content: "### model_validate\n\nclassmethod\n\n\xB6\n\n```\nmodel_validate(\n  obj:\
+    \ Any,\n  *,\n  strict: bool | None = None,\n  from_attributes: bool | None =\
+    \ None,\n  context: Any | None = None,\n  by_alias: bool | None = None,\n  by_name:\
+    \ bool | None = None\n) -> Self\n```\n\nValidate a pydantic model instance.\n\n\
+    Parameters:\n\n| Name            | Type        | Description                 \
+    \                                                      | Default   |\n|-----------------|-------------|-----------------------------------------------------------------------------------|-----------|\n\
+    | obj             | Any         | The object to validate.                    \
+    \                                       | required  |\n| strict          | bool\
+    \ | None | Whether to enforce types strictly.                                \
+    \                | None      |\n| from_attributes | bool | None | Whether to extract\
+    \ data from object attributes.                                   | None      |\n\
+    | context         | Any | None  | Additional contex..."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/99'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_validateclassmethod'
+  relationships:
+    children:
+    - '43'
+    - '44'
+    - '45'
+    next: '46'
+    parent: '2'
+    previous: '38'
+- node_id: '43'
+  node_depth: 3
+  node_type: Node
+  content_length: 292
+  content: |-
+    ### model_validateclassmethod
+
+    ```
+    model_validate(
+      obj: Any,
+      *,
+      strict: bool | None = None,
+      from_attributes: bool | None = None,
+      context: Any | None = None,
+      by_alias: bool | None = None,
+      by_name: bool | None = None
+    ) -> Self
+    ```
+
+    Validate a pydantic model instance.
+
+    Parameters:
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/99'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_validateclassmethod'
+  relationships:
+    next: '44'
+    parent: '42'
+- node_id: '44'
+  node_depth: 3
+  node_type: Node
+  content_length: 1039
+  content: |-
+    | Name            | Type        | Description                                                                       | Default   |
+    |-----------------|-------------|-----------------------------------------------------------------------------------|-----------|
+    | obj             | Any         | The object to validate.                                                           | required  |
+    | strict          | bool | None | Whether to enforce types strictly.                                                | None      |
+    | from_attributes | bool | None | Whether to extract data from object attributes.                                   | None      |
+    | context         | Any | None  | Additional context to pass to the validator.                                      | None      |
+    | by_alias        | bool | None | Whether to use the field's alias when validating against the provided input data. | None      |
+    | by_name         | bool | None | Whether to use the field's name when validating against ...
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/30'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_validateclassmethod'
+  relationships:
+    next: '45'
+    parent: '42'
+    previous: '43'
+- node_id: '45'
+  node_depth: 3
+  node_type: Node
+  content_length: 361
+  content: |-
+    Raises:
+
+    | Type            | Description                           |
+    |-----------------|---------------------------------------|
+    | ValidationError | If the object could not be validated. |
+
+    Returns:
+
+    | Type   | Description                   |
+    |--------|-------------------------------|
+    | Self   | The validated model instance. |
+
+    Source code in pydantic/main.py
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/103'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_validateclassmethod'
+  relationships:
+    parent: '42'
+    previous: '44'
+- node_id: '46'
+  node_depth: 2
+  node_type: Node
+  content_length: 1768
+  content: "### model_validate_json\n\nclassmethod\n\n\xB6\n\n```\nmodel_validate_json(\n\
+    \  json_data: str | bytes | bytearray,\n  *,\n  strict: bool | None = None,\n\
+    \  context: Any | None = None,\n  by_alias: bool | None = None,\n  by_name: bool\
+    \ | None = None\n) -> Self\n```\n\nUsage Documentation\n\nJSON Parsing\n\nValidate\
+    \ the given JSON data against the Pydantic model.\n\nParameters:\n\n| Name   \
+    \   | Type                    | Description                                  \
+    \                                     | Default   |\n|-----------|-------------------------|-----------------------------------------------------------------------------------|-----------|\n\
+    | json_data | str | bytes | bytearray | The JSON data to validate.           \
+    \                                             | required  |\n| strict    | bool\
+    \ | None             | Whether to enforce types strictly.                    \
+    \                            | None      |\n| context   | Any | None         \
+    \     | Extra variables to pass to the validator.                       ..."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/106'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_validate_jsonclassmethod'
+  relationships:
+    children:
+    - '47'
+    - '48'
+    - '49'
+    next: '50'
+    parent: '2'
+    previous: '42'
+- node_id: '47'
+  node_depth: 3
+  node_type: Node
+  content_length: 345
+  content: |-
+    ### model_validate_jsonclassmethod
+
+    ```
+    model_validate_json(
+      json_data: str | bytes | bytearray,
+      *,
+      strict: bool | None = None,
+      context: Any | None = None,
+      by_alias: bool | None = None,
+      by_name: bool | None = None
+    ) -> Self
+    ```
+
+    Usage Documentation
+
+    JSON Parsing
+
+    Validate the given JSON data against the Pydantic model.
+
+    Parameters:
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/106'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_validate_jsonclassmethod'
+  relationships:
+    next: '48'
+    parent: '46'
+- node_id: '48'
+  node_depth: 3
+  node_type: Node
+  content_length: 961
+  content: |-
+    | Name      | Type                    | Description                                                                       | Default   |
+    |-----------|-------------------------|-----------------------------------------------------------------------------------|-----------|
+    | json_data | str | bytes | bytearray | The JSON data to validate.                                                        | required  |
+    | strict    | bool | None             | Whether to enforce types strictly.                                                | None      |
+    | context   | Any | None              | Extra variables to pass to the validator.                                         | None      |
+    | by_alias  | bool | None             | Whether to use the field's alias when validating against the provided input data. | None      |
+    | by_name   | bool | None             | Whether to use the field's name when validating against the provided input data.  | None      |
+
+    Returns:
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/34'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_validate_jsonclassmethod'
+  relationships:
+    next: '49'
+    parent: '46'
+    previous: '47'
+- node_id: '49'
+  node_depth: 3
+  node_type: Node
+  content_length: 453
+  content: |-
+    | Type   | Description                   |
+    |--------|-------------------------------|
+    | Self   | The validated Pydantic model. |
+
+    Raises:
+
+    | Type            | Description                                                             |
+    |-----------------|-------------------------------------------------------------------------|
+    | ValidationError | If json_data is not a JSON string or the object could not be validated. |
+
+    Source code in pydantic/main.py
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/35'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_validate_jsonclassmethod'
+  relationships:
+    parent: '46'
+    previous: '48'
+- node_id: '50'
+  node_depth: 2
+  node_type: Node
+  content_length: 1344
+  content: "### model_validate_strings\n\nclassmethod\n\n\xB6\n\n```\nmodel_validate_strings(\n\
+    \  obj: Any,\n  *,\n  strict: bool | None = None,\n  context: Any | None = None,\n\
+    \  by_alias: bool | None = None,\n  by_name: bool | None = None\n) -> Self\n```\n\
+    \nValidate the given object with string data against the Pydantic model.\n\nParameters:\n\
+    \n| Name     | Type        | Description                                     \
+    \                                  | Default   |\n|----------|-------------|-----------------------------------------------------------------------------------|-----------|\n\
+    | obj      | Any         | The object containing string data to validate.    \
+    \                                | required  |\n| strict   | bool | None | Whether\
+    \ to enforce types strictly.                                                |\
+    \ None      |\n| context  | Any | None  | Extra variables to pass to the validator.\
+    \                                         | None      |\n| by_alias | bool | None\
+    \ | Whether to use the field's alias when validatin..."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/115'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_validate_stringsclassmethod'
+  relationships:
+    children:
+    - '51'
+    - '52'
+    parent: '2'
+    previous: '46'
+- node_id: '51'
+  node_depth: 3
+  node_type: Node
+  content_length: 304
+  content: |-
+    ### model_validate_stringsclassmethod
+
+    ```
+    model_validate_strings(
+      obj: Any,
+      *,
+      strict: bool | None = None,
+      context: Any | None = None,
+      by_alias: bool | None = None,
+      by_name: bool | None = None
+    ) -> Self
+    ```
+
+    Validate the given object with string data against the Pydantic model.
+
+    Parameters:
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/115'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_validate_stringsclassmethod'
+  relationships:
+    next: '52'
+    parent: '50'
+- node_id: '52'
+  node_depth: 3
+  node_type: Node
+  content_length: 1033
+  content: |-
+    | Name     | Type        | Description                                                                       | Default   |
+    |----------|-------------|-----------------------------------------------------------------------------------|-----------|
+    | obj      | Any         | The object containing string data to validate.                                    | required  |
+    | strict   | bool | None | Whether to enforce types strictly.                                                | None      |
+    | context  | Any | None  | Extra variables to pass to the validator.                                         | None      |
+    | by_alias | bool | None | Whether to use the field's alias when validating against the provided input data. | None      |
+    | by_name  | bool | None | Whether to use the field's name when validating against the provided input data.  | None      |
+
+    Returns:
+
+    | Type   | Description                   |
+    |--------|-------------------------------|
+    | Self   | The validated Pydantic model. |...
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/38'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.BaseModel'
+    - '### model_validate_stringsclassmethod'
+  relationships:
+    parent: '50'
+    previous: '51'
+- node_id: '53'
+  node_depth: 1
+  node_type: Node
+  content_length: 5098
+  content: "## pydantic.create_model\n\xB6\n\n```\ncreate_model(\n  model_name: str,\n\
+    \  /,\n  *,\n  __config__: ConfigDict | None = None,\n  __doc__: str | None =\
+    \ None,\n  __base__: None = None,\n  __module__: str = __name__,\n  __validators__:\
+    \ (\n      dict[str, Callable[..., Any]] | None\n  ) = None,\n  __cls_kwargs__:\
+    \ dict[str, Any] | None = None,\n  **field_definitions: Any | tuple[str, Any],\n\
+    ) -> type[BaseModel]\n```\n\n```\ncreate_model(\n  model_name: str,\n  /,\n  *,\n\
+    \  __config__: ConfigDict | None = None,\n  __doc__: str | None = None,\n  __base__:\
+    \ type[ModelT] | tuple[type[ModelT], ...],\n  __module__: str = __name__,\n  __validators__:\
+    \ (\n      dict[str, Callable[..., Any]] | None\n  ) = None,\n  __cls_kwargs__:\
+    \ dict[str, Any] | None = None,\n  **field_definitions: Any | tuple[str, Any],\n\
+    ) -> type[ModelT]\n```\n\n```\ncreate_model(\n  model_name: str,\n  /,\n  *,\n\
+    \  __config__: ConfigDict | None = None,\n  __doc__: str | None = None,\n  __base__:\
+    \ (\n      type[ModelT] | tuple[type[ModelT], ...] | None\n  ) = None,\n  __module__:\
+    \ str..."
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/121'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.create_model'
+  relationships:
+    children:
+    - '54'
+    - '55'
+    - '56'
+    - '57'
+    parent: '0'
+    previous: '2'
+- node_id: '54'
+  node_depth: 2
+  node_type: Node
+  content_length: 783
+  content: |-
+    ## pydantic.create_model
+
+    ```
+    create_model(
+      model_name: str,
+      /,
+      *,
+      __config__: ConfigDict | None = None,
+      __doc__: str | None = None,
+      __base__: None = None,
+      __module__: str = __name__,
+      __validators__: (
+          dict[str, Callable[..., Any]] | None
+      ) = None,
+      __cls_kwargs__: dict[str, Any] | None = None,
+      **field_definitions: Any | tuple[str, Any],
+    ) -> type[BaseModel]
+    ```
+
+    ```
+    create_model(
+      model_name: str,
+      /,
+      *,
+      __config__: ConfigDict | None = None,
+      __doc__: str | None = None,
+      __base__: type[ModelT] | tuple[type[ModelT], ...],
+      __module__: str = __name__,
+      __validators__: (
+          dict[str, Callable[..., Any]] | None
+      ) = None,
+      __cls_kwargs__: dict[str, Any] | None = None,
+      **field_definitions: Any | tuple[str, Any],
+    ) -> type[ModelT]
+    ```
+  metadata:
+    docling_label: section_header
+    docling_ref: '#/texts/121'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.create_model'
+  relationships:
+    next: '55'
+    parent: '53'
+- node_id: '55'
+  node_depth: 2
+  node_type: Node
+  content_length: 606
+  content: |-
+    ```
+    create_model(
+      model_name: str,
+      /,
+      *,
+      __config__: ConfigDict | None = None,
+      __doc__: str | None = None,
+      __base__: (
+          type[ModelT] | tuple[type[ModelT], ...] | None
+      ) = None,
+      __module__: str | None = None,
+      __validators__: (
+          dict[str, Callable[..., Any]] | None
+      ) = None,
+      __cls_kwargs__: dict[str, Any] | None = None,
+      **field_definitions: Any | tuple[str, Any],
+    ) -> type[ModelT]
+    ```
+
+    Usage Documentation
+
+    Dynamic Model Creation
+
+    Dynamically creates and returns a new Pydantic model, in other words, create_model dynamically creates a
+    subclass of BaseModel.
+
+    Parameters:
+  metadata:
+    docling_label: code
+    docling_ref: '#/texts/124'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.create_model'
+  relationships:
+    next: '56'
+    parent: '53'
+    previous: '54'
+- node_id: '56'
+  node_depth: 2
+  node_type: Node
+  content_length: 3289
+  content: |-
+    | Name                | Type                                           | Description                                                                                                                                                                                                                                       | Default   |
+    |---------------------|------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
+    | model_name          | str                                            | The name of the newly created model.                                                                                                                                                                                                              | required  |
+    | __config__ ...
+  metadata:
+    docling_label: table
+    docling_ref: '#/tables/41'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.create_model'
+  relationships:
+    next: '57'
+    parent: '53'
+    previous: '55'
+- node_id: '57'
+  node_depth: 2
+  node_type: Node
+  content_length: 412
+  content: |-
+    Returns:
+
+    | Type         | Description    |
+    |--------------|----------------|
+    | type[ModelT] | The new model. |
+
+    Raises:
+
+    | Type              | Description                                 |
+    |-------------------|---------------------------------------------|
+    | PydanticUserError | If __base__ and __config__ are both passed. |
+
+    Source code in pydantic/main.py
+
+    Thanks for your feedback!
+
+    Thanks for your feedback!
+  metadata:
+    docling_label: text
+    docling_ref: '#/texts/129'
+    headings:
+    - '# BaseModel'
+    - '## pydantic.create_model'
+  relationships:
+    parent: '53'
+    previous: '56'

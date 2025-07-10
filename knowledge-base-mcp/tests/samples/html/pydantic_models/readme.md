@@ -1,0 +1,1 @@
+From https://docs.pydantic.dev/dev/concepts/models/

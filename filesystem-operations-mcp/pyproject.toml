@@ -1,12 +1,13 @@
 [project]
 name = "filesystem_operations_mcp"
-version = "0.2.2"
-description = "Filesystem Operations Mcp project"
+version = "0.3.0"
+description = "Filesystem Operations MCP project"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 
 dependencies = [
     "aiofiles>=24.1.0",
+    "aioshutil>=1.5",
     "async-lru>=2.0.5",
     "asyncclick>=8.1.8",
     "asyncstdlib>=3.13.1",
@@ -14,12 +15,16 @@ dependencies = [
     "magika>=0.6.2",
     "makefun>=1.16.0",
     "mcp>=1.9.0",
+    "pydantic>=2.11.5",
+    "pytest-benchmark>=5.1.0",
     "pyyaml>=6.0.2",
     "sumy>=0.11.0",
     "syrupy>=4.9.1",
-    "textstat>=0.7.7",
-    "tree-sitter>=0.24.0",
     "tree-sitter-language-pack>=0.7.3",
+    "tree-sitter>=0.24.0",
+    "mistune>=3.1.3",
+    "ripgrep>=14.1.0",
+    "rpygrep>=0.1.1",
 ]
 
 [tool.poetry]
@@ -37,15 +42,34 @@ dev = [
   "pytest",
   "pytest-asyncio>=0.26.0",
   "pytest-mock",
+  "deepdiff>=8.5.0",
   "ruff",
 ]
 lint = [
   "ruff"
 ]
 
+[tool.pyright]
+pythonVersion = "3.13"
+exclude = [
+    "**/archive/**",
+    "**/node_modules/**",
+    "**/__pycache__/**",
+    "**/.venv/**",
+    ".venv",
+    "**/.pytest_cache/**",
+    "**/.ruff_cache/**",
+    "**/uv/python/**",
+    "playground",
+    "**/playground/**"
+]
+reportMissingTypeStubs = false
+reportExplicitAny = false
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
+addopts = "--ignore=playground"
 
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
@@ -53,9 +77,11 @@ build-backend = "hatchling.build"
 
 [tool.ruff]
 extend="../pyproject.toml"
+extend-exclude=["playground", "**/playground/**"]
 
 [tool.ruff.lint.extend-per-file-ignores]
 "**/*.py" = [
     "PLR0917", # Ingore too many args
     "PLR0913", # Ignore positional args
+    "ARG002", # Ignore unused args, handled by pyright
 ]

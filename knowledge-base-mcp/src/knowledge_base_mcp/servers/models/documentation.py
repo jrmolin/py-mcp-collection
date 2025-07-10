@@ -1,13 +1,12 @@
 from collections import defaultdict
 
-from llama_index.core.schema import MetadataMode, NodeWithScore
+from llama_index.core.schema import BaseNode, MetadataMode, NodeWithScore
 from pydantic import BaseModel, Field, RootModel
 
 
 class TitleResult(BaseModel):
     """A result from a search query"""
 
-    title: str = Field(description="The title of the result", exclude=True)
     source: str = Field(description="The source of the result")
     headings: dict[str, list[str]] = Field(description="The results of the search by heading")
 
@@ -26,22 +25,21 @@ class TitleResult(BaseModel):
             by_heading: dict[str, list[str]] = defaultdict(list)
 
             for node in these_nodes:
-                heading = node.node.metadata.get("heading", "<no heading>")
+                heading = node.node.metadata.get("headings", "<no heading>")
 
-                node_text = node.get_content(metadata_mode=MetadataMode.LLM).strip()
+                node_text = node.get_content(metadata_mode=MetadataMode.NONE).strip()
 
                 by_heading[heading].append(node_text)
 
-            results[title] = TitleResult(title=title, source=these_nodes[0].node.metadata.get("source", "<no source>"), headings=by_heading)
+            results[title] = TitleResult(source=these_nodes[0].node.metadata.get("source", "<no source>"), headings=by_heading)
 
         return results
 
 
-class KnowledgeBaseResult(BaseModel):
+class KnowledgeBaseResult(RootModel[dict[str, TitleResult]]):
     """A result from a search query"""
 
-    name: str = Field(description="The name of the knowledge base", exclude=True)
-    documents: dict[str, TitleResult] = Field(description="The results of the search by document")
+    root: dict[str, TitleResult] = Field(description="The results of the search by document")
 
     @classmethod
     def from_nodes(cls, nodes: list[NodeWithScore]) -> dict[str, "KnowledgeBaseResult"]:
@@ -58,12 +56,12 @@ class KnowledgeBaseResult(BaseModel):
         for knowledge_base, kb_nodes in nodes_by_knowledge_base.items():
             by_title: dict[str, TitleResult] = TitleResult.from_nodes(kb_nodes)
 
-            results[knowledge_base] = KnowledgeBaseResult(name=knowledge_base, documents=by_title)
+            results[knowledge_base] = KnowledgeBaseResult(root=by_title)
 
         return results
 
 
-class KnowledgeBaseSummary(RootModel):
+class KnowledgeBaseSummary(RootModel[dict[str, int]]):
     """A high level summary of relevant documents across all knowledge bases"""
 
     root: dict[str, int] = Field(default_factory=dict, description="The number of documents in each knowledge base")
@@ -80,19 +78,33 @@ class KnowledgeBaseSummary(RootModel):
         return cls(root=results)
 
 
-class TreeSearchResponse(BaseModel):
+# class TreeSearchResponse(BaseModel):
+#     """A response to a search query"""
+
+#     query: str = Field(description="The query that was used to search the knowledge base")
+#     knowledge_bases: dict[str, KnowledgeBaseResult] = Field(description="The knowledge bases that had results")
+
+#     @classmethod
+#     def from_nodes(cls, query: str, nodes: list[NodeWithScore]) -> "TreeSearchResponse":
+#         """Convert a list of nodes to a search response"""
+
+#         results = KnowledgeBaseResult.from_nodes(nodes)
+
+#         return cls(query=query, knowledge_bases=results)
+
+
+class TreeSearchResponse(RootModel[dict[str, KnowledgeBaseResult]]):
     """A response to a search query"""
 
-    query: str = Field(description="The query that was used to search the knowledge base")
-    knowledge_bases: dict[str, KnowledgeBaseResult] = Field(description="The knowledge bases that had results")
+    root: dict[str, KnowledgeBaseResult] = Field(description="The knowledge bases that had results")
 
     @classmethod
-    def from_nodes(cls, query: str, nodes: list[NodeWithScore]) -> "TreeSearchResponse":
+    def from_nodes(cls, nodes: list[NodeWithScore]) -> "TreeSearchResponse":
         """Convert a list of nodes to a search response"""
 
         results = KnowledgeBaseResult.from_nodes(nodes)
 
-        return cls(query=query, knowledge_bases=results)
+        return cls(root=results)
 
 
 class SearchResponseWithSummary(BaseModel):
@@ -101,3 +113,20 @@ class SearchResponseWithSummary(BaseModel):
     query: str = Field(description="The query that was used to search the knowledge base")
     summary: KnowledgeBaseSummary = Field(description="The summary of the search")
     results: TreeSearchResponse = Field(description="The results of the search")
+
+
+class DocumentResponse(BaseModel):
+    """A response to a document request"""
+
+    source: str = Field(description="The source of the document")
+    title: str = Field(description="The title of the document")
+    content: str = Field(description="The content of the document")
+
+    @classmethod
+    def from_node(cls, node: BaseNode) -> "DocumentResponse":
+        """Convert a node to a document response"""
+        return cls(
+            source=node.metadata.get("source", "<no source>"),  #  pyright: ignore[reportAny]
+            title=node.metadata.get("title", "<no title>"),  #  pyright: ignore[reportAny]
+            content=node.get_content(metadata_mode=MetadataMode.NONE).strip(),
+        )

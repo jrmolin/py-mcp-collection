@@ -1,0 +1,358 @@
+- node_id: '17'
+  node_depth: 0
+  node_type: Node
+  content_length: 471
+  content: |-
+    # Main Heading
+
+    Content under the first H1, with italic text.
+
+    ## Section with a Table
+
+    | Column A   | Column B   |
+    |------------|------------|
+    | Data 1A    | Data 1B    |
+    | Data 2A    | Data 2B    |
+
+    ## Another Section with Lists
+
+    Here are some lists.
+
+    - First item
+    - Second item
+
+    1. Step 1
+    2. Step 2
+
+    This is a blockquote.
+
+    ### Subsection with Code
+
+    An example of inline code is document.getElementById().
+
+    ```
+    function hello() {
+        console.log("Hello, world!");
+    }
+    ```
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/1'
+    headings:
+    - '# Main Heading'
+  relationships:
+    children:
+    - '18'
+    - '19'
+    - '20'
+    - '21'
+    next: '31'
+  members:
+  - node_id: '18'
+    node_depth: 1
+    node_type: Node
+    content_length: 14
+    content: '# Main Heading'
+    metadata:
+      docling_label: title
+      docling_ref: '#/texts/1'
+      headings:
+      - '# Main Heading'
+    relationships:
+      next: '19'
+      parent: '17'
+    members: []
+  - node_id: '19'
+    node_depth: 1
+    node_type: Node
+    content_length: 45
+    content: Content under the first H1, with italic text.
+    metadata:
+      docling_label: text
+      docling_ref: '#/texts/2'
+      headings:
+      - '# Main Heading'
+    relationships:
+      next: '20'
+      parent: '17'
+      previous: '18'
+    members: []
+  - node_id: '20'
+    node_depth: 1
+    node_type: Node
+    content_length: 136
+    content: |-
+      ## Section with a Table
+
+      | Column A   | Column B   |
+      |------------|------------|
+      | Data 1A    | Data 1B    |
+      | Data 2A    | Data 2B    |
+    metadata:
+      docling_label: section_header
+      docling_ref: '#/texts/3'
+      headings:
+      - '# Main Heading'
+      - '## Section with a Table'
+    relationships:
+      next: '21'
+      parent: '17'
+      previous: '19'
+    members: []
+  - node_id: '21'
+    node_depth: 1
+    node_type: Node
+    content_length: 270
+    content: |-
+      ## Another Section with Lists
+
+      Here are some lists.
+
+      - First item
+      - Second item
+
+      1. Step 1
+      2. Step 2
+
+      This is a blockquote.
+
+      ### Subsection with Code
+
+      An example of inline code is document.getElementById().
+
+      ```
+      function hello() {
+          console.log("Hello, world!");
+      }
+      ```
+    metadata:
+      docling_label: section_header
+      docling_ref: '#/texts/4'
+      headings:
+      - '# Main Heading'
+      - '## Another Section with Lists'
+    relationships:
+      children:
+      - '22'
+      - '23'
+      - '24'
+      - '25'
+      - '26'
+      - '27'
+      parent: '17'
+      previous: '20'
+    members:
+    - node_id: '22'
+      node_depth: 2
+      node_type: Node
+      content_length: 29
+      content: '## Another Section with Lists'
+      metadata:
+        docling_label: section_header
+        docling_ref: '#/texts/4'
+        headings:
+        - '# Main Heading'
+        - '## Another Section with Lists'
+      relationships:
+        next: '23'
+        parent: '21'
+      members: []
+    - node_id: '23'
+      node_depth: 2
+      node_type: Node
+      content_length: 20
+      content: Here are some lists.
+      metadata:
+        docling_label: text
+        docling_ref: '#/texts/5'
+        headings:
+        - '# Main Heading'
+        - '## Another Section with Lists'
+      relationships:
+        next: '24'
+        parent: '21'
+        previous: '22'
+      members: []
+    - node_id: '24'
+      node_depth: 2
+      node_type: Node
+      content_length: 26
+      content: |-
+        - First item
+        - Second item
+      metadata:
+        docling_label: list
+        docling_ref: '#/groups/0'
+        headings:
+        - '# Main Heading'
+        - '## Another Section with Lists'
+      relationships:
+        next: '25'
+        parent: '21'
+        previous: '23'
+      members: []
+    - node_id: '25'
+      node_depth: 2
+      node_type: Node
+      content_length: 19
+      content: |-
+        1. Step 1
+        2. Step 2
+      metadata:
+        docling_label: list
+        docling_ref: '#/groups/1'
+        headings:
+        - '# Main Heading'
+        - '## Another Section with Lists'
+      relationships:
+        next: '26'
+        parent: '21'
+        previous: '24'
+      members: []
+    - node_id: '26'
+      node_depth: 2
+      node_type: Node
+      content_length: 21
+      content: This is a blockquote.
+      metadata:
+        docling_label: text
+        docling_ref: '#/texts/10'
+        headings:
+        - '# Main Heading'
+        - '## Another Section with Lists'
+      relationships:
+        next: '27'
+        parent: '21'
+        previous: '25'
+      members: []
+    - node_id: '27'
+      node_depth: 2
+      node_type: Node
+      content_length: 145
+      content: |-
+        ### Subsection with Code
+
+        An example of inline code is document.getElementById().
+
+        ```
+        function hello() {
+            console.log("Hello, world!");
+        }
+        ```
+      metadata:
+        docling_label: section_header
+        docling_ref: '#/texts/11'
+        headings:
+        - '# Main Heading'
+        - '## Another Section with Lists'
+        - '### Subsection with Code'
+      relationships:
+        children:
+        - '28'
+        - '29'
+        - '30'
+        parent: '21'
+        previous: '26'
+      members:
+      - node_id: '28'
+        node_depth: 3
+        node_type: Node
+        content_length: 24
+        content: '### Subsection with Code'
+        metadata:
+          docling_label: section_header
+          docling_ref: '#/texts/11'
+          headings:
+          - '# Main Heading'
+          - '## Another Section with Lists'
+          - '### Subsection with Code'
+        relationships:
+          next: '29'
+          parent: '27'
+        members: []
+      - node_id: '29'
+        node_depth: 3
+        node_type: Node
+        content_length: 55
+        content: An example of inline code is document.getElementById().
+        metadata:
+          docling_label: text
+          docling_ref: '#/texts/12'
+          headings:
+          - '# Main Heading'
+          - '## Another Section with Lists'
+          - '### Subsection with Code'
+        relationships:
+          next: '30'
+          parent: '27'
+          previous: '28'
+        members: []
+      - node_id: '30'
+        node_depth: 3
+        node_type: Node
+        content_length: 62
+        content: |-
+          ```
+          function hello() {
+              console.log("Hello, world!");
+          }
+          ```
+        metadata:
+          docling_label: code
+          docling_ref: '#/texts/13'
+          headings:
+          - '# Main Heading'
+          - '## Another Section with Lists'
+          - '### Subsection with Code'
+        relationships:
+          parent: '27'
+          previous: '29'
+        members: []
+- node_id: '31'
+  node_depth: 0
+  node_type: Node
+  content_length: 104
+  content: |-
+    # Final Heading
+
+    A final paragraph with an image and some text that should not be formatted: 5 * 3 = 15.
+  metadata:
+    docling_label: title
+    docling_ref: '#/texts/14'
+    headings:
+    - '# Final Heading'
+  relationships:
+    children:
+    - '32'
+    - '33'
+    previous: '17'
+  members:
+  - node_id: '32'
+    node_depth: 1
+    node_type: Node
+    content_length: 15
+    content: '# Final Heading'
+    metadata:
+      docling_label: title
+      docling_ref: '#/texts/14'
+      headings:
+      - '# Final Heading'
+    relationships:
+      next: '33'
+      parent: '31'
+    members: []
+  - node_id: '33'
+    node_depth: 1
+    node_type: Node
+    content_length: 87
+    content: 'A final paragraph with an image and some text that should not be formatted:
+      5 * 3 = 15.'
+    metadata:
+      docling_label: text
+      docling_ref: '#/texts/15'
+      headings:
+      - '# Final Heading'
+    relationships:
+      parent: '31'
+      previous: '32'
+    members: []

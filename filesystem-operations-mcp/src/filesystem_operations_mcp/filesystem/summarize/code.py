@@ -1,6 +1,7 @@
+import time
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Literal, get_args
+from typing import Any, ClassVar, Literal, get_args, override
 
 from pydantic import BaseModel, ConfigDict, computed_field
 from pydantic.fields import Field
@@ -12,6 +13,9 @@ from tree_sitter_language_pack import (
 
 from filesystem_operations_mcp.filesystem.errors import LanguageNotSupportedError
 from filesystem_operations_mcp.filesystem.summarize.text import summarize_text
+from filesystem_operations_mcp.logging import BASE_LOGGER
+
+logger = BASE_LOGGER.getChild(__name__)
 
 TAG_FOLDER = Path(__file__).parent / "tree-sitter-language-pack"
 """A folder of queries that extract significant markers from the corresponding language."""
@@ -49,7 +53,7 @@ def to_supported_language(language_name: str) -> SupportedLanguage:
     if language_name not in get_args(SupportedLanguage):
         raise LanguageNotSupportedError(language=language_name)
 
-    supported_language: Literal[SupportedLanguage] = language_name  # type: ignore
+    supported_language: Literal[SupportedLanguage] = language_name  # pyright: ignore[reportAssignmentType]
 
     return supported_language
 
@@ -79,16 +83,17 @@ class ViewNode(BaseModel):
     doc_nodes: list[Node] = Field(exclude=True)
     child_nodes: dict[str, list["ViewNode"]] = Field(default_factory=dict, exclude=True)
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config: ClassVar[ConfigDict] = ConfigDict(arbitrary_types_allowed=True)
 
-    def model_dump(self, *args, **kwargs) -> dict[str, Any] | str | None:
+    @override
+    def model_dump(self, *args: Any, **kwargs: Any) -> dict[str, Any] | str | None:  # pyright: ignore[reportAny, reportIncompatibleMethodOverride]
         result = super().model_dump(*args, **kwargs)
 
         for key, children in self.child_nodes.items():
             result[key] = [child.model_dump(*args, **kwargs) for child in children]
 
         if len(result) == 1 and "identifier" in result:
-            return result["identifier"]
+            return result["identifier"]  # pyright: ignore[reportAny]
         if len(result) > 1:
             return result
 
@@ -124,7 +129,7 @@ def new_pruned_tree(node: Node, interesting_nodes: list[Node], doc_nodes: list[N
     """
     root_node = ViewNode(ast_id=node.id, ast_node=node, identifier=node.type, is_root_node=True, doc_nodes=[])
 
-    prune_branches(root_node, node, interesting_nodes, doc_nodes)
+    _ = prune_branches(root_node, node, interesting_nodes, doc_nodes)
 
     return root_node
 
@@ -169,27 +174,42 @@ def prune_branches(last_interesting_node_view: ViewNode, node: Node, interesting
             last_interesting_node_view.doc_nodes.append(node)
 
     for child in node.children:
-        prune_branches(view_node, child, interesting_nodes, doc_nodes)
+        _ = prune_branches(view_node, child, interesting_nodes, doc_nodes)
 
     return view_node
 
 
 def summarize_code(language_name: str, code: str) -> dict[str, Any] | str | None:
+    timers: dict[str, float] = {
+        "start": time.time(),
+    }
+
     ensure_initialized()
+
+    timers["ensure_initialized"] = time.time()
 
     if language_name not in tag_queries:
         return None
 
     # Get the language and parser
     language: Language = get_language(language_name=language_name)
+
+    timers["get_language"] = time.time()
+
     parser: Parser = get_language_parser(language=language)
+
+    timers["get_language_parser"] = time.time()
 
     # Parse the code
     tree: Tree = parser.parse(code.encode())
 
+    timers["parse"] = time.time()
+
     # Identify the tags
     tag_query: Query = language.query(tag_queries[language_name])
     captures: dict[str, list[Node]] = tag_query.captures(tree.root_node)
+
+    timers["tag_query_captures"] = time.time()
 
     interesting_captures = {
         key: captures[key]
@@ -207,13 +227,35 @@ def summarize_code(language_name: str, code: str) -> dict[str, Any] | str | None
 
     doc_nodes = [node for nodes in doc_captures.values() for node in nodes]
 
+    timers["interesting_nodes"] = time.time()
+
     summary_model_view = new_pruned_tree(
         node=tree.root_node,
         interesting_nodes=interesting_nodes,
         doc_nodes=doc_nodes,
     )
 
-    if summary_model_view is None:
+    timers["new_pruned_tree"] = time.time()
+
+    if summary_model_view is None:  # pyright: ignore[reportUnnecessaryComparison]
         return None
 
-    return summary_model_view.model_dump(exclude_none=True, exclude_defaults=True, mode="json")
+    dumped_model = summary_model_view.model_dump(exclude_none=True, exclude_defaults=True, mode="json")
+
+    timers["dumped_model"] = time.time()
+
+    times: dict[str, float] = {
+        "ensure_initialized": timers["ensure_initialized"] - timers["start"],
+        "get_language": timers["get_language"] - timers["ensure_initialized"],
+        "get_language_parser": timers["get_language_parser"] - timers["get_language"],
+        "parse": timers["parse"] - timers["get_language_parser"],
+        "tag_query_captures": timers["tag_query_captures"] - timers["parse"],
+        "interesting_nodes": timers["interesting_nodes"] - timers["tag_query_captures"],
+        "new_pruned_tree": timers["new_pruned_tree"] - timers["interesting_nodes"],
+        "dumped_model": timers["dumped_model"] - timers["new_pruned_tree"],
+        "total": timers["dumped_model"] - timers["start"],
+    }
+
+    logger.info(f"Summarize code took: {times}")
+
+    return dumped_model

@@ -1,0 +1,223 @@
+from collections.abc import Sequence
+from typing import Any, override
+
+import pytest
+from llama_index.core.schema import BaseNode, Document, MediaResource, Node, NodeRelationship, RelatedNodeInfo
+
+from knowledge_base_mcp.llama_index.hierarchical_node_parsers.hierarchical_node_parser import HierarchicalNodeParser
+
+
+class SimpleHierarchicalNodeParser(HierarchicalNodeParser):
+    @override
+    def _parse_nodes(
+        self,
+        nodes: Sequence[BaseNode],
+        show_progress: bool = False,
+        **kwargs: Any,  # pyright: ignore[reportAny]
+    ) -> list[BaseNode]:
+        return list(nodes)
+
+
+@pytest.fixture
+def hierarchical_node_parser() -> SimpleHierarchicalNodeParser:
+    return SimpleHierarchicalNodeParser()
+
+
+@pytest.fixture
+def test_nodes_one():
+    document = Document(
+        text="Document 1",
+    )
+
+    parent_node_one = Node(
+        relationships={NodeRelationship.SOURCE: document.as_related_node_info()},
+    )
+
+    child_node_one = Node(
+        relationships={NodeRelationship.PARENT: parent_node_one.as_related_node_info()},
+    )
+
+    child_node_two = Node(
+        relationships={NodeRelationship.PARENT: parent_node_one.as_related_node_info()},
+    )
+
+    return [parent_node_one, child_node_one, child_node_two]
+
+
+@pytest.fixture
+def test_nodes_two():
+    document = Document(
+        text="Document 1",
+    )
+
+    parent_node_one = Node(
+        relationships={NodeRelationship.SOURCE: document.as_related_node_info()},
+    )
+
+    child_node_one = Node(
+        text_resource=MediaResource(text="Child Node 1"),
+        relationships={NodeRelationship.PARENT: parent_node_one.as_related_node_info()},
+    )
+
+    child_node_two = Node(
+        text_resource=MediaResource(text="Child Node 2"),
+        relationships={NodeRelationship.PARENT: parent_node_one.as_related_node_info()},
+    )
+
+    parent_node_two = Node(
+        relationships={NodeRelationship.SOURCE: document.as_related_node_info()},
+    )
+
+    child_node_three = Node(
+        relationships={NodeRelationship.PARENT: parent_node_two.as_related_node_info()},
+    )
+
+    child_node_four = Node(
+        relationships={NodeRelationship.PARENT: parent_node_two.as_related_node_info()},
+    )
+
+    return [parent_node_one, child_node_one, child_node_two, parent_node_two, child_node_three, child_node_four]
+
+
+def test_hierarchical_node_parser(hierarchical_node_parser: SimpleHierarchicalNodeParser, test_nodes_one: list[BaseNode]):
+    hierarchical_nodes = hierarchical_node_parser._postprocess_parsed_nodes(  # pyright: ignore[reportPrivateUsage]
+        test_nodes_one,
+        {},
+    )
+
+    assert len(hierarchical_nodes) == 3
+
+    child_node_two = hierarchical_nodes[2]
+
+    child_node_one = hierarchical_nodes[1]
+
+    parent_node_one = hierarchical_nodes[0]
+
+    assert parent_node_one.relationships[NodeRelationship.CHILD] == [
+        child_node_one.as_related_node_info(),
+        child_node_two.as_related_node_info(),
+    ]
+
+    assert child_node_one.relationships[NodeRelationship.PARENT] == parent_node_one.as_related_node_info()
+    assert child_node_two.relationships[NodeRelationship.PARENT] == parent_node_one.as_related_node_info()
+
+    assert child_node_one.relationships[NodeRelationship.NEXT] == child_node_two.as_related_node_info()
+    assert child_node_two.relationships[NodeRelationship.PREVIOUS] == child_node_one.as_related_node_info()
+
+
+def test_cross_parent_sibling_links(hierarchical_node_parser: SimpleHierarchicalNodeParser, test_nodes_two: list[BaseNode]):
+    """Ensure that we do not create sibling links across parent nodes."""
+
+    hierarchical_nodes: list[BaseNode] = hierarchical_node_parser._postprocess_parsed_nodes(  # pyright: ignore[reportPrivateUsage]
+        nodes=test_nodes_two,
+        parent_doc_map={},
+    )
+
+    assert len(hierarchical_nodes) == 6
+
+    child_node_two = hierarchical_nodes[2]
+    child_node_three = hierarchical_nodes[4]
+
+    assert child_node_two.prev_node
+    assert child_node_two.next_node is None
+    assert child_node_three.prev_node is None
+    assert child_node_three.next_node
+
+
+def test_group_node_init():
+    node_one: Node = Node(
+        text_resource=MediaResource(text="Node One"),
+    )
+
+    node_two: Node = Node(
+        text_resource=MediaResource(text="Node Two"),
+    )
+
+    group_node: GroupNode = GroupNode(
+        member_nodes=[node_one, node_two],
+    )
+
+    assert group_node.member_nodes == [node_one, node_two]
+    assert group_node.parent_node is None
+    assert group_node.relationships[NodeRelationship.CHILD] == [
+        node_one.as_related_node_info(),
+        node_two.as_related_node_info(),
+    ]
+
+    assert node_one.next_node == node_two.as_related_node_info()
+    assert node_two.prev_node == node_one.as_related_node_info()
+
+    assert node_one.parent_node == group_node.as_related_node_info()
+    assert node_two.parent_node == group_node.as_related_node_info()
+
+
+def test_group_node_collapse():
+    node_one: Node = Node(
+        text_resource=MediaResource(text="Node One"),
+    )
+
+    node_one_ref: RelatedNodeInfo = node_one.as_related_node_info()
+
+    group_node_one: GroupNode = GroupNode(
+        member_nodes=[node_one],
+        text_resource=MediaResource(text="Node One"),
+    )
+
+    node_two: Node = Node(
+        text_resource=MediaResource(text="Node Two"),
+    )
+
+    node_two_ref: RelatedNodeInfo = node_two.as_related_node_info()
+
+    group_node_two: GroupNode = GroupNode(
+        member_nodes=[node_two],
+        text_resource=MediaResource(text="Node Two"),
+    )
+
+    root_node: RootNode = RootNode(
+        member_nodes=[group_node_one, group_node_two],
+        text_resource=MediaResource(text="Node One\n\nNode Two"),
+    )
+
+    root_node_ref: RelatedNodeInfo = root_node.as_related_node_info()
+
+    _ = root_node.collapse()
+
+    assert root_node.child_nodes
+    assert len(root_node.child_nodes) == 2
+    assert root_node.child_nodes == [node_one_ref, node_two_ref]
+
+    assert node_one.parent_node == root_node_ref
+    assert node_two.parent_node == root_node_ref
+
+    assert node_one.prev_node is None
+    assert node_one.next_node == node_two_ref
+    assert node_two.prev_node == node_one_ref
+    assert node_two.next_node is None
+
+
+def test_metadata_propagation(hierarchical_node_parser: SimpleHierarchicalNodeParser):
+    document = Document(
+        text="Document 1",
+        extra_info={"document_key": "document_value"},
+    )
+
+    group_node = GroupNode(
+        member_nodes=[
+            Node(
+                text_resource=MediaResource(text="Child Node 1"),
+                extra_info={"node_key": "node_value"},
+                relationships={NodeRelationship.SOURCE: document.as_related_node_info()},
+            ),
+        ],
+        text_resource=MediaResource(text="Child Node 1"),
+        relationships={NodeRelationship.SOURCE: document.as_related_node_info()},
+    )
+
+    hierarchical_nodes: list[BaseNode] = hierarchical_node_parser._postprocess_parsed_nodes(  # pyright: ignore[reportPrivateUsage]
+        nodes=list(group_node.descendant_nodes()),
+        parent_doc_map={},
+    )
+
+    assert hierarchical_nodes[0].metadata == {"document_key": "document_value"}
+    assert hierarchical_nodes[1].metadata == {"document_key": "document_value", "node_key": "node_value"}

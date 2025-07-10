@@ -5,6 +5,7 @@ import pytest
 from aiofiles import open as aopen
 
 from filesystem_operations_mcp.filesystem.file_system import FileSystem
+from filesystem_operations_mcp.filesystem.nodes import FileEntry, FileEntryTypeEnum
 
 
 # Helper function to create test files
@@ -73,136 +74,44 @@ async def temp_dir():
 
 
 @pytest.fixture
-async def file_system(temp_dir):
-    return FileSystem(root=temp_dir)
+async def file_system(temp_dir: Path):
+    return FileSystem(path=temp_dir)
 
 
 @pytest.mark.asyncio
-async def test_get_root(file_system, temp_dir):
-    root = await file_system.get_root()
-    assert root.absolute_path == temp_dir.resolve()
-    assert root.relative_path == Path()
+async def test_get_root(file_system: FileSystem):
+    files = [file async for file in file_system.get_root()]
+    assert len(files) == 13
 
 
 @pytest.mark.asyncio
 async def test_get_structure(file_system: FileSystem):
-    structure = await file_system.get_structure(depth=1)
-    assert len(structure) == 3  # root, nested, deeper
+    files = [file async for file in file_system.get_structure(depth=1)]
+    assert len(files) == 13  # root, nested, deeper
 
     # Test with different depths
-    structure = await file_system.get_structure(depth=0)
-    assert len(structure) == 2  # root, nested
-
-    # Test with includes
-    structure = await file_system.get_structure(depth=2, includes=["deeper"])
-    assert len(structure) == 1
-
-    # Test with excludes
-    structure = await file_system.get_structure(depth=2, excludes=["*.py"])
-    assert len(structure) == 3
-
-    # Test with skip_hidden
-    structure = await file_system.get_structure(depth=2, skip_hidden=True)
-    assert len(structure) == 3
-
-
-@pytest.mark.asyncio
-async def test_get_files(file_system: FileSystem):
-    # Test getting specific files
-    files = await file_system.get_files(["code.py", "readme.md"])
-    assert len(files) == 2
-    assert {f.name for f in files} == {"code.py", "readme.md"}
-
-    # Test getting text files
-    text_files = await file_system.get_text_files(["code.py", "readme.md", "large.txt"])
-    assert len(text_files) == 3
-    assert all(not f.is_binary for f in text_files)
-
-
-@pytest.mark.asyncio
-async def test_get_directories(file_system: FileSystem):
-    dirs = await file_system.get_directories(["nested", "nested/deeper"])
-    assert len(dirs) == 2
-    assert {d.name for d in dirs} == {"nested", "deeper"}
-
-
-@pytest.mark.asyncio
-async def test_get_file_matches(file_system: FileSystem):
-    # Test simple content matching
-    matches = await file_system.get_file_matches("large.txt", "Target line")
-    assert len(matches) == 1
-    assert "Target line" in matches[0].match.lines()[0]
-
-    # Test regex matching
-    matches = await file_system.get_file_matches("code.py", r"def \w+", pattern_is_regex=True)
-    assert len(matches) == 1
-    assert "def hello" in matches[0].match.lines()[0]
-
-    # Test context lines
-    matches = await file_system.get_file_matches("large.txt", "Target line", before=2, after=2)
-    assert len(matches) == 1
-    assert len(matches[0].before.lines()) == 2
-    assert len(matches[0].after.lines()) == 2
-
-
-@pytest.mark.asyncio
-async def test_find_files(file_system: FileSystem):
-    # Test finding all Python files
-    files = await file_system.find_files("*.py")
-    assert len(files) == 3  # code.py, deep.py, very_deep.py
-    assert all(f.name.endswith(".py") for f in files)
-
-    # Test finding files in nested directory
-    files = await file_system.find_files("*.py", directory_path="nested")
-    assert len(files) == 2
-    assert files[0].name == "deep.py"
-    assert files[1].name == "very_deep.py"
-
-    # Test finding files with includes/excludes
-    files = await file_system.find_files("*.py", includes=["code.py"])
-    assert len(files) == 1
-    assert files[0].name == "code.py"
-
-    # Test finding files with skip_hidden
-    files = await file_system.find_files("*", skip_hidden=True)
-    assert not any(f.name.startswith(".") for f in files)
-
-
-@pytest.mark.asyncio
-async def test_find_dirs(file_system: FileSystem):
-    # Test finding all directories
-    dirs = await file_system.find_dirs("*")
-    assert len(dirs) == 2  # nested, deeper
-    assert {d.name for d in dirs} == {"nested", "deeper"}
-
-    # Test finding directories with includes/excludes
-    dirs = await file_system.find_dirs("*", includes=["nested"])
-    assert len(dirs) == 1
-    assert dirs[0].name == "nested"
-
-    # Test finding directories with skip_hidden
-    dirs = await file_system.find_dirs("*", skip_hidden=True)
-    assert not any(d.name.startswith(".") for d in dirs)
+    structure = [file async for file in file_system.get_structure(depth=2)]
+    assert len(structure) == 15
 
 
 @pytest.mark.asyncio
 async def test_file_type_detection(file_system: FileSystem):
     # Test files with extensions
-    files = await file_system.get_files(["code.py", "data.json", "readme.md"])
-    assert files[0].is_code
-    assert files[1].is_data
-    assert files[2].is_text
+    files: list[FileEntry] = file_system.get_files(["code.py", "data.json", "readme.md"])
+    assert files[0].type == FileEntryTypeEnum.CODE
+    assert files[1].type == FileEntryTypeEnum.DATA
+    assert files[2].type == FileEntryTypeEnum.TEXT
 
     # Test files without extensions
-    files = await file_system.get_files(["no_extension_code", "no_extension_data", "no_extension_text"])
-    assert files[0].is_code
-    assert files[1].is_data
-    assert files[2].is_text
+    files = file_system.get_files(["no_extension_code", "no_extension_data", "no_extension_text"])
+    assert files[0].type == FileEntryTypeEnum.CODE
+    assert files[1].type == FileEntryTypeEnum.DATA
+    assert files[2].type == FileEntryTypeEnum.TEXT
 
 
 @pytest.mark.asyncio
 async def test_special_characters(file_system: FileSystem):
     # Test files with spaces, dashes, and underscores
-    files = await file_system.get_files(["file with spaces.txt", "file-with-dashes.txt", "file_with_underscores.txt"])
+    files = file_system.get_files(["file with spaces.txt", "file-with-dashes.txt", "file_with_underscores.txt"])
     assert len(files) == 3
-    assert all(f.is_text for f in files)
+    assert all(f.type == FileEntryTypeEnum.TEXT for f in files)

@@ -12,7 +12,6 @@ from sumy.summarizers.luhn import LuhnSummarizer
 from sumy.summarizers.reduction import ReductionSummarizer
 from sumy.summarizers.text_rank import TextRankSummarizer
 from sumy.utils import get_stop_words
-from textstat import textstat
 
 from filesystem_operations_mcp.logging import BASE_LOGGER
 
@@ -79,9 +78,10 @@ def strip_unwanted(document: str) -> str:
     return strip_code_blocks(strip_long_non_words(document))
 
 
-def summarize_text(document: str) -> str:
-    summarizer, tokenizer = get_luhn_summarizer("english")
+summarizer, tokenizer = get_luhn_summarizer("english")
 
+
+def summarize_text(document: str) -> str:
     sentences = tokenizer.to_sentences(document)
 
     interesting_sentences = [strip_unwanted(sentence) for sentence in sentences if has_verb_and_noun(tokenizer, sentence)]
@@ -92,44 +92,4 @@ def summarize_text(document: str) -> str:
 
     summary: tuple[Sentence, ...] = summarizer(parser.document, sentences_count)
 
-    return summary_to_text(summary)
-
-
-def print_sentence_stats(sentence: str):
-    print("--------------------------------")
-    print("sentence", sentence)
-    print("standard", textstat.text_standard(sentence))
-    print("flesch_reading_ease", textstat.flesch_reading_ease(sentence))
-    print("flesch_kincaid_grade", textstat.flesch_kincaid_grade(sentence))
-    print("smog_index", textstat.smog_index(sentence))
-    print("coleman_liau_index", textstat.coleman_liau_index(sentence))
-    print("automated_readability_index", textstat.automated_readability_index(sentence))
-    print("dale_chall_readability_score", textstat.dale_chall_readability_score(sentence))
-    print("difficult_words", textstat.difficult_words(sentence))
-    print("linsear_write_formula", textstat.linsear_write_formula(sentence))
-    print("gunning_fog", textstat.gunning_fog(sentence))
-    print("text_standard", textstat.text_standard(sentence))
-    print("fernandez_huerta", textstat.fernandez_huerta(sentence))
-    print("szigriszt_pazos", textstat.szigriszt_pazos(sentence))
-    print("gutierrez_polini", textstat.gutierrez_polini(sentence))
-    print("crawford", textstat.crawford(sentence))
-    print("gulpease_index", textstat.gulpease_index(sentence))
-    print("osman", textstat.osman(sentence))
-
-
-def reduction_summarizer(document: str) -> str:
-    summarizer = ReductionSummarizer(Stemmer("english"))
-    summarizer.stop_words = stop_words
-    parser = PlaintextParser.from_string(document, Tokenizer("english"))
-    sentences_count = ideal_sentences_count(document)
-    summary: tuple[Sentence, ...] = summarizer(parser.document, sentences_count)
-    return summary_to_text(summary)
-
-
-def text_rank_summarizer(document: str) -> str:
-    summarizer = TextRankSummarizer(Stemmer("english"))
-    summarizer.stop_words = stop_words
-    parser = PlaintextParser.from_string(document, Tokenizer("english"))
-    sentences_count = ideal_sentences_count(document)
-    summary: tuple[Sentence, ...] = summarizer(parser.document, sentences_count)
     return summary_to_text(summary)
