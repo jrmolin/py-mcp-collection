@@ -3,22 +3,21 @@ from typing import TYPE_CHECKING
 
 import pytest
 from llama_index.core.indices.vector_store import VectorStoreIndex
-from llama_index.core.schema import BaseNode, MetadataMode, RelatedNodeInfo
+from llama_index.core.schema import BaseNode, MetadataMode
 from llama_index.core.storage import StorageContext
 from llama_index.embeddings.fastembed import FastEmbedEmbedding
+from llama_index.storage.docstore.duckdb import DuckDBDocumentStore
+from llama_index.storage.kvstore.duckdb import DuckDBKVStore
 from llama_index.vector_stores.duckdb import DuckDBVectorStore
 from syrupy.assertion import SnapshotAssertion
 
 from knowledge_base_mcp.clients.knowledge_base import KnowledgeBaseClient
-from knowledge_base_mcp.servers.ingest.github import GitHubIngestServer
-from knowledge_base_mcp.servers.search.github import GitHubSearchServer, SearchResponseWithSummary
-from knowledge_base_mcp.vendored.storage.docstore.duckdb import DuckDBDocumentStore
-from knowledge_base_mcp.vendored.storage.kvstore.duckdb.base import DuckDBKVStore
+from knowledge_base_mcp.main import DEFAULT_DOCS_CROSS_ENCODER_MODEL
+from knowledge_base_mcp.servers.github import GitHubServer, SearchResponseWithSummary
 
 if TYPE_CHECKING:
     from knowledge_base_mcp.servers.ingest.base import IngestResult
 
-DEFAULT_DOCS_CROSS_ENCODER_MODEL = "cross-encoder/ms-marco-MiniLM-L-2-v2"
 
 embedding_model: FastEmbedEmbedding | None = None
 try:
@@ -52,12 +51,12 @@ def vector_store_index(duckdb_vector_store: DuckDBVectorStore, duckdb_docstore: 
 
 @pytest.fixture
 def knowledge_base_client(vector_store_index: VectorStoreIndex):
-    return KnowledgeBaseClient(vector_store_index=vector_store_index)
+    return KnowledgeBaseClient(vector_store_index=vector_store_index, reranker_model=DEFAULT_DOCS_CROSS_ENCODER_MODEL)
 
 
 @pytest.fixture
-def github_ingest_server(knowledge_base_client: KnowledgeBaseClient):
-    return GitHubIngestServer(knowledge_base_client=knowledge_base_client)
+def github_server(knowledge_base_client: KnowledgeBaseClient):
+    return GitHubServer(knowledge_base_client=knowledge_base_client)
 
 
 def prepare_nodes_for_snapshot(nodes: list[BaseNode]) -> list[BaseNode]:
@@ -82,10 +81,8 @@ def prepare_nodes_for_snapshot(nodes: list[BaseNode]) -> list[BaseNode]:
 
 
 class TestIngest:
-    async def test_ingest(
-        self, github_ingest_server: GitHubIngestServer, vector_store_index: VectorStoreIndex, yaml_snapshot: SnapshotAssertion
-    ):
-        ingest_result: IngestResult = await github_ingest_server.load_github_issues(
+    async def test_ingest(self, github_server: GitHubServer, vector_store_index: VectorStoreIndex, yaml_snapshot: SnapshotAssertion):
+        ingest_result: IngestResult = await github_server.load_github_issues(
             knowledge_base="test",
             owner="strawgate",
             repo="gemini-for-github-demo",
@@ -129,9 +126,9 @@ class TestIngest:
         assert prepare_nodes_for_snapshot(nodes) == yaml_snapshot
 
     async def test_ingest_comments(
-        self, github_ingest_server: GitHubIngestServer, vector_store_index: VectorStoreIndex, yaml_snapshot: SnapshotAssertion
+        self, github_server: GitHubServer, vector_store_index: VectorStoreIndex, yaml_snapshot: SnapshotAssertion
     ):
-        ingest_result: IngestResult = await github_ingest_server.load_github_issues(
+        ingest_result: IngestResult = await github_server.load_github_issues(
             knowledge_base="test",
             owner="strawgate",
             repo="gemini-for-github-demo",
@@ -170,8 +167,8 @@ class TestIngest:
 
 class TestSearch:
     @pytest.fixture(autouse=True)
-    async def vector_store_index_with_comments(self, github_ingest_server: GitHubIngestServer):
-        ingest_result: IngestResult = await github_ingest_server.load_github_issues(
+    async def vector_store_index_with_comments(self, github_server: GitHubServer):
+        ingest_result: IngestResult = await github_server.load_github_issues(
             knowledge_base="test",
             owner="strawgate",
             repo="gemini-for-github-demo",
@@ -182,36 +179,18 @@ class TestSearch:
 
     @pytest.fixture
     def github_search_server(self, knowledge_base_client: KnowledgeBaseClient):
-        return GitHubSearchServer(knowledge_base_client=knowledge_base_client, reranker_model=DEFAULT_DOCS_CROSS_ENCODER_MODEL)
+        return GitHubServer(knowledge_base_client=knowledge_base_client)
 
-    async def test_search(self, github_search_server: GitHubSearchServer, yaml_snapshot: SnapshotAssertion):
+    async def test_search(self, github_search_server: GitHubServer, yaml_snapshot: SnapshotAssertion):
         response: SearchResponseWithSummary = await github_search_server.query("What do you do as a feature request triager?")
 
         assert response.query == "What do you do as a feature request triager?"
 
         assert response.summary.root == {"test": 59}
 
-        assert len(response.results) == 10
+        assert len(response.results) == 2
 
         # sort them by their "number" field
         response.results = sorted(response.results, key=lambda x: x.number)
-
-        assert response.model_dump() == yaml_snapshot
-
-    @pytest.fixture
-    def github_search_server_keep_children(self, knowledge_base_client: KnowledgeBaseClient):
-        return GitHubSearchServer(knowledge_base_client=knowledge_base_client, reranker_model=DEFAULT_DOCS_CROSS_ENCODER_MODEL)
-
-    async def test_search_keep_children(self, github_search_server_keep_children: GitHubSearchServer, yaml_snapshot: SnapshotAssertion):
-        response: SearchResponseWithSummary = await github_search_server_keep_children.query("What do you do as a feature request triager?")
-
-        assert response.query == "What do you do as a feature request triager?"
-
-        assert response.summary.root == {"test": 59}
-
-        assert len(response.results) == 10
-
-        # sort them by their "number" field
-        response.results.sort(key=lambda x: x.number)
 
         assert response.model_dump() == yaml_snapshot

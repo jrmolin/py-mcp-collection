@@ -75,7 +75,7 @@ class FilesystemIngestServer(BaseIngestServer):
     knowledge_base_type: str = "documentation"
 
     @override
-    def get_tools(self) -> list[FastMCPTool]:
+    def get_ingest_tools(self) -> list[FastMCPTool]:
         return [
             FastMCPTool.from_function(fn=self.load_directory),
             FastMCPTool.from_function(fn=self.load_git_repository),
@@ -83,13 +83,13 @@ class FilesystemIngestServer(BaseIngestServer):
 
     async def load_directory(
         self,
-        context: Context,
         knowledge_base: NewKnowledgeBaseField,
         path: DirectoryPathField,
         exclude: DirectoryExcludeField = None,
         extensions: DirectoryFilterExtensionsField = None,
         recursive: DirectoryRecursiveField = True,
         background: bool = True,
+        context: Context | None = None,
     ) -> IngestResult | None:
         """Create a new knowledge base from a directory."""
 
@@ -110,12 +110,12 @@ class FilesystemIngestServer(BaseIngestServer):
 
     async def _load_directory(
         self,
-        context: Context,
         knowledge_base: NewKnowledgeBaseField,
         path: DirectoryPathField,
         exclude: DirectoryExcludeField = None,
         extensions: DirectoryFilterExtensionsField = None,
         recursive: DirectoryRecursiveField = True,
+        context: Context | None = None,
     ) -> IngestResult:
         """Create a new knowledge base from a directory."""
 
@@ -151,12 +151,12 @@ class FilesystemIngestServer(BaseIngestServer):
 
     async def load_git_repository(
         self,
-        context: Context,
         knowledge_base: NewKnowledgeBaseField,
         repository_url: Annotated[str, Field(description="The URL of the git repository to clone.")],
         branch: Annotated[str, Field(description="The branch to clone.")],
         path: Annotated[str, Field(description="The path in the repository to ingest.")],
         background: bool = True,
+        context: Context | None = None,
     ) -> IngestResult | None:
         """Create a new knowledge base from a git repository."""
 
@@ -176,13 +176,13 @@ class FilesystemIngestServer(BaseIngestServer):
 
     async def _load_git_repository(
         self,
-        context: Context,
         knowledge_base: NewKnowledgeBaseField,
         repository_url: Annotated[str, Field(description="The URL of the git repository to clone.")],
         branch: Annotated[str, Field(description="The branch to clone.")],
         path: Annotated[str, Field(description="The path in the repository to ingest.")],
         exclude: DirectoryExcludeField = None,
         extensions: DirectoryFilterExtensionsField = None,
+        context: Context | None = None,
     ) -> IngestResult:
         """Create a new knowledge base from a git repository."""
 

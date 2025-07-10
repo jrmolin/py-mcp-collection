@@ -5,6 +5,8 @@ from llama_index.core.embeddings import BaseEmbedding
 from llama_index.core.indices.vector_store import VectorStoreIndex
 from llama_index.core.indices.vector_store.retrievers import VectorIndexRetriever
 from llama_index.core.ingestion.pipeline import IngestionPipeline
+from llama_index.core.postprocessor.sbert_rerank import SentenceTransformerRerank
+from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from llama_index.core.schema import BaseNode, RelatedNodeInfo
 from llama_index.core.storage.docstore.keyval_docstore import KVDocumentStore
 from llama_index.core.storage.kvstore.types import BaseKVStore
@@ -13,6 +15,7 @@ from pydantic import BaseModel, ConfigDict
 
 from knowledge_base_mcp.llama_index.hierarchical_node_parsers.collapse_only_children import CollapseSmallFamilies
 from knowledge_base_mcp.llama_index.hierarchical_node_parsers.leaf_semantic_merging import LeafSemanticMergerNodeParser
+from knowledge_base_mcp.llama_index.post_processors.flash_rerank import FlashRankRerank
 from knowledge_base_mcp.llama_index.transformations.check_docstore import CheckDocstore
 from knowledge_base_mcp.llama_index.transformations.large_node_detector import LargeNodeDetector
 from knowledge_base_mcp.llama_index.transformations.leaf_embeddings import LeafNodeEmbedding
@@ -48,6 +51,12 @@ class KnowledgeBaseClient(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(arbitrary_types_allowed=True)
 
     vector_store_index: VectorStoreIndex
+
+    reranker_model: str
+
+    @cached_property
+    def reranker(self) -> BaseNodePostprocessor:
+        return FlashRankRerank(model=self.reranker_model, top_n=1000)
 
     @property
     def docstore(self) -> KVDocumentStore:

@@ -1,8 +1,6 @@
-from abc import ABC, abstractmethod
-from typing import Any, ClassVar
+from abc import ABC
+from typing import ClassVar
 
-from fastmcp import FastMCP
-from fastmcp.tools import Tool as FastMCPTool
 from pydantic import ConfigDict
 from pydantic.main import BaseModel
 
@@ -17,15 +15,3 @@ class BaseKnowledgeBaseServer(BaseModel, ABC):  # pyright: ignore[reportUnsafeMu
     knowledge_base_client: KnowledgeBaseClient
 
     server_name: str
-
-    def as_fastmcp(self) -> FastMCP[Any]:
-        """Convert the server to a FastMCP server."""
-
-        mcp: FastMCP[Any] = FastMCP[Any](name=self.server_name)
-
-        [mcp.add_tool(tool=tool) for tool in self.get_tools()]
-
-        return mcp
-
-    @abstractmethod
-    def get_tools(self) -> list[FastMCPTool]: ...

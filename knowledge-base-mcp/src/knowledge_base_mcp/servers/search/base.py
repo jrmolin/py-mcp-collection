@@ -1,21 +1,22 @@
-from abc import ABC
-from functools import cached_property
+from abc import ABC, abstractmethod
 from logging import Logger
-from typing import TYPE_CHECKING, Annotated, ClassVar
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
+from fastmcp import FastMCP
+from fastmcp.tools import Tool as FastMCPTool
 from llama_index.core.base.base_query_engine import BaseQueryEngine
 from llama_index.core.base.base_retriever import BaseRetriever
 from llama_index.core.bridge.pydantic import Field
 from llama_index.core.llms import MockLLM
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
-from llama_index.core.query_engine.retriever_query_engine import RetrieverQueryEngine
 from llama_index.core.response_synthesizers.no_text import NoText
 from llama_index.core.schema import NodeWithScore
 from llama_index.core.vector_stores.types import MetadataFilters
 from pydantic import BaseModel, ConfigDict
 
 from knowledge_base_mcp.clients.knowledge_base import KnowledgeBaseClient
-from knowledge_base_mcp.llama_index.post_processors.duplicate_node import DuplicateNodePostprocessor
+from knowledge_base_mcp.llama_index.post_processors.remove_duplicate_nodes import RemoveDuplicateNodesPostprocessor
+from knowledge_base_mcp.llama_index.query_engine.timing_retriever_query_engine import TimingRetrieverQueryEngine
 from knowledge_base_mcp.servers.base import BaseKnowledgeBaseServer
 from knowledge_base_mcp.servers.models.documentation import (
     DocumentResponse,
@@ -83,6 +84,18 @@ class BaseSearchServer(BaseKnowledgeBaseServer, ABC):
 
     knowledge_base_type: str
 
+    @abstractmethod
+    def get_search_tools(self) -> list[FastMCPTool]: ...
+
+    def as_search_server(self) -> FastMCP[Any]:
+        """Convert the server to a FastMCP server."""
+
+        mcp: FastMCP[Any] = FastMCP[Any](name=self.server_name)
+
+        [mcp.add_tool(tool=tool) for tool in self.get_search_tools()]
+
+        return mcp
+
     async def get_document(self, knowledge_base: DocumentKnowledgeBaseField, title: DocumentTitleField) -> DocumentResponse:
         """Get a document from the knowledge base"""
 
@@ -97,20 +110,23 @@ class BaseSearchServer(BaseKnowledgeBaseServer, ABC):
             knowledge_base_types=[self.knowledge_base_type], knowledge_base=knowledge_base, top_k=top_k
         )
 
-    def result_post_processors(self, result_count: int = 20) -> list[BaseNodePostprocessor]:
+    def result_post_processors(self) -> list[BaseNodePostprocessor]:
         post_processors: list[BaseNodePostprocessor] = []
-        if result_count:
-            post_processors.append(DuplicateNodePostprocessor())
+
+        post_processors.append(RemoveDuplicateNodesPostprocessor(by_id=True, by_hash=True))
+
         return post_processors
 
-    def result_query_engine(self, knowledge_base: list[str] | str | None = None, extra_filters: MetadataFilters | None = None, result_count: int = 20) -> BaseQueryEngine:
+    def result_query_engine(
+        self, knowledge_base: list[str] | str | None = None, extra_filters: MetadataFilters | None = None, top_k: int = 50
+    ) -> BaseQueryEngine:
         synthesizer: NoText = NoText(llm=MockLLM())
 
-        post_processors: list[BaseNodePostprocessor] = self.result_post_processors(result_count=result_count)
+        post_processors: list[BaseNodePostprocessor] = self.result_post_processors()
 
-        return RetrieverQueryEngine(
+        return TimingRetrieverQueryEngine(
             retriever=self.knowledge_base_client.get_knowledge_base_retriever(
-                knowledge_base_types=[self.knowledge_base_type], knowledge_base=knowledge_base, extra_filters=extra_filters
+                knowledge_base_types=[self.knowledge_base_type], knowledge_base=knowledge_base, extra_filters=extra_filters, top_k=top_k
             ),
             node_postprocessors=post_processors,
             response_synthesizer=synthesizer,
@@ -120,19 +136,25 @@ class BaseSearchServer(BaseKnowledgeBaseServer, ABC):
         synthesizer: NoText = NoText(llm=MockLLM())
 
         retriever: BaseRetriever = self.knowledge_base_client.get_knowledge_base_retriever(
-            knowledge_base_types=[self.knowledge_base_type], knowledge_base=knowledge_base, top_k=1000
+            knowledge_base_types=[self.knowledge_base_type], knowledge_base=knowledge_base, top_k=500
         )
 
-        return RetrieverQueryEngine(
+        return TimingRetrieverQueryEngine(
             retriever=retriever,
             response_synthesizer=synthesizer,
         )
 
     async def get_results(
-        self, query: QueryStringField, knowledge_bases: QueryKnowledgeBasesField | None = None, extra_filters: MetadataFilters | None = None, count: int = 20
+        self,
+        query: QueryStringField,
+        knowledge_bases: QueryKnowledgeBasesField | None = None,
+        extra_filters: MetadataFilters | None = None,
+        count: int = 50,
     ) -> list[NodeWithScore]:
         """Get the results from the query engine"""
-        response: RESPONSE_TYPE = await self.result_query_engine(knowledge_base=knowledge_bases, extra_filters=extra_filters, result_count=count).aquery(query)
+        response: RESPONSE_TYPE = await self.result_query_engine(
+            knowledge_base=knowledge_bases, extra_filters=extra_filters, top_k=count
+        ).aquery(query)
 
         return response.source_nodes[:count]
 

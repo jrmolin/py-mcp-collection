@@ -1,22 +1,23 @@
+import time
+from functools import cached_property
 from logging import Logger
+from typing import TYPE_CHECKING, Any, override
 
-
-from typing import TYPE_CHECKING, override
-
+from fastmcp.server.server import FastMCP
 from fastmcp.tools import Tool as FastMCPTool
 from llama_index.core.postprocessor import SentenceTransformerRerank
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
-import time
 
-from knowledge_base_mcp.llama_index.post_processors.duplicate_node import DuplicateNodePostprocessor
-from knowledge_base_mcp.llama_index.post_processors.parent_context import ParentContextNodePostprocessor
+from knowledge_base_mcp.llama_index.post_processors.flash_rerank import FlashRankRerank
+from knowledge_base_mcp.llama_index.post_processors.get_parent_nodes import GetParentNodesPostprocessor
+from knowledge_base_mcp.llama_index.post_processors.get_sibling_nodes import GetSiblingNodesPostprocessor
+from knowledge_base_mcp.llama_index.post_processors.remove_duplicate_nodes import RemoveDuplicateNodesPostprocessor
 from knowledge_base_mcp.servers.models.documentation import (
     KnowledgeBaseSummary,
     SearchResponseWithSummary,
     TreeSearchResponse,
 )
 from knowledge_base_mcp.servers.search.base import BaseSearchServer, QueryKnowledgeBasesField, QueryStringField
-
 from knowledge_base_mcp.utils.logging import BASE_LOGGER
 
 logger: Logger = BASE_LOGGER.getChild(suffix="DocumentationSearchServer")
@@ -35,37 +36,52 @@ class DocumentationSearchServer(BaseSearchServer):
     reranker_model: str
 
     @override
-    def get_tools(self) -> list[FastMCPTool]:
-        """Get the tools for the server."""
+    def get_search_tools(self) -> list[FastMCPTool]:
+        """Get the search tools for the server."""
         return [
             FastMCPTool.from_function(fn=self.query),
         ]
 
     @override
-    def result_post_processors(self, result_count: int = 3) -> list[BaseNodePostprocessor]:
-        reranker = SentenceTransformerRerank(model=self.reranker_model, top_n=result_count * 3)
+    def as_search_server(self) -> FastMCP[Any]:
+        """Convert the server to a FastMCP server."""
 
-        # Always bring in the parent node
-        parent_context_postprocessor = ParentContextNodePostprocessor(
+        mcp: FastMCP[Any] = FastMCP[Any](name=self.server_name)
+
+        [mcp.add_tool(tool=tool) for tool in self.get_search_tools()]
+
+        return mcp
+
+    @override
+    def result_post_processors(self) -> list[BaseNodePostprocessor]:
+        # Bring in sibling nodes before reranking
+        get_sibling_nodes_postprocessor = GetSiblingNodesPostprocessor(
             doc_store=self.knowledge_base_client.docstore,
-            threshold=0.0,
         )
 
-        # Sometimes bring in the grandaprent node
-        grandparent_context_postprocessor = ParentContextNodePostprocessor(
+        rerank_nodes_postprocessor = self.knowledge_base_client.reranker
+
+        # Replace child nodes with a parent node if we have enough of them
+        get_parent_node_postprocessor = GetParentNodesPostprocessor(
             doc_store=self.knowledge_base_client.docstore,
-            threshold=0.5,
+            minimum_coverage=0.5,
+            minimum_size=1024,
+            maximum_size=4096,
+            keep_child_nodes=False,
         )
 
-        duplicate_node_postprocessor = DuplicateNodePostprocessor()
+        # Remove duplicate nodes
+        duplicate_node_postprocessor = RemoveDuplicateNodesPostprocessor(
+            by_id=True,
+            by_hash=True,
+        )
 
         return [
-            #parent_context_postprocessor,
             duplicate_node_postprocessor,
-            reranker,
-            #grandparent_context_postprocessor,
-            reranker,
+            get_sibling_nodes_postprocessor,
+            get_parent_node_postprocessor,
             duplicate_node_postprocessor,
+            rerank_nodes_postprocessor,
         ]
 
     async def query(self, query: QueryStringField, knowledge_bases: QueryKnowledgeBasesField | None = None) -> SearchResponseWithSummary:

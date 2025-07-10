@@ -1,24 +1,24 @@
-from textwrap import dedent
+import subprocess
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
 from llama_index.core.indices.vector_store import VectorStoreIndex
-from llama_index.core.schema import BaseNode, MetadataMode, RelatedNodeInfo
+from llama_index.core.schema import BaseNode, Document, MediaResource, Node, NodeRelationship
 from llama_index.core.storage import StorageContext
 from llama_index.embeddings.fastembed import FastEmbedEmbedding
+from llama_index.storage.docstore.duckdb import DuckDBDocumentStore
+from llama_index.storage.kvstore.duckdb import DuckDBKVStore
 from llama_index.vector_stores.duckdb import DuckDBVectorStore
 from syrupy.assertion import SnapshotAssertion
 
 from knowledge_base_mcp.clients.knowledge_base import KnowledgeBaseClient
-from knowledge_base_mcp.servers.ingest.github import GitHubIngestServer
-from knowledge_base_mcp.servers.search.github import GitHubSearchServer, SearchResponseWithSummary
-from knowledge_base_mcp.vendored.storage.docstore.duckdb import DuckDBDocumentStore
-from knowledge_base_mcp.vendored.storage.kvstore.duckdb.base import DuckDBKVStore
+from knowledge_base_mcp.main import DEFAULT_DOCS_CROSS_ENCODER_MODEL
+from knowledge_base_mcp.servers.ingest.filesystem import FilesystemIngestServer
+from knowledge_base_mcp.servers.search.docs import DocumentationSearchServer
 
 if TYPE_CHECKING:
-    from knowledge_base_mcp.servers.ingest.base import IngestResult
-
-DEFAULT_DOCS_CROSS_ENCODER_MODEL = "cross-encoder/ms-marco-MiniLM-L-2-v2"
+    from knowledge_base_mcp.servers.models.documentation import KnowledgeBaseResult, SearchResponseWithSummary
 
 embedding_model: FastEmbedEmbedding | None = None
 try:
@@ -52,12 +52,12 @@ def vector_store_index(duckdb_vector_store: DuckDBVectorStore, duckdb_docstore: 
 
 @pytest.fixture
 def knowledge_base_client(vector_store_index: VectorStoreIndex):
-    return KnowledgeBaseClient(vector_store_index=vector_store_index)
+    return KnowledgeBaseClient(vector_store_index=vector_store_index, reranker_model=DEFAULT_DOCS_CROSS_ENCODER_MODEL)
 
 
 @pytest.fixture
-def github_ingest_server(knowledge_base_client: KnowledgeBaseClient):
-    return GitHubIngestServer(knowledge_base_client=knowledge_base_client)
+def documentation_search_server(knowledge_base_client: KnowledgeBaseClient):
+    return DocumentationSearchServer(knowledge_base_client=knowledge_base_client, reranker_model=DEFAULT_DOCS_CROSS_ENCODER_MODEL)
 
 
 def prepare_nodes_for_snapshot(nodes: list[BaseNode]) -> list[BaseNode]:
@@ -81,137 +81,169 @@ def prepare_nodes_for_snapshot(nodes: list[BaseNode]) -> list[BaseNode]:
     return nodes
 
 
-class TestIngest:
-    async def test_ingest(
-        self, github_ingest_server: GitHubIngestServer, vector_store_index: VectorStoreIndex, yaml_snapshot: SnapshotAssertion
-    ):
-        ingest_result: IngestResult = await github_ingest_server.load_github_issues(
-            knowledge_base="test",
-            owner="strawgate",
-            repo="gemini-for-github-demo",
-        )
+@pytest.fixture
+def filesystem_ingest_server(knowledge_base_client: KnowledgeBaseClient):
+    return FilesystemIngestServer(knowledge_base_client=knowledge_base_client)
 
-        assert ingest_result.parsed_nodes == 15
 
-        nodes_by_id: dict[str, BaseNode] = vector_store_index.docstore.docs
+@pytest.fixture
+def playground_beats():
+    root_dir = Path("./playground/beats")
+    if not root_dir.exists():
+        # git clone --depth 1 --branch <branch_name> --single-branch <repo_url> <clone_path>
 
-        nodes: list[BaseNode] = list(nodes_by_id.values())
+        # Clone commit 63a537a17839ef23b0cd4cd7d62e708319374b61 with depth 1 and single branch
+        commit = "static-branch-e2e-tests"
+        repo_url = "https://github.com/strawgate/beats.git"
+        clone_path = "./playground/beats"
+        git_clone_command = f"git clone --depth 1 --branch {commit} --single-branch {repo_url} {clone_path}"
 
-        # Sort nodes by their "number" field
-        nodes.sort(key=lambda x: x.metadata.get("number", 0))  # pyright: ignore[reportAny]
+        _ = subprocess.run(git_clone_command, check=False, shell=True)  # noqa: S602
 
-        node_one: BaseNode = nodes[13]
-
-        node_one_content: str = node_one.get_content(metadata_mode=MetadataMode.NONE)
-
-        assert (
-            node_one_content
-            == "/gemini can you summarize this repository and tell me what it is all about anyway? Please inlude information about commits, prs, and issues. Suggest improvements."
-        )
-
-        node_one_embed_content: str = node_one.get_content(metadata_mode=MetadataMode.EMBED)
-
-        assert (
-            node_one_embed_content
-            == dedent("""
-        repository: strawgate/gemini-for-github-demo
-        title: Just what is this all about anyway?
-        user.association: NONE
-
-        /gemini can you summarize this repository and tell me what it is all about anyway? Please inlude information about commits, prs, and issues. Suggest improvements.""").strip()
-        )
-
-        assert node_one.metadata["knowledge_base"] == "test"
-        assert node_one.metadata["knowledge_base_type"] == "github_issues"
-        assert node_one.metadata["title"] == "Just what is this all about anyway?"
-        assert node_one.metadata["state"] == "open"
-
-        assert prepare_nodes_for_snapshot(nodes) == yaml_snapshot
-
-    async def test_ingest_comments(
-        self, github_ingest_server: GitHubIngestServer, vector_store_index: VectorStoreIndex, yaml_snapshot: SnapshotAssertion
-    ):
-        ingest_result: IngestResult = await github_ingest_server.load_github_issues(
-            knowledge_base="test",
-            owner="strawgate",
-            repo="gemini-for-github-demo",
-            include_comments=True,
-        )
-
-        assert ingest_result.parsed_nodes == 74
-
-        nodes_by_id: dict[str, BaseNode] = vector_store_index.docstore.docs
-
-        nodes: list[BaseNode] = list(nodes_by_id.values())
-
-        # Get the node with a "number" metadata field of 1
-        node_one: BaseNode = next(node for node in nodes if node.metadata.get("number") == 1)
-
-        assert node_one.metadata["knowledge_base"] == "test"
-        assert node_one.metadata["knowledge_base_type"] == "github_issues"
-        assert node_one.metadata["type"] == "issue"
-        assert node_one.metadata["number"] == 1
-
-        assert node_one.metadata["title"] == "The readme has nothing in it"
-        assert node_one.metadata["state"] == "open"
-
-        node_two: BaseNode = nodes[1]
-
-        node_two_content: str = node_two.get_content(metadata_mode=MetadataMode.NONE)
-
-        assert "/gemini can you read issue descriptions? Any thoughts about the description in this issue?" in node_two_content
-
-        assert node_two.metadata["knowledge_base"] == "test"
-        assert node_two.metadata["knowledge_base_type"] == "github_issues"
-        assert node_two.metadata["type"] == "comment"
-
-        assert prepare_nodes_for_snapshot(nodes) == yaml_snapshot
+    return root_dir.resolve()
 
 
 class TestSearch:
-    @pytest.fixture(autouse=True)
-    async def vector_store_index_with_comments(self, github_ingest_server: GitHubIngestServer):
-        ingest_result: IngestResult = await github_ingest_server.load_github_issues(
-            knowledge_base="test",
-            owner="strawgate",
-            repo="gemini-for-github-demo",
-            include_comments=True,
+    @pytest.fixture
+    def documentation_search_server(
+        self,
+        knowledge_base_client: KnowledgeBaseClient,
+    ):
+        return DocumentationSearchServer(knowledge_base_client=knowledge_base_client, reranker_model=DEFAULT_DOCS_CROSS_ENCODER_MODEL)
+
+    @pytest.fixture
+    async def vector_store_index_with_documents(self, vector_store_index: VectorStoreIndex):
+        document = Document(
+            text="Hello, world!",
+            metadata={
+                "knowledge_base": "test",
+                "knowledge_base_type": "documentation",
+                "title": "Hello, world document!",
+            },
         )
 
-        assert ingest_result.parsed_nodes == 74
+        parent_node = Node(
+            text_resource=MediaResource(text="Hello, world!"),
+            extra_info={
+                **document.metadata,
+                "headings": "# Parent Node",
+            },
+        )
 
-    @pytest.fixture
-    def github_search_server(self, knowledge_base_client: KnowledgeBaseClient):
-        return GitHubSearchServer(knowledge_base_client=knowledge_base_client, reranker_model=DEFAULT_DOCS_CROSS_ENCODER_MODEL)
+        node_one = Node(
+            text_resource=MediaResource(text="I'm just a Node, I am not a document!"),
+            extra_info={
+                **document.metadata,
+                "headings": "## Node One",
+            },
+        )
 
-    async def test_search(self, github_search_server: GitHubSearchServer, yaml_snapshot: SnapshotAssertion):
-        response: SearchResponseWithSummary = await github_search_server.query("What do you do as a feature request triager?")
+        node_two = Node(
+            text_resource=MediaResource(text="I'm the second node, better than the first one!"),
+            extra_info={
+                **document.metadata,
+                "headings": "## Node Two",
+            },
+        )
 
-        assert response.query == "What do you do as a feature request triager?"
+        node_three = Node(
+            text_resource=MediaResource(text="I'm the third node, better than any other node!"),
+            extra_info={
+                **document.metadata,
+                "headings": "## Node Three",
+            },
+        )
 
-        assert response.summary.root == {"test": 59}
+        for node in [node_one, node_two, node_three]:
+            node.relationships[NodeRelationship.PARENT] = parent_node.as_related_node_info()
 
-        assert len(response.results) == 10
+        parent_node.relationships[NodeRelationship.CHILD] = [
+            node_one.as_related_node_info(),
+            node_two.as_related_node_info(),
+            node_three.as_related_node_info(),
+        ]
 
-        # sort them by their "number" field
-        response.results = sorted(response.results, key=lambda x: x.number)
+        if not embedding_model:
+            msg = "Embedding model not available"
+            raise TypeError(msg)
 
-        assert response.model_dump() == yaml_snapshot
+        _ = await embedding_model.acall(
+            [
+                node_one,
+                node_two,
+                node_three,
+            ]
+        )
 
-    @pytest.fixture
-    def github_search_server_keep_children(self, knowledge_base_client: KnowledgeBaseClient):
-        return GitHubSearchServer(knowledge_base_client=knowledge_base_client, reranker_model=DEFAULT_DOCS_CROSS_ENCODER_MODEL)
+        _ = await vector_store_index.vector_store.async_add(
+            nodes=[node_one, node_two, node_three],
+        )
 
-    async def test_search_keep_children(self, github_search_server_keep_children: GitHubSearchServer, yaml_snapshot: SnapshotAssertion):
-        response: SearchResponseWithSummary = await github_search_server_keep_children.query("What do you do as a feature request triager?")
+        await vector_store_index.docstore.async_add_documents(
+            docs=[document, parent_node],
+        )
 
-        assert response.query == "What do you do as a feature request triager?"
+    async def test_search(
+        self,
+        documentation_search_server: DocumentationSearchServer,
+        vector_store_index_with_documents: VectorStoreIndex,
+        yaml_snapshot: SnapshotAssertion,
+    ):
+        response: SearchResponseWithSummary = await documentation_search_server.query("Who is the best?")
 
-        assert response.summary.root == {"test": 59}
+        assert response.query == "Who is the best?"
 
-        assert len(response.results) == 10
+        assert response.summary.root == {"test": 3}
 
-        # sort them by their "number" field
-        response.results.sort(key=lambda x: x.number)
+        assert len(response.results.root) == 1
 
-        assert response.model_dump() == yaml_snapshot
+        kb_results: dict[str, KnowledgeBaseResult] = response.results.root
+
+        headings = kb_results["test"].root["Hello, world document!"].headings
+
+        assert sorted(headings) == sorted(["# Parent Node"])
+
+        assert response == yaml_snapshot
+
+    # class TestBenchmark:
+    #     @pytest.fixture
+    #     async def vector_store_index_with_documents(self, filesystem_ingest_server: FilesystemIngestServer, playground_beats: Path):
+    #         ingest_result: IngestResult | None = await filesystem_ingest_server.load_directory(
+    #             knowledge_base="test",
+    #             path=str(playground_beats / "docs"),
+    #             background=False,
+    #         )
+
+    #         if not ingest_result:
+    #             msg = "Failed to ingest documentation"
+    #             raise TypeError(msg)
+
+    #         assert ingest_result.parsed_nodes == 74
+
+    #     async def test_search(
+    #         self,
+    #         documentation_search_server: DocumentationSearchServer,
+    #         vector_store_index_with_documents: VectorStoreIndex,
+    #         yaml_snapshot: SnapshotAssertion,
+    #     ):
+    #         """Benchmark searching over a larger number of documents."""
+
+    #         start_time = time.time()
+    #         response: SearchResponseWithSummary = await documentation_search_server.query("What do you do as a feature request triager?")
+
+    #         end_time = time.time()
+
+    #         duration = end_time - start_time
+
+    #         assert duration < 1
+
+    #         assert response.query == "What do you do as a feature request triager?"
+
+    #         assert response.summary.root == {"test": 59}
+
+    #         assert len(response.results) == 10
+
+    #         # sort them by their "number" field
+    #         response.results = sorted(response.results, key=lambda x: x.number)
+
+    #         assert response.model_dump() == yaml_snapshot

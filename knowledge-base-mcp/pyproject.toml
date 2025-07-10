@@ -33,13 +33,17 @@ dependencies = [
     "llama-index-readers-slack>=0.3.1",
     "llama-index-readers-github>=0.6.1",
     "githubkit>=0.12.15",
+    "flashrank>=0.2.10",
+    "llama-index-storage-docstore-duckdb>=0.1.0",
+    "llama-index-storage-kvstore-duckdb>=0.1.1",
+    "llama-index-storage-index-store-duckdb>=0.1.0",
 ]
 
 [tool.uv.sources]
 #docling = { git = "https://github.com/strawgate/fork.docling.git", branch = "make-docling-fast-again" }
-#llama-index-storage-docstore-duckdb = {path = "/Users/bill.easton/repos/llama_index/llama-index-integrations/storage/docstore/llama-index-storage-docstore-duckdb"}
-#llama-index-storage-kvstore-duckdb = {path = "/Users/bill.easton/repos/llama_index/llama-index-integrations/storage/kvstore/llama-index-storage-kvstore-duckdb"}
-#llama-index-storage-index-store-duckdb = {path = "/Users/bill.easton/repos/llama_index/llama-index-integrations/storage/index_store/llama-index-storage-index-store-duckdb"}
+llama-index-storage-docstore-duckdb = {path = "/Users/bill.easton/repos/llama_index/llama-index-integrations/storage/docstore/llama-index-storage-docstore-duckdb"}
+llama-index-storage-kvstore-duckdb = {path = "/Users/bill.easton/repos/llama_index/llama-index-integrations/storage/kvstore/llama-index-storage-kvstore-duckdb"}
+llama-index-storage-index-store-duckdb = {path = "/Users/bill.easton/repos/llama_index/llama-index-integrations/storage/index_store/llama-index-storage-index-store-duckdb"}
 
 [tool.poetry]
 packages = [
@@ -54,6 +58,7 @@ knowledge-base-mcp = "knowledge_base_mcp.main:run_mcp"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+addopts = "-s"  # disable captures
 
 [dependency-groups]
 dev = [

@@ -1,14 +1,14 @@
 import asyncio
 import datetime
-from abc import ABC
+from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
 from logging import Logger
-from typing import Any, override
+from typing import Any
 
 from anyio import ClosedResourceError, EndOfStream, create_memory_object_stream, create_task_group
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
-from fastmcp import Context
+from fastmcp import Context, FastMCP
 from fastmcp.tools import Tool as FastMCPTool
 from llama_index.core.ingestion.pipeline import IngestionPipeline
 from llama_index.core.schema import BaseNode, Document
@@ -78,11 +78,17 @@ class BaseIngestServer(BaseKnowledgeBaseServer, ABC):
 
     _background_tasks: list[asyncio.Task[IngestResult]] = PrivateAttr(default_factory=list)
 
-    @override
-    def get_tools(self) -> list[FastMCPTool]:
-        return [
-            FastMCPTool.from_function(fn=self.get_completed_tasks),
-        ]
+    @abstractmethod
+    def get_ingest_tools(self) -> list[FastMCPTool]: ...
+
+    def as_ingest_server(self) -> FastMCP[Any]:
+        """Convert the server to a FastMCP server."""
+
+        mcp: FastMCP[Any] = FastMCP[Any](name=self.server_name)
+
+        [mcp.add_tool(tool=tool) for tool in self.get_ingest_tools()]
+
+        return mcp
 
     async def _pipeline_worker(
         self,

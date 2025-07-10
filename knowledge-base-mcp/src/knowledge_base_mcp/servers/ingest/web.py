@@ -96,7 +96,7 @@ class WebIngestServer(BaseIngestServer):
     knowledge_base_type: str = "documentation"
 
     @override
-    def get_tools(self) -> list[FastMCPTool]:
+    def get_ingest_tools(self) -> list[FastMCPTool]:
         return [
             FastMCPTool.from_function(fn=self.load_website),
         ]
