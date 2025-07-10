@@ -1,28 +1,24 @@
 {
 	"folders": [
 		{
-			"path": "local-references-mcp",
-			"name": "Local References MCP Server"
-		},
-		{
 			"path": "filesystem-operations-mcp",
 			"name": "Filesystem Operations MCP"
 		},
 		{
-			"path": "doc-store-vector-search-mcp",
-			"name": "Doc Store and Vector Search MCP"
+			"path": "knowledge-base-mcp",
+			"name": "Knowledge Base MCP"
+		},
+		{
+			"path": "local-references-mcp",
+			"name": "Local References MCP Server"
+		},
+		{
+			"path": "strawgate-es-mcp",
+			"name": "Elasticsearch MCP"
 		},
 		{
 			"path": "aider-wrapper-mcp",
 			"name": "Aider MCP"
-		},
-		{
-			"path": "es-mcp",
-			"name": "Elasticsearch MCP"
-		},
-		{
-			"path": "mcp-utils",
-			"name": "MCP Utils"
 		},
 		{
 			"path": ".",

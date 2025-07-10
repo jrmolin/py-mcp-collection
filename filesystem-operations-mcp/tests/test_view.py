@@ -54,14 +54,16 @@ async def test_file_exportable_field_default_fields(file_system: FileSystem):
 @pytest.mark.asyncio
 async def test_file_exportable_field_toggle_fields(file_system: FileSystem):
     node = file_system.get_file("code.py")
-    file_fields = FileExportableField(read=True, basename=True, extension=True, created_at=True, modified_at=True, owner=True, group=True, mime_type=True)
+    file_fields = FileExportableField(
+        read=True, basename=True, extension=True, created_at=True, modified_at=True, owner=True, group=True, mime_type=True
+    )
     result, _ = file_fields.apply(node)
     expensive_fields = await file_fields.aapply(node)
     assert result["stem"] == "code"
     assert result["extension"] == ".py"
     assert "read" in expensive_fields
     assert "def hello():" in expensive_fields["read"][1]
-    assert "created_at" in result   
+    assert "created_at" in result
     assert "modified_at" in result
     assert "owner" in result
     assert "group" in result
@@ -85,9 +87,19 @@ async def test_file_exportable_field_toggle_fields(file_system: FileSystem):
 async def test_file_exportable_field_preview(file_system: FileSystem):
     node = file_system.get_file("notes.txt")
     file_fields = FileExportableField(preview=True)
-    #result, _ = file_fields.apply(node)
+    # result, _ = file_fields.apply(node)
     expensive_fields = await file_fields.aapply(node)
     assert "preview" in expensive_fields
     assert expensive_fields["preview"][1] == "Important notes:"
     assert expensive_fields["preview"][2] == "1. First point"
     assert expensive_fields["preview"][3] == "2. Second point"
+
+@pytest.mark.asyncio
+async def test_file_exportable_field_summarize(file_system: FileSystem):
+
+    _ = await file_system.create_file(file_system.path / "notes.md", "# Important notes: The first important note is about the first point. The second important note is about the second point.")
+    node = file_system.get_file("notes.md")
+    file_fields = FileExportableField(summarize=True)
+    result = await file_fields.aapply(node)
+    assert "summary" in result
+    assert result["summary"] == "Important notes: The first important note is about the first point. The second important note is about the second point."

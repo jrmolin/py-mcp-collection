@@ -44,7 +44,7 @@ class FileInsertPatch(BaseFilePatch):
     """The lines to insert into the file."""
 
     @override
-    def apply(self, lines: list[str]) -> list[str]: 
+    def apply(self, lines: list[str]) -> list[str]:
         """Applies the patch to the file."""
         self.validate_line_numbers([self.line_number], lines)
 
@@ -54,7 +54,7 @@ class FileInsertPatch(BaseFilePatch):
         if self.current_line != file_line:
             raise FilePatchDoesNotMatchError(self.line_number, [self.current_line], [file_line])
 
-        return lines[: file_line_number] + self.lines + lines[file_line_number :]
+        return lines[:file_line_number] + self.lines + lines[file_line_number:]
 
 
 class FileAppendPatch(BaseFilePatch):
@@ -114,12 +114,12 @@ class FileReplacePatch(BaseFilePatch):
         file_start_line_number = self.start_line_number - 1
         file_end_line_number = self.start_line_number + len(self.current_lines) - 1
 
-        current_file_lines = lines[file_start_line_number : file_end_line_number]
+        current_file_lines = lines[file_start_line_number:file_end_line_number]
 
         if current_file_lines != self.current_lines:
             raise FilePatchDoesNotMatchError(self.start_line_number, self.current_lines, current_file_lines)
 
-        prepend_lines = lines[: file_start_line_number]
+        prepend_lines = lines[:file_start_line_number]
         append_lines = lines[file_end_line_number:]
 
         return prepend_lines + self.new_lines + append_lines

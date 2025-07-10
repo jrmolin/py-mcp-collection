@@ -181,7 +181,7 @@ def duckdb_group() -> None:
 async def duckdb_memory(ctx: click.Context) -> None:
     from llama_index.storage.docstore.duckdb import DuckDBDocumentStore
     from llama_index.storage.index_store.duckdb import DuckDBIndexStore
-    from llama_index.storage.kvstore.duckdb import DuckDBKVStore
+    from knowledge_base_mcp.vendored.kv_store.base import DuckDBKVStore
 
     from knowledge_base_mcp.stores.vector_stores.duckdb import EnhancedDuckDBVectorStore
 
@@ -211,7 +211,7 @@ async def duckdb_memory(ctx: click.Context) -> None:
 async def duckdb_persistent(ctx: click.Context, docs_db_dir: Path, docs_db_name: str) -> None:
     from llama_index.storage.docstore.duckdb import DuckDBDocumentStore
     from llama_index.storage.index_store.duckdb import DuckDBIndexStore
-    from llama_index.storage.kvstore.duckdb import DuckDBKVStore
+    from knowledge_base_mcp.vendored.kv_store.base import DuckDBKVStore
 
     from knowledge_base_mcp.stores.vector_stores.duckdb import EnhancedDuckDBVectorStore
 

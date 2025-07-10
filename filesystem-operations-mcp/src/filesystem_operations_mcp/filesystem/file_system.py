@@ -53,6 +53,7 @@ Depth = Annotated[int, Field(description="The depth of the filesystem to get.", 
 FileReadStart = Annotated[int, Field(description="The index-1 line number to start reading from.", examples=[1])]
 FileReadCount = Annotated[int, Field(description="The number of lines to read.", examples=[100])]
 
+
 class FileSystem(DirectoryEntry):
     """A virtual filesystem rooted in a specific directory on disk."""
 

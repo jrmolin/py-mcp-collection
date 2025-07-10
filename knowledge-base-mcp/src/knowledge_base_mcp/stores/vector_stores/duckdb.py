@@ -1,6 +1,6 @@
 from typing import Any
 
-from llama_index.vector_stores.duckdb import DuckDBVectorStore
+from knowledge_base_mcp.vendored.vector_store.base import DuckDBVectorStore
 
 
 class EnhancedDuckDBVectorStore(DuckDBVectorStore):

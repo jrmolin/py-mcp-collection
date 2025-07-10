@@ -12,7 +12,7 @@ from pydantic.fields import computed_field
 from filesystem_operations_mcp.filesystem.nodes import FileEntry, FileEntryTypeEnum, FileEntryWithMatches
 from filesystem_operations_mcp.filesystem.summarize.code import summarize_code
 from filesystem_operations_mcp.filesystem.summarize.markdown import summarize_markdown
-from filesystem_operations_mcp.filesystem.summarize.text import summarize_text
+from filesystem_operations_mcp.filesystem.summarize.text import summarizer
 from filesystem_operations_mcp.filesystem.utils.workers import gather_results_from_queue, worker_pool
 from filesystem_operations_mcp.logging import BASE_LOGGER
 
@@ -129,13 +129,13 @@ class FileExportableField(BaseModel):
         return {"summary": summary}
 
     def _apply_text_summary(self, lines: list[str]) -> dict[str, Any]:
-        summary = summarize_text("\n".join(lines))
+        summary = summarizer.summarize("\n".join(lines))
         return {"summary": summary[:MAX_SUMMARY_BYTES]}
 
     def _apply_markdown_summary(self, lines: list[str]) -> dict[str, Any]:
         summary = summarize_markdown("\n".join(lines))
 
-        summary = summarize_text(summary)
+        summary = summarizer.summarize(summary)
 
         return {"summary": summary[:MAX_SUMMARY_BYTES]}
 
@@ -150,7 +150,7 @@ class FileExportableField(BaseModel):
         if not lines:
             return {}
 
-        summary = summarize_text("\n".join(lines))
+        summary = summarizer.summarize("\n".join(lines))
         return {"summary": summary[:MAX_SUMMARY_BYTES]}
 
     # def apply(self, node: FileEntry | FileEntryWithMatches) -> dict[str, Any]:
@@ -204,6 +204,9 @@ class FileExportableField(BaseModel):
         includes: set[str] = self.to_model_dump_include() | {"relative_path_str", "matches", "matches_limit_reached"}
 
         model = node.model_dump(include=includes, exclude_none=True)
+
+        if model.get("type") and isinstance(model["type"], FileEntryTypeEnum):
+            model["type"] = model["type"].value
 
         return model, self.apply_read_lines_count(node)
 

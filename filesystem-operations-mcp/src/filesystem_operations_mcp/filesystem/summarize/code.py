@@ -12,7 +12,7 @@ from tree_sitter_language_pack import (
 )
 
 from filesystem_operations_mcp.filesystem.errors import LanguageNotSupportedError
-from filesystem_operations_mcp.filesystem.summarize.text import summarize_text
+from filesystem_operations_mcp.filesystem.summarize.text import summarizer
 from filesystem_operations_mcp.logging import BASE_LOGGER
 
 logger = BASE_LOGGER.getChild(__name__)
@@ -113,7 +113,7 @@ class ViewNode(BaseModel):
         if not docs:
             return None
 
-        summary = summarize_text(document="\n".join(docs))
+        summary = summarizer.summarize(document="\n".join(docs))
 
         if summary == "":
             return None

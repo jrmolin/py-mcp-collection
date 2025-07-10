@@ -1,6 +1,6 @@
 [project]
 name = "knowledge_base_mcp"
-version = "0.4.0"
+version = "0.5.0"
 description = "Knowledge Base MCP"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -41,10 +41,10 @@ dependencies = [
 
 [tool.uv.sources]
 #docling = { git = "https://github.com/strawgate/fork.docling.git", branch = "make-docling-fast-again" }
-llama-index-storage-docstore-duckdb = {path = "/Users/bill.easton/repos/llama_index/llama-index-integrations/storage/docstore/llama-index-storage-docstore-duckdb"}
-llama-index-storage-kvstore-duckdb = {path = "/Users/bill.easton/repos/llama_index/llama-index-integrations/storage/kvstore/llama-index-storage-kvstore-duckdb"}
-llama-index-storage-index-store-duckdb = {path = "/Users/bill.easton/repos/llama_index/llama-index-integrations/storage/index_store/llama-index-storage-index-store-duckdb"}
-llama-index-vector-stores-duckdb = {path = "/Users/bill.easton/repos/llama_index/llama-index-integrations/vector_stores/llama-index-vector-stores-duckdb"}
+#llama-index-storage-docstore-duckdb = {path = "/Users/bill.easton/repos/llama_index/llama-index-integrations/storage/docstore/llama-index-storage-docstore-duckdb"}
+#llama-index-storage-kvstore-duckdb = {path = "/Users/bill.easton/repos/llama_index/llama-index-integrations/storage/kvstore/llama-index-storage-kvstore-duckdb"}
+#llama-index-storage-index-store-duckdb = {path = "/Users/bill.easton/repos/llama_index/llama-index-integrations/storage/index_store/llama-index-storage-index-store-duckdb"}
+#llama-index-vector-stores-duckdb = {path = "/Users/bill.easton/repos/llama_index/llama-index-integrations/vector_stores/llama-index-vector-stores-duckdb"}
 
 [tool.poetry]
 packages = [

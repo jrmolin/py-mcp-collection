@@ -1,6 +1,6 @@
 [project]
 name = "template"
-version = "0.2.2"
+version = "0.5.0"
 description = "Template project"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -17,7 +17,7 @@ packages = [
 [tool.hatch.metadata]
 allow-direct-references=true
 
-[tool.poetry.scripts]
+[project.scripts]
 template = "template.main:run_mcp"
 
 [tool.pytest.ini_options]

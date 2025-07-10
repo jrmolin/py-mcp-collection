@@ -1,0 +1,39 @@
+name: Publish Knowledge Base MCP to PyPI
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    environment: pypi
+    strategy:
+      matrix:
+        package:
+          - knowledge-base-mcp
+
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v6
+      
+      - name: "Install ${matrix.package}"
+        run: uv sync --locked --group dev
+
+      - name: "Test ${matrix.package}"
+        run: uv run pytest tests
+
+      - name: "Build ${matrix.package}"
+        run: uv build
+
+      - name: "Publish to PyPi ${matrix.package}"
+        run: uv publish -v dist/*

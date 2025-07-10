@@ -1,36 +1,39 @@
 import re
+from functools import cached_property
+from typing import Any, override
+import zipfile
 
 import nltk
+from nltk.downloader import Downloader
+from nltk.tokenize import PunktTokenizer
+from pydantic import BaseModel, Field
 from sumy.models.dom import Sentence
 from sumy.nlp.stemmers import Stemmer
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.parsers.plaintext import PlaintextParser
-from sumy.summarizers.edmundson import EdmundsonSummarizer
-from sumy.summarizers.lex_rank import LexRankSummarizer
-from sumy.summarizers.lsa import LsaSummarizer
 from sumy.summarizers.luhn import LuhnSummarizer
-from sumy.summarizers.reduction import ReductionSummarizer
-from sumy.summarizers.text_rank import TextRankSummarizer
-from sumy.utils import get_stop_words
+from sumy.utils import get_stop_words  # pyright: ignore[reportUnknownVariableType]
 
 from filesystem_operations_mcp.logging import BASE_LOGGER
 
+def _get_sentence_tokenizer(self, language):
+    """ We are overriding this as we need to replace punkt with punkt_tab in sumy"""
+    if language in self.SPECIAL_SENTENCE_TOKENIZERS:
+        return self.SPECIAL_SENTENCE_TOKENIZERS[language]
+    try:
+        return PunktTokenizer(language)
+    except (LookupError, zipfile.BadZipfile) as e:
+        raise LookupError(
+            "NLTK tokenizers are missing or the language is not supported.\n"
+            """Download them by following command: python -c "import nltk; nltk.download('punkt_tab')"\n"""
+            "Original error was:\n" + str(e)
+        )
+
+
+Tokenizer._get_sentence_tokenizer = _get_sentence_tokenizer
+
+
 logger = BASE_LOGGER.getChild("summarize")
-
-nltk.download("punkt")
-
-english_stemmer = Stemmer("english")
-
-summarizers = [
-    EdmundsonSummarizer(english_stemmer),
-    LsaSummarizer(english_stemmer),
-    LexRankSummarizer(english_stemmer),
-    LuhnSummarizer(english_stemmer),
-    TextRankSummarizer(english_stemmer),
-    ReductionSummarizer(english_stemmer),
-]
-
-stop_words = get_stop_words("english")
 
 
 def ideal_sentences_count(document: str) -> int:
@@ -48,22 +51,7 @@ def ideal_sentences_count(document: str) -> int:
 
 
 def summary_to_text(summary: tuple[Sentence, ...]) -> str:
-    return " ".join([sentence._text for sentence in summary])
-
-
-def get_luhn_summarizer(language: str) -> tuple[LuhnSummarizer, Tokenizer]:
-    stemmer = Stemmer(language)
-    summarizer = LuhnSummarizer(stemmer)
-    summarizer.stop_words = stop_words
-    tokenizer = Tokenizer(language)
-
-    return summarizer, tokenizer
-
-
-def has_verb_and_noun(tokenizer: Tokenizer, sentence: str) -> bool:
-    tokenized = tokenizer.to_words(sentence)
-    pos_tagged = nltk.pos_tag(tokenized)
-    return any(tag.startswith("VB") for word, tag in pos_tagged) and any(tag.startswith("NN") for word, tag in pos_tagged)
+    return " ".join([sentence._text for sentence in summary])  # pyright: ignore[reportUnknownArgumentType]
 
 
 def strip_long_non_words(document: str) -> str:
@@ -78,18 +66,50 @@ def strip_unwanted(document: str) -> str:
     return strip_code_blocks(strip_long_non_words(document))
 
 
-summarizer, tokenizer = get_luhn_summarizer("english")
+class TextSummarizer(BaseModel):
+    language: str = Field(default="english", description="The language of the text to summarize.")
+
+    @override
+    def model_post_init(self, __context: Any) -> None:  # pyright: ignore[reportAny]
+        downloader: Downloader = Downloader()
+        if not downloader.download("punkt_tab"):
+            msg = "Failed to download punkt"
+            raise RuntimeError(msg)
+
+        if not downloader.download("averaged_perceptron_tagger_eng"):
+            msg = "Failed to download averaged_perceptron_tagger_eng"
+            raise RuntimeError(msg)
+
+    @cached_property
+    def summarizer(self) -> LuhnSummarizer:
+        summarizer = LuhnSummarizer(self.stemmer)
+        summarizer.stop_words = self.stop_words
+        return summarizer
+
+    @cached_property
+    def stemmer(self) -> Stemmer:
+        return Stemmer(self.language)
+
+    @cached_property
+    def stop_words(self) -> frozenset[str]:
+        return get_stop_words(self.language)  # pyright: ignore[reportUnknownVariableType]
+
+    @cached_property
+    def tokenizer(self) -> Tokenizer:
+        return Tokenizer(self.language)
+
+    def has_verb_and_noun(self, sentence: str) -> bool:
+        tokenized = self.tokenizer.to_words(sentence)
+        pos_tagged = nltk.pos_tag(tokenized)
+        return any(tag.startswith("VB") for word, tag in pos_tagged) and any(tag.startswith("NN") for word, tag in pos_tagged)
+
+    def summarize(self, document: str) -> str:
+        sentences = self.tokenizer.to_sentences(document)
+        interesting_sentences = [strip_unwanted(sentence) for sentence in sentences if self.has_verb_and_noun(sentence)]
+        sentences_count = ideal_sentences_count(document)
+        parser = PlaintextParser.from_string("\n".join(interesting_sentences), self.tokenizer)
+        summary: tuple[Sentence, ...] = self.summarizer(parser.document, sentences_count)
+        return summary_to_text(summary)
 
 
-def summarize_text(document: str) -> str:
-    sentences = tokenizer.to_sentences(document)
-
-    interesting_sentences = [strip_unwanted(sentence) for sentence in sentences if has_verb_and_noun(tokenizer, sentence)]
-
-    sentences_count = ideal_sentences_count(document)
-
-    parser = PlaintextParser.from_string("\n".join(interesting_sentences), tokenizer)
-
-    summary: tuple[Sentence, ...] = summarizer(parser.document, sentences_count)
-
-    return summary_to_text(summary)
+summarizer = TextSummarizer()
