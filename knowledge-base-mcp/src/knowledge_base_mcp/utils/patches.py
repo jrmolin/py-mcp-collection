@@ -1,12 +1,15 @@
 from collections import defaultdict
 from collections.abc import Sequence
 from datetime import UTC, datetime
+import json
 from logging import Logger
 from typing import Any, Self
+from typing_extensions import Dict
 
 from llama_index.core.ingestion import pipeline
 from llama_index.core.ingestion.cache import IngestionCache
 from llama_index.core.ingestion.pipeline import get_transformation_hash
+from llama_index.core.vector_stores import utils
 from llama_index.core.schema import (
     BaseNode,
     Document,
@@ -164,7 +167,52 @@ async def arun_transformations(
 
     return nodes
 
+def node_to_metadata_dict(
+    node: BaseNode,
+    remove_text: bool = False,
+    text_field: str = utils.DEFAULT_TEXT_KEY,
+    text_resource_field: str = utils.DEFAULT_TEXT_RESOURCE_KEY,
+    flat_metadata: bool = False,
+) -> Dict[str, Any]:
+    """Common logic for saving Node data into metadata dict."""
+    # Using mode="json" here because BaseNode may have fields of type bytes (e.g. images in ImageBlock),
+    # which would cause serialization issues.
+    node_dict = node.model_dump(mode="json")
+    metadata: dict[str, Any] = node_dict.get("metadata", {})
+
+    if flat_metadata:
+        utils._validate_is_flat_dict(metadata)
+
+    # store entire node as json string - some minor text duplication
+    if remove_text and text_field in node_dict:
+        node_dict[text_field] = ""
+    if remove_text and text_resource_field in node_dict:
+        del node_dict[text_resource_field]
+
+    # remove embedding from node_dict
+    node_dict["embedding"] = None
+
+    # dump remainder of node_dict to json string
+    metadata["_node_content"] = json.dumps(node_dict)
+    metadata["_node_type"] = node.class_name()
+
+    # store ref doc id at top level to allow metadata filtering
+    # kept for backwards compatibility, will consolidate in future
+    metadata["document_id"] = node.ref_doc_id or "None"  # for Chroma
+    metadata["doc_id"] = node.ref_doc_id or "None"  # for Pinecone, Qdrant, Redis
+    metadata["ref_doc_id"] = node.ref_doc_id or "None"  # for Weaviate
+
+    return metadata
+
+
+
+
 
 def apply_patches() -> None:
     """Apply the patches to the pipeline."""
     pipeline.arun_transformations = arun_transformations
+
+    # TODO: Remove this once https://github.com/run-llama/llama_index/pull/19388 is merged
+    utils.node_to_metadata_dict = node_to_metadata_dict
+
+
