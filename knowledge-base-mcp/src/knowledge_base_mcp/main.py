@@ -177,9 +177,9 @@ def duckdb_group() -> None:
 async def duckdb_memory(ctx: click.Context) -> None:
     from llama_index.storage.docstore.duckdb import DuckDBDocumentStore
     from llama_index.storage.index_store.duckdb import DuckDBIndexStore
-    from llama_index.storage.kvstore.duckdb import DuckDBKVStore
 
     from knowledge_base_mcp.stores.vector_stores.duckdb import EnhancedDuckDBVectorStore
+    from knowledge_base_mcp.vendored.kvstore.duckdb import DuckDBKVStore
 
     logger.info("Loading DuckDB document and code stores in memory")
 
@@ -201,31 +201,32 @@ async def duckdb_memory(ctx: click.Context) -> None:
 
 
 @duckdb_group.group(name="persistent")
-@click.option("--docs-db-dir", type=click.Path(path_type=Path), default="./storage")
-@click.option("--docs-db-name", type=str, default="documents.duckdb")
+@click.option("--db-dir", type=click.Path(path_type=Path), default="./storage")
+@click.option("--db-docs", type=str, default="documents.duckdb")
+@click.option("--db-vectors", type=str, default="vectors.duckdb")
 @click.pass_context
-async def duckdb_persistent(ctx: click.Context, docs_db_dir: Path, docs_db_name: str) -> None:
+async def duckdb_persistent(ctx: click.Context, db_dir: Path, db_docs: str, db_vectors: str) -> None:
     from llama_index.storage.docstore.duckdb import DuckDBDocumentStore
     from llama_index.storage.index_store.duckdb import DuckDBIndexStore
-    from llama_index.storage.kvstore.duckdb import DuckDBKVStore
 
     from knowledge_base_mcp.stores.vector_stores.duckdb import EnhancedDuckDBVectorStore
+    from knowledge_base_mcp.vendored.kvstore.duckdb import DuckDBKVStore
 
     cli_ctx: PartialCliContext = ctx.obj  # pyright: ignore[reportAny]
 
-    logger.info(f"Loading DuckDB document in persistent mode: {docs_db_dir / docs_db_name}")
+    logger.info(f"Loading DuckDB document in persistent mode: {db_dir / db_docs}")
 
-    docs_db_path: Path = docs_db_dir / docs_db_name
+    docs_db_path: Path = db_dir / db_docs
 
     docs_vector_store: EnhancedDuckDBVectorStore
 
     if not docs_db_path.exists():
-        docs_vector_store = EnhancedDuckDBVectorStore(database_name=docs_db_name, persist_dir=str(docs_db_dir))
+        docs_vector_store = EnhancedDuckDBVectorStore(database_name=db_vectors, persist_dir=str(db_dir))
     else:
         docs_vector_store = EnhancedDuckDBVectorStore.from_local(database_path=str(docs_db_path))  # pyright: ignore[reportAssignmentType, reportUnknownMemberType]
 
     # code_kv_store = DuckDBKVStore(client=code_vector_store.client)
-    docs_kv_store = DuckDBKVStore(client=docs_vector_store.client)
+    docs_kv_store = DuckDBKVStore(database_name=db_docs, persist_dir=str(db_dir))
 
     ctx.obj = CliContext(
         docs_stores=Store(

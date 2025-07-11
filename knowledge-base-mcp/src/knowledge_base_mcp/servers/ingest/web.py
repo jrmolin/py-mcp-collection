@@ -103,12 +103,12 @@ class WebIngestServer(BaseIngestServer):
 
     async def load_website(
         self,
-        context: Context,
         knowledge_base: NewKnowledgeBaseField,
         seed_urls: SeedPagesField,
         url_exclusions: URLExclusionsField = None,
         max_pages: MaxPagesField = None,
         background: bool = True,
+        context: Context | None = None,
     ) -> IngestResult | None:
         """Create a new knowledge base from a website using seed URLs. If the knowledge base already exists, it will be replaced."""
 
@@ -128,11 +128,11 @@ class WebIngestServer(BaseIngestServer):
 
     async def _load_website(
         self,
-        context: Context,
         knowledge_base: NewKnowledgeBaseField,
         seed_urls: SeedPagesField,
         url_exclusions: URLExclusionsField = None,
         max_pages: MaxPagesField = None,
+        context: Context | None = None,
     ) -> IngestResult:
         """Create a new knowledge base from a website using seed URLs. If the knowledge base already exists, it will be replaced."""
 

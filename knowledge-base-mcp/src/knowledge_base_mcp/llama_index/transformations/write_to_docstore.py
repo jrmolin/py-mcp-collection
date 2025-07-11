@@ -25,7 +25,7 @@ class WriteToDocstore(TransformComponent):
     def __call__(self, nodes: Sequence[BaseNode], **kwargs: Any) -> Sequence[BaseNode]:  # pyright: ignore[reportAny]
         """Embed the leaf nodes."""
 
-        self.docstore.add_documents(docs=nodes)
+        self.docstore.add_documents(docs=nodes, allow_update=True)
 
         return nodes
 
@@ -33,6 +33,6 @@ class WriteToDocstore(TransformComponent):
     async def acall(self, nodes: Sequence[BaseNode], **kwargs: Any) -> Sequence[BaseNode]:  # pyright: ignore[reportAny]
         """Async embed the leaf nodes."""
 
-        await self.docstore.async_add_documents(docs=nodes)
+        await self.docstore.async_add_documents(docs=nodes, allow_update=True)
 
         return nodes
