@@ -8,6 +8,7 @@ from fastmcp.tools import Tool as FastMCPTool
 from llama_index.core.ingestion.pipeline import IngestionPipeline
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from llama_index.core.schema import BaseNode, MetadataMode, Node, NodeWithScore
+from llama_index.core.vector_stores import MetadataFilter, MetadataFilters
 from pydantic import BaseModel, ConfigDict, Field
 
 from knowledge_base_mcp.clients.knowledge_base import KnowledgeBaseClient
@@ -17,9 +18,14 @@ from knowledge_base_mcp.llama_index.post_processors.remove_duplicate_nodes impor
 from knowledge_base_mcp.llama_index.readers.github import GithubIssuesReader
 from knowledge_base_mcp.llama_index.transformations.metadata import AddMetadata, IncludeMetadata
 from knowledge_base_mcp.servers.ingest.base import BaseIngestServer
-from knowledge_base_mcp.servers.models.documentation import KnowledgeBaseSummary
-from knowledge_base_mcp.servers.search.base import BaseSearchServer
+from knowledge_base_mcp.servers.search.base import (
+    BaseSearchResponse,
+    BaseSearchServer,
+    BaseSummaryResult,
+    QueryKnowledgeBasesField,
+)
 from knowledge_base_mcp.utils.logging import BASE_LOGGER
+from knowledge_base_mcp.utils.patches import TimerGroup
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -92,11 +98,9 @@ class GitHubIssue(BaseModel):
         )
 
 
-class SearchResponseWithSummary(BaseModel):
+class GitHubSearchResponse(BaseSearchResponse):
     """A response to a search query with a summary"""
 
-    query: str = Field(description="The query that was used to search the knowledge base")
-    summary: KnowledgeBaseSummary = Field(description="The summary of the search")
     results: list[GitHubIssue] = Field(description="The results of the search")
 
 
@@ -166,7 +170,7 @@ class GitHubServer(BaseSearchServer, BaseIngestServer):
         count = 0
         post_process_count = 0
 
-        async with self.start_rumbling() as (queue_nodes, _, ingest_result):
+        async with self.start_rumbling(hierarchical=False) as (queue_nodes, _, ingest_result):
             async for document in reader.alazy_load_data(
                 milestone=milestone,
                 labels=labels,
@@ -196,6 +200,7 @@ class GitHubServer(BaseSearchServer, BaseIngestServer):
 
         return ingest_result
 
+    @cached_property
     @override
     def result_post_processors(self) -> list[BaseNodePostprocessor]:
         return [
@@ -205,7 +210,7 @@ class GitHubServer(BaseSearchServer, BaseIngestServer):
             GetChildNodesPostprocessor(doc_store=self.knowledge_base_client.docstore),
         ]
 
-    def format_results(self, nodes_with_scores: list[NodeWithScore]) -> list[GitHubIssue]:
+    def _convert_to_github_issues(self, nodes_with_scores: list[NodeWithScore]) -> list[GitHubIssue]:
         """Format the results"""
 
         nodes_by_id: dict[str, NodeWithScore] = {node_with_score.node.node_id: node_with_score for node_with_score in nodes_with_scores}
@@ -228,20 +233,43 @@ class GitHubServer(BaseSearchServer, BaseIngestServer):
 
         return github_issues
 
+    @override
     async def query(
         self,
         query: QueryStringField,
-        repository: Annotated[str | None, Field(description="The indexed repository to search for issues in.")] = None,
+        knowledge_bases: QueryKnowledgeBasesField | None = None,
         result_count: Annotated[int, Field(description="The number of results to return.")] = 20,
-    ) -> SearchResponseWithSummary:
+        issues_only: Annotated[bool, Field(description="Whether to only return issues.")] = False,
+        repository: Annotated[str | None, Field(description="The indexed repository to search for issues in.")] = None,
+    ) -> GitHubSearchResponse:
         """Query the GitHub issues"""
+        timer_group: TimerGroup = TimerGroup(name="DocumentationSearchServer.query")
 
-        nodes_with_scores: list[NodeWithScore] = await self.get_results(
-            query, knowledge_bases=[repository] if repository else None, count=result_count
-        )
+        extra_filters: list[MetadataFilter | MetadataFilters] = []
+        if repository:
+            extra_filters.append(MetadataFilter(key="repository", value=repository))
+        elif issues_only:
+            extra_filters.append(MetadataFilter(key="type", value="issue"))
 
-        github_issues: list[GitHubIssue] = self.format_results(nodes_with_scores=nodes_with_scores)
+        with timer_group.time(name="fetch_results"):
+            nodes_with_scores = await self.knowledge_base_client.aretrieve(
+                query=query,
+                knowledge_base=knowledge_bases,
+                knowledge_base_types=[self.knowledge_base_type],
+                extra_filters=MetadataFilters(filters=extra_filters) if extra_filters else None,
+            )
 
-        summary: KnowledgeBaseSummary = await self.get_summary(query, knowledge_bases=[repository] if repository else None)
+        summary: BaseSummaryResult = self.format_summary(nodes_with_scores=nodes_with_scores)
 
-        return SearchResponseWithSummary(query=query, summary=summary, results=github_issues)
+        nodes_with_scores = nodes_with_scores[:result_count]
+
+        with timer_group.time(name="apply_post_processors"):
+            nodes_with_scores = await self.apply_post_processors(
+                query=query,
+                nodes_with_scores=nodes_with_scores,
+                post_processors=self.result_post_processors,
+            )
+
+        result: list[GitHubIssue] = self._convert_to_github_issues(nodes_with_scores=nodes_with_scores)
+
+        return GitHubSearchResponse(query=query, summary=summary, results=result)

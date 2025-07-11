@@ -11,8 +11,11 @@ from llama_index.core.schema import BaseNode, Document, MediaResource, MetadataM
 from pydantic import BaseModel, Field
 from syrupy.assertion import SnapshotAssertion
 
+from knowledge_base_mcp.utils.patches import apply_patches
 from tests.extensions.markdown_snapshot_extension import MarkdownSnapshotExtension
 from tests.extensions.yaml_snapshot_extension import YAMLSnapshotExtension
+
+apply_patches()
 
 
 @pytest.fixture

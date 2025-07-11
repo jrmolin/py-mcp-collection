@@ -16,7 +16,6 @@ from llama_index.core.storage.index_store.types import BaseIndexStore
 from llama_index.core.storage.storage_context import StorageContext
 
 from knowledge_base_mcp.clients.knowledge_base import KnowledgeBaseClient
-from knowledge_base_mcp.llama_index.post_processors.flash_rerank import FlashRankRerank
 from knowledge_base_mcp.servers.github import GitHubServer
 from knowledge_base_mcp.servers.ingest.filesystem import FilesystemIngestServer
 from knowledge_base_mcp.servers.ingest.web import WebIngestServer
@@ -107,9 +106,6 @@ def cli(
     logger.info(f"Loading document model {document_embeddings_model} for embeddings")
     from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
-    # Initialize the Reranker
-    _ = FlashRankRerank(model=document_reranker_model)
-
     ctx.obj = PartialCliContext(
         document_embeddings=HuggingFaceEmbedding(
             model_name=document_embeddings_model,
@@ -181,7 +177,7 @@ def duckdb_group() -> None:
 async def duckdb_memory(ctx: click.Context) -> None:
     from llama_index.storage.docstore.duckdb import DuckDBDocumentStore
     from llama_index.storage.index_store.duckdb import DuckDBIndexStore
-    from knowledge_base_mcp.vendored.kv_store.base import DuckDBKVStore
+    from llama_index.storage.kvstore.duckdb import DuckDBKVStore
 
     from knowledge_base_mcp.stores.vector_stores.duckdb import EnhancedDuckDBVectorStore
 
@@ -211,7 +207,7 @@ async def duckdb_memory(ctx: click.Context) -> None:
 async def duckdb_persistent(ctx: click.Context, docs_db_dir: Path, docs_db_name: str) -> None:
     from llama_index.storage.docstore.duckdb import DuckDBDocumentStore
     from llama_index.storage.index_store.duckdb import DuckDBIndexStore
-    from knowledge_base_mcp.vendored.kv_store.base import DuckDBKVStore
+    from llama_index.storage.kvstore.duckdb import DuckDBKVStore
 
     from knowledge_base_mcp.stores.vector_stores.duckdb import EnhancedDuckDBVectorStore
 

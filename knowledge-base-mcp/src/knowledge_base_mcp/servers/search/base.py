@@ -1,31 +1,25 @@
 from abc import ABC, abstractmethod
+from functools import cached_property
 from logging import Logger
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
 from fastmcp import FastMCP
 from fastmcp.tools import Tool as FastMCPTool
-from llama_index.core.base.base_query_engine import BaseQueryEngine
-from llama_index.core.base.base_retriever import BaseRetriever
 from llama_index.core.bridge.pydantic import Field
-from llama_index.core.llms import MockLLM
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
-from llama_index.core.response_synthesizers.no_text import NoText
 from llama_index.core.schema import NodeWithScore
-from llama_index.core.vector_stores.types import MetadataFilters
 from pydantic import BaseModel, ConfigDict
+from pydantic.root_model import RootModel
 
 from knowledge_base_mcp.clients.knowledge_base import KnowledgeBaseClient
-from knowledge_base_mcp.llama_index.post_processors.remove_duplicate_nodes import RemoveDuplicateNodesPostprocessor
-from knowledge_base_mcp.llama_index.query_engine.timing_retriever_query_engine import TimingRetrieverQueryEngine
 from knowledge_base_mcp.servers.base import BaseKnowledgeBaseServer
 from knowledge_base_mcp.servers.models.documentation import (
     DocumentResponse,
-    KnowledgeBaseSummary,
 )
 from knowledge_base_mcp.utils.logging import BASE_LOGGER
+from knowledge_base_mcp.utils.patches import TimerGroup
 
 if TYPE_CHECKING:
-    from llama_index.core.base.response.schema import RESPONSE_TYPE
     from llama_index.core.schema import BaseNode
 
 logger: Logger = BASE_LOGGER.getChild(suffix=__name__)
@@ -65,14 +59,55 @@ DocumentTitleField = Annotated[
 ]
 
 
-class SearchResponse(BaseModel):
-    """A response to a search query"""
+class BaseSummaryResult(RootModel[dict[str, int]]):
+    """A high level summary of relevant documents across all knowledge bases"""
 
-    model_config: ClassVar[ConfigDict] = ConfigDict(arbitrary_types_allowed=True)
+    root: dict[str, int] = Field(default_factory=dict, description="The number of documents in each knowledge base")
+
+    @classmethod
+    def from_nodes(cls, nodes: list[NodeWithScore]) -> "BaseSummaryResult":
+        """Convert a list of nodes to a summary"""
+        results: dict[str, int] = {}
+
+        for node in nodes:
+            knowledge_base: str | None = node.node.metadata.get("knowledge_base")
+
+            if knowledge_base is None:
+                logger.warning(f"Retrieved Node {node.node_id} has no knowledge base")
+                continue
+
+            results[knowledge_base] = results.get(knowledge_base, 0) + 1
+
+        return cls(root=results)
+
+
+class BaseSearchResult(BaseModel):
+    """A result from a search query"""
+
+    nodes_with_scores: list[NodeWithScore]
+
+
+class BaseSearchResponse(BaseModel):
+    """A base class for responses to a search query"""
 
     query: QueryStringField
-    summary: BaseModel
-    results: BaseModel
+    summary: BaseSummaryResult
+
+
+class SearchResponse(BaseSearchResponse):
+    """A response to a search query that includes a simple list of results"""
+
+    results: BaseSearchResult
+
+
+# class SearchResponse(BaseModel):
+#     """A response to a search query"""
+
+#     model_config: ClassVar[ConfigDict] = ConfigDict(arbitrary_types_allowed=True)
+
+#     query: QueryStringField
+#     summary: BaseModel
+#     results: BaseModel
 
 
 class BaseSearchServer(BaseKnowledgeBaseServer, ABC):
@@ -105,69 +140,116 @@ class BaseSearchServer(BaseKnowledgeBaseServer, ABC):
 
         return DocumentResponse.from_node(node=document)
 
-    def retriever(self, knowledge_base: list[str] | str | None = None, top_k: int = 50) -> BaseRetriever:
-        return self.knowledge_base_client.get_knowledge_base_retriever(
-            knowledge_base_types=[self.knowledge_base_type], knowledge_base=knowledge_base, top_k=top_k
-        )
+    # def retriever(self, knowledge_base: list[str] | str | None = None, top_k: int = 50) -> BaseRetriever:
+    #     return self.knowledge_base_client.get_knowledge_base_retriever(
+    #         knowledge_base_types=[self.knowledge_base_type], knowledge_base=knowledge_base, top_k=top_k
+    #     )
 
-    def result_post_processors(self) -> list[BaseNodePostprocessor]:
-        post_processors: list[BaseNodePostprocessor] = []
+    @cached_property
+    @abstractmethod
+    def result_post_processors(self) -> list[BaseNodePostprocessor]: ...
 
-        post_processors.append(RemoveDuplicateNodesPostprocessor(by_id=True, by_hash=True))
+    # def result_query_engine(
+    #     self, knowledge_base: list[str] | str | None = None, extra_filters: MetadataFilters | None = None, top_k: int = 50
+    # ) -> BaseQueryEngine:
+    #     synthesizer: NoText = NoText(llm=MockLLM())
 
-        return post_processors
+    #     post_processors: list[BaseNodePostprocessor] = self.result_post_processors()
 
-    def result_query_engine(
-        self, knowledge_base: list[str] | str | None = None, extra_filters: MetadataFilters | None = None, top_k: int = 50
-    ) -> BaseQueryEngine:
-        synthesizer: NoText = NoText(llm=MockLLM())
+    #     return TimingRetrieverQueryEngine(
+    #         retriever=self.knowledge_base_client.get_knowledge_base_retriever(
+    #             knowledge_base_types=[self.knowledge_base_type], knowledge_base=knowledge_base, extra_filters=extra_filters, top_k=top_k
+    #         ),
+    #         node_postprocessors=post_processors,
+    #         response_synthesizer=synthesizer,
+    #     )
 
-        post_processors: list[BaseNodePostprocessor] = self.result_post_processors()
+    # def summary_query_engine(self, knowledge_base: list[str] | str | None = None) -> BaseQueryEngine:
+    #     synthesizer: NoText = NoText(llm=MockLLM())
 
-        return TimingRetrieverQueryEngine(
-            retriever=self.knowledge_base_client.get_knowledge_base_retriever(
-                knowledge_base_types=[self.knowledge_base_type], knowledge_base=knowledge_base, extra_filters=extra_filters, top_k=top_k
-            ),
-            node_postprocessors=post_processors,
-            response_synthesizer=synthesizer,
-        )
+    #     retriever: BaseRetriever = self.knowledge_base_client.get_knowledge_base_retriever(
+    #         knowledge_base_types=[self.knowledge_base_type], knowledge_base=knowledge_base, top_k=500
+    #     )
 
-    def summary_query_engine(self, knowledge_base: list[str] | str | None = None) -> BaseQueryEngine:
-        synthesizer: NoText = NoText(llm=MockLLM())
+    #     return TimingRetrieverQueryEngine(
+    #         retriever=retriever,
+    #         response_synthesizer=synthesizer,
+    #     )
 
-        retriever: BaseRetriever = self.knowledge_base_client.get_knowledge_base_retriever(
-            knowledge_base_types=[self.knowledge_base_type], knowledge_base=knowledge_base, top_k=500
-        )
-
-        return TimingRetrieverQueryEngine(
-            retriever=retriever,
-            response_synthesizer=synthesizer,
-        )
-
-    async def get_results(
-        self,
-        query: QueryStringField,
-        knowledge_bases: QueryKnowledgeBasesField | None = None,
-        extra_filters: MetadataFilters | None = None,
-        count: int = 50,
+    @classmethod
+    async def apply_post_processors(
+        cls, query: str, nodes_with_scores: list[NodeWithScore], post_processors: list[BaseNodePostprocessor]
     ) -> list[NodeWithScore]:
-        """Get the results from the query engine"""
-        response: RESPONSE_TYPE = await self.result_query_engine(
-            knowledge_base=knowledge_bases, extra_filters=extra_filters, top_k=count
-        ).aquery(query)
+        """Apply the post processors to the nodes"""
+        processed_nodes: list[NodeWithScore] = nodes_with_scores.copy()
 
-        return response.source_nodes[:count]
+        timer_group: TimerGroup = TimerGroup(name="BaseSearchServer.apply_post_processors")
 
-    # def format_results(self, results: list[NodeWithScore]) -> BaseModel: ...
-    #     """Format the results"""
+        for post_processor in post_processors:
+            start_node_count: int = len(processed_nodes)
 
-    #     # return TreeSearchResponse.from_nodes(nodes=results)
+            with timer_group.time(name=f"{post_processor.__class__.__name__} with {start_node_count} nodes"):
+                processed_nodes = await post_processor.apostprocess_nodes(nodes=processed_nodes, query_str=query)
 
-    async def get_summary(self, query: QueryStringField, knowledge_bases: QueryKnowledgeBasesField | None = None) -> KnowledgeBaseSummary:
-        """Get the summary from the query engine"""
-        response: RESPONSE_TYPE = await self.summary_query_engine(knowledge_base=knowledge_bases).aquery(query)
+        logger.info(f"Post processors took: {timer_group}s")
 
-        return KnowledgeBaseSummary.from_nodes(response.source_nodes)
+        return processed_nodes
+
+    @classmethod
+    def format_summary(cls, nodes_with_scores: list[NodeWithScore]):
+        """Format the summary"""
+        return BaseSummaryResult.from_nodes(nodes=nodes_with_scores)
+
+    @classmethod
+    def format_results(cls, nodes_with_scores: list[NodeWithScore]) -> BaseSearchResult:
+        """Format the results"""
+        return BaseSearchResult(nodes_with_scores=nodes_with_scores)
+
+    async def query(
+        self, query: QueryStringField, knowledge_bases: QueryKnowledgeBasesField | None = None, result_count: int = 200
+    ) -> BaseSearchResponse:
+        """Query the knowledge base"""
+
+        nodes_with_scores: list[NodeWithScore] = await self.knowledge_base_client.aretrieve(
+            query=query, knowledge_base=knowledge_bases, top_k=result_count
+        )
+
+        summary: BaseSummaryResult = self.format_summary(nodes_with_scores=nodes_with_scores)
+
+        # processed_nodes: list[NodeWithScore] = await self.apply_post_processors(
+        #     query=query,
+        #     nodes_with_scores=nodes_with_scores,
+        #     post_processors=self.result_post_processors,
+        # )
+
+        result: BaseSearchResult = self.format_results(nodes_with_scores=nodes_with_scores)
+
+        return SearchResponse(query=query, summary=summary, results=result)
+
+    # async def get_results(
+    #     self,
+    #     query: QueryStringField,
+    #     knowledge_bases: QueryKnowledgeBasesField | None = None,
+    #     extra_filters: MetadataFilters | None = None,
+    #     count: int = 50,
+    # ) -> list[NodeWithScore]:
+    #     """Get the results from the query engine"""
+    #     response: RESPONSE_TYPE = await self.result_query_engine(
+    #         knowledge_base=knowledge_bases, extra_filters=extra_filters, top_k=count
+    #     ).aquery(query)
+
+    #     return response.source_nodes[:count]
+
+    # # def format_results(self, results: list[NodeWithScore]) -> BaseModel: ...
+    # #     """Format the results"""
+
+    # #     # return TreeSearchResponse.from_nodes(nodes=results)
+
+    # async def get_summary(self, query: QueryStringField, knowledge_bases: QueryKnowledgeBasesField | None = None) -> KnowledgeBaseSummary:
+    #     """Get the summary from the query engine"""
+    #     response: RESPONSE_TYPE = await self.summary_query_engine(knowledge_base=knowledge_bases).aquery(query)
+
+    #     return KnowledgeBaseSummary.from_nodes(response.source_nodes)
 
     # def format_search_response(self, query: QueryStringField, raw_results: list[NodeWithScore], summary: BaseModel): ...
 

@@ -13,7 +13,7 @@ from syrupy.assertion import SnapshotAssertion
 
 from knowledge_base_mcp.clients.knowledge_base import KnowledgeBaseClient
 from knowledge_base_mcp.main import DEFAULT_DOCS_CROSS_ENCODER_MODEL
-from knowledge_base_mcp.servers.github import GitHubServer, SearchResponseWithSummary
+from knowledge_base_mcp.servers.github import GitHubSearchResponse, GitHubServer
 
 if TYPE_CHECKING:
     from knowledge_base_mcp.servers.ingest.base import IngestResult
@@ -80,6 +80,7 @@ def prepare_nodes_for_snapshot(nodes: list[BaseNode]) -> list[BaseNode]:
     return nodes
 
 
+@pytest.mark.not_on_ci
 class TestIngest:
     async def test_ingest(self, github_server: GitHubServer, vector_store_index: VectorStoreIndex, yaml_snapshot: SnapshotAssertion):
         ingest_result: IngestResult = await github_server.load_github_issues(
@@ -142,7 +143,7 @@ class TestIngest:
         nodes: list[BaseNode] = list(nodes_by_id.values())
 
         # Sort the nodes by the "id" field in the metadata
-        nodes = sorted(nodes, key=lambda x: x.metadata.get("id"))
+        nodes.sort(key=lambda x: x.metadata.get("id"))  # pyright: ignore[reportArgumentType]
 
         # Get the node with a "number" metadata field of 1
         node_one: BaseNode = next(node for node in nodes if node.metadata.get("issue") == 1 and node.metadata.get("type") == "issue")
@@ -168,6 +169,7 @@ class TestIngest:
         assert prepare_nodes_for_snapshot(nodes) == yaml_snapshot
 
 
+@pytest.mark.not_on_ci
 class TestSearch:
     @pytest.fixture(autouse=True)
     async def vector_store_index_with_comments(self, github_server: GitHubServer):
@@ -185,13 +187,29 @@ class TestSearch:
         return GitHubServer(knowledge_base_client=knowledge_base_client)
 
     async def test_search(self, github_search_server: GitHubServer, yaml_snapshot: SnapshotAssertion):
-        response: SearchResponseWithSummary = await github_search_server.query("What do you do as a feature request triager?")
+        response: GitHubSearchResponse = await github_search_server.query(query="What do you do as a feature request triager?")
 
         assert response.query == "What do you do as a feature request triager?"
 
-        assert response.summary.root == {"test": 59}
+        assert response.summary.root == {"test": 74}
 
-        assert len(response.results) == 2
+        assert len(response.results) == 8
+
+        # sort them by their "number" field
+        response.results = sorted(response.results, key=lambda x: x.number)
+
+        assert response.model_dump() == yaml_snapshot
+
+    async def test_search_issues_only(self, github_search_server: GitHubServer, yaml_snapshot: SnapshotAssertion):
+        response: GitHubSearchResponse = await github_search_server.query(
+            query="What do you do as a feature request triager?", issues_only=True
+        )
+
+        assert response.query == "What do you do as a feature request triager?"
+
+        assert response.summary.root == {"test": 15}
+
+        assert len(response.results) == 12
 
         # sort them by their "number" field
         response.results = sorted(response.results, key=lambda x: x.number)

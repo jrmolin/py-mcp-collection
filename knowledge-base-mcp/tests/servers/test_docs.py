@@ -16,9 +16,11 @@ from knowledge_base_mcp.clients.knowledge_base import KnowledgeBaseClient
 from knowledge_base_mcp.main import DEFAULT_DOCS_CROSS_ENCODER_MODEL
 from knowledge_base_mcp.servers.ingest.filesystem import FilesystemIngestServer
 from knowledge_base_mcp.servers.search.docs import DocumentationSearchServer
+from knowledge_base_mcp.stores.vector_stores.duckdb import EnhancedDuckDBVectorStore
 
 if TYPE_CHECKING:
-    from knowledge_base_mcp.servers.models.documentation import KnowledgeBaseResult, SearchResponseWithSummary
+    from knowledge_base_mcp.servers.models.documentation import KnowledgeBaseResult
+    from knowledge_base_mcp.servers.search.docs import DocumentationSearchResponse
 
 embedding_model: FastEmbedEmbedding | None = None
 try:
@@ -31,7 +33,7 @@ except Exception:
 
 @pytest.fixture
 def duckdb_vector_store():
-    return DuckDBVectorStore(
+    return EnhancedDuckDBVectorStore(
         index_name="test",
         embedding_model=embedding_model,
         nodes=[],
@@ -189,7 +191,7 @@ class TestSearch:
         vector_store_index_with_documents: VectorStoreIndex,
         yaml_snapshot: SnapshotAssertion,
     ):
-        response: SearchResponseWithSummary = await documentation_search_server.query("Who is the best?")
+        response: DocumentationSearchResponse = await documentation_search_server.query("Who is the best?")
 
         assert response.query == "Who is the best?"
 

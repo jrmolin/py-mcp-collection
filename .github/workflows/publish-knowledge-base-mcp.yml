@@ -30,7 +30,7 @@ jobs:
         run: uv sync --locked --group dev
 
       - name: "Test ${matrix.package}"
-        run: uv run pytest tests
+        run: uv run pytest tests -m "not not_on_ci"
 
       - name: "Build ${matrix.package}"
         run: uv build

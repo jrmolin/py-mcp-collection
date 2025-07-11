@@ -1,6 +1,6 @@
 from typing import Any
 
-from knowledge_base_mcp.vendored.vector_store.base import DuckDBVectorStore
+from llama_index.vector_stores.duckdb import DuckDBVectorStore
 
 
 class EnhancedDuckDBVectorStore(DuckDBVectorStore):
@@ -8,7 +8,7 @@ class EnhancedDuckDBVectorStore(DuckDBVectorStore):
         self,
         database_name: str = ":memory:",
         table_name: str = "documents",
-        embed_dim: int | None = None,
+        embed_dim: int = 384,
         text_search_config: dict[str, Any] | None = None,
         persist_dir: str = "./storage",
         **kwargs: Any,  # pyright: ignore[reportAny]

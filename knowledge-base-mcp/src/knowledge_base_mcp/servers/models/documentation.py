@@ -61,23 +61,6 @@ class KnowledgeBaseResult(RootModel[dict[str, TitleResult]]):
         return results
 
 
-class KnowledgeBaseSummary(RootModel[dict[str, int]]):
-    """A high level summary of relevant documents across all knowledge bases"""
-
-    root: dict[str, int] = Field(default_factory=dict, description="The number of documents in each knowledge base")
-
-    @classmethod
-    def from_nodes(cls, nodes: list[NodeWithScore]) -> "KnowledgeBaseSummary":
-        """Convert a list of nodes to a summary"""
-        results: dict[str, int] = {}
-
-        for node in nodes:
-            knowledge_base = node.node.metadata.get("knowledge_base", "<no knowledge base>")
-            results[knowledge_base] = results.get(knowledge_base, 0) + 1
-
-        return cls(root=results)
-
-
 # class TreeSearchResponse(BaseModel):
 #     """A response to a search query"""
 
@@ -105,14 +88,6 @@ class TreeSearchResponse(RootModel[dict[str, KnowledgeBaseResult]]):
         results = KnowledgeBaseResult.from_nodes(nodes)
 
         return cls(root=results)
-
-
-class SearchResponseWithSummary(BaseModel):
-    """A response to a search query with a summary"""
-
-    query: str = Field(description="The query that was used to search the knowledge base")
-    summary: KnowledgeBaseSummary = Field(description="The summary of the search")
-    results: TreeSearchResponse = Field(description="The results of the search")
 
 
 class DocumentResponse(BaseModel):

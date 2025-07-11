@@ -10,6 +10,7 @@ from llama_index.core.schema import (
     QueryBundle,
 )
 from llama_index.core.storage.docstore.types import BaseDocumentStore
+from llama_index.core.vector_stores.types import BasePydanticVectorStore
 
 from knowledge_base_mcp.utils.logging import BASE_LOGGER
 
@@ -27,6 +28,9 @@ class GetSiblingNodesPostprocessor(BaseNodePostprocessor):
 
     doc_store: BaseDocumentStore
     """The document store to get the parent nodes from."""
+
+    vector_store: BasePydanticVectorStore | None = None
+    """If the vector store supports Text, we will try to use it to get the sibling nodes."""
 
     maximum_size: int = Field(default=1024)
     """The maximum size of the sibling node to bring in."""
@@ -89,6 +93,14 @@ class GetSiblingNodesPostprocessor(BaseNodePostprocessor):
 
         nodes_to_fetch = prev_sibling_nodes_ids | next_sibling_nodes_ids
 
-        new_sibling_nodes: list[BaseNode] = self.doc_store.get_nodes(node_ids=list(nodes_to_fetch))
+        new_sibling_nodes: list[BaseNode] = []
+
+        if self.vector_store and self.vector_store.stores_text:
+            new_sibling_nodes = self.vector_store.get_nodes(node_ids=list(nodes_to_fetch))
+
+        missing_nodes = nodes_to_fetch - {node.node_id for node in new_sibling_nodes}
+
+        if missing_nodes:
+            new_sibling_nodes.extend(self.doc_store.get_nodes(node_ids=list(missing_nodes)))
 
         return new_sibling_nodes

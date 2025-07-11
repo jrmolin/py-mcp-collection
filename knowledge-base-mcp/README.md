@@ -1,15 +1,46 @@
 # Knowledge Base MCP
 
-An MCP Server for creating knowledge bases and searching them!
+An MCP Server for creating Knowledge Bases and searching them!
 
-## Features
+## 100% Local, Fast, and Easy to Use
 
+The MCP Server uses DuckDB by default which runs in-process and persists to disk. Everything from the vector store, to the embeddings, to the reranker, crawler, etc is all local. It does not require any cloud services or external dependencies.
+
+Even more important, the Knowledge Base MCP Server is very fast at indexing, embedding, searching, and reranking compared to other solutions.
+
+## Quick Start
+
+Just add the following to your MCP Server configuration!
+
+```json
+"Knowledge Base": {
+    "command": "uvx",
+    "args": [
+        "knowledge_base_mcp",
+        "duckdb",
+        "persistent",
+        "run"
+    ]
+}
+```
+
+# Features
+
+## Search Features
+
+- **Knowledge Base Management**: Organize your data into knowledge bases.
+- **Semantic Search**: Query across one or more knowledge bases using semantic search.
 - **Multiple Vector Store Backends**: Works with DuckDB and Elasticsearch.
-- **Website Ingestion**: Load and crawl documentation or websites into a knowledge base.
+
+Search results are automatically reranked using a reranker model to try to achieve the highest quality results.
+
+## Document Ingestion Features
+
+- **Website Ingestion**: Crawl websites into a knowledge base.
 - **Git Repository Ingestion**: Load and ingest a Git repository into a knowledge base.
 - **Directory Ingestion**: Load and ingest a directory into a knowledge base.
-- **Semantic Search**: Query across one or more knowledge bases using embeddings and reranking.
-- **Knowledge Base Management**: List, remove, or clear knowledge bases.
+
+The Knowledge Base MCP Server uses advanced hierarchical + semantic chunking techniques to create embeddings for your data.
 
 ## Usage
 
@@ -98,7 +129,7 @@ When running, the MCP server exposes the following tools:
             "Knowledge Base": {
                 "command": "uvx",
                 "args": [
-                    "git+https://github.com/strawgate/py-mcp-collection.git#subdirectory=knowledge_base_mcp",
+                    "knowledge_base_mcp",
                     "duckdb",
                     "persistent",
                     "run"
@@ -118,7 +149,7 @@ When running, the MCP server exposes the following tools:
       "Knowledge Base": {
           "command": "uvx",
           "args": [
-              "git+https://github.com/strawgate/py-mcp-collection.git#subdirectory=knowledge_base_mcp",
+              "knowledge_base_mcp",
               "duckdb",
               "persistent",
               "run"

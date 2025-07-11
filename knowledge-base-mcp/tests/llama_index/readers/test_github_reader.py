@@ -1,11 +1,13 @@
 from typing import TYPE_CHECKING
 
+import pytest
+
 from knowledge_base_mcp.llama_index.readers.github import GithubIssuesReader
 
 if TYPE_CHECKING:
     from llama_index.core.schema import Document
 
-
+@pytest.mark.not_on_ci  
 def test_github_reader():
     client = GithubIssuesReader(
         owner="strawgate",
@@ -27,10 +29,10 @@ def test_github_reader():
     assert first_issue is not None
     assert first_comment is not None
 
-    assert first_issue.metadata["number"] == 11
-    assert first_comment.metadata["number"] == 11
+    assert first_issue.metadata["issue"] == 11
+    assert first_comment.metadata["issue"] == 11
 
-
+@pytest.mark.not_on_ci
 async def test_github_reader_async():
     client = GithubIssuesReader(
         owner="strawgate",

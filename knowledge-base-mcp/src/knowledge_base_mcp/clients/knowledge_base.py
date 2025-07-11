@@ -3,25 +3,25 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from llama_index.core.embeddings import BaseEmbedding
 from llama_index.core.indices.vector_store import VectorStoreIndex
-from llama_index.core.indices.vector_store.retrievers import VectorIndexRetriever
 from llama_index.core.ingestion.pipeline import IngestionPipeline
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
-from llama_index.core.schema import BaseNode, RelatedNodeInfo
+from llama_index.core.schema import BaseNode, NodeWithScore, RelatedNodeInfo
 from llama_index.core.storage.docstore.keyval_docstore import KVDocumentStore
 from llama_index.core.storage.kvstore.types import BaseKVStore
 from llama_index.core.vector_stores.types import FilterCondition, FilterOperator, MetadataFilter, MetadataFilters
+from llama_index.postprocessor.flashrank_rerank import FlashRankRerank
 from pydantic import BaseModel, ConfigDict
 
 from knowledge_base_mcp.llama_index.hierarchical_node_parsers.collapse_only_children import CollapseSmallFamilies
 from knowledge_base_mcp.llama_index.hierarchical_node_parsers.leaf_semantic_merging import LeafSemanticMergerNodeParser
-from knowledge_base_mcp.llama_index.post_processors.flash_rerank import FlashRankRerank
+from knowledge_base_mcp.llama_index.transformations.batch_embeddings import BatchedNodeEmbedding
 from knowledge_base_mcp.llama_index.transformations.check_docstore import CheckDocstore
 from knowledge_base_mcp.llama_index.transformations.large_node_detector import LargeNodeDetector
-from knowledge_base_mcp.llama_index.transformations.leaf_embeddings import LeafNodeEmbedding
 from knowledge_base_mcp.llama_index.transformations.metadata import ExcludeMetadata, FlattenMetadata
 from knowledge_base_mcp.llama_index.transformations.write_to_docstore import WriteToDocstore
 from knowledge_base_mcp.stores.vector_stores.base import EnhancedBaseVectorStore
 from knowledge_base_mcp.utils.logging import BASE_LOGGER
+from knowledge_base_mcp.utils.patches import VectorIndexRetriever
 
 if TYPE_CHECKING:
     from llama_index.core.base.base_retriever import BaseRetriever
@@ -55,6 +55,7 @@ class KnowledgeBaseClient(BaseModel):
 
     @cached_property
     def reranker(self) -> BaseNodePostprocessor:
+        # return SentenceTransformerRerank(top_n=1000, device="cpu")
         return FlashRankRerank(model=self.reranker_model, top_n=1000)
 
     @property
@@ -235,7 +236,7 @@ class KnowledgeBaseClient(BaseModel):
                 FlattenMetadata(include_related_nodes=True),
                 # Embeddings
                 LargeNodeDetector.from_embed_model(embed_model=self.embed_model, node_type="leaf", extra_size=1024),
-                LeafNodeEmbedding(embed_model=self.embed_model),
+                BatchedNodeEmbedding(embed_model=self.embed_model),
                 # Write to docstore
                 WriteToDocstore(docstore=self.docstore),
             ],
@@ -257,7 +258,7 @@ class KnowledgeBaseClient(BaseModel):
                 FlattenMetadata(include_related_nodes=True),
                 # Embeddings
                 LargeNodeDetector.from_embed_model(embed_model=self.embed_model, node_type="leaf", extra_size=1024),
-                LeafNodeEmbedding(embed_model=self.embed_model),
+                BatchedNodeEmbedding(embed_model=self.embed_model, leaf_node_only=True),
                 LeafSemanticMergerNodeParser(embed_model=self.embed_model),
                 CollapseSmallFamilies(),
                 # Write to docstore
@@ -271,6 +272,25 @@ class KnowledgeBaseClient(BaseModel):
         )
 
         return knowledge_base_pipeline
+
+    async def aretrieve(
+        self,
+        query: str,
+        knowledge_base: list[str] | str | None = None,
+        knowledge_base_types: list[str] | str | None = None,
+        extra_filters: MetadataFilters | None = None,
+        top_k: int = 200,  # A high number is needed to produce the summary and then should be reduced by the server
+    ) -> list[NodeWithScore]:
+        """Get a retriever for the specified knowledge base, if none is provided, return a retriever for all knowledge bases."""
+
+        retriever: BaseRetriever = self.get_knowledge_base_retriever(
+            knowledge_base_types=knowledge_base_types,
+            knowledge_base=knowledge_base,
+            extra_filters=extra_filters,
+            top_k=top_k,
+        )
+
+        return await retriever.aretrieve(query)
 
     def get_knowledge_base_retriever(
         self,

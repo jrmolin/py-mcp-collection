@@ -1,10 +1,12 @@
 import json
 from collections import defaultdict
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from logging import Logger
 from typing import Any, Self
 
+from llama_index.core.indices.vector_store import retrievers
 from llama_index.core.ingestion import pipeline
 from llama_index.core.ingestion.cache import IngestionCache
 from llama_index.core.ingestion.pipeline import get_transformation_hash
@@ -17,6 +19,7 @@ from llama_index.core.vector_stores import utils
 from pydantic import BaseModel, Field, PrivateAttr, computed_field
 
 from knowledge_base_mcp.utils.logging import BASE_LOGGER
+from knowledge_base_mcp.vendored.retrievers.retrieve import VectorIndexRetriever
 
 logger: Logger = BASE_LOGGER.getChild(__name__)
 
@@ -57,6 +60,12 @@ class TimerGroup(BaseModel):
         self._running_timer = new_timer
 
         return self
+
+    @contextmanager
+    def time(self, name: str) -> Iterator[None]:
+        _ = self.start_timer(name)
+        yield
+        _ = self.stop_timer()
 
     def stop_timer(self) -> Self:
         if self._running_timer is None:
@@ -211,3 +220,5 @@ def apply_patches() -> None:
 
     # TODO: Remove this once https://github.com/run-llama/llama_index/pull/19388 is merged
     utils.node_to_metadata_dict = node_to_metadata_dict
+
+    retrievers.VectorIndexRetriever = VectorIndexRetriever

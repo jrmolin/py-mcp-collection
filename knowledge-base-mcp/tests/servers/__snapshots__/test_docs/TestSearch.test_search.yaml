@@ -1,1 +1,1 @@
-SearchResponseWithSummary(query='Who is the best?', summary=KnowledgeBaseSummary(root={'test': 3}), results=TreeSearchResponse(root={'test': KnowledgeBaseResult(root={'Hello, world document!': TitleResult(source='<no source>', headings={'# Parent Node': ['Hello, world!']})})}))
+DocumentationSearchResponse(query='Who is the best?', summary=BaseSummaryResult(root={'test': 3}), results=TreeSearchResponse(root={'test': KnowledgeBaseResult(root={'Hello, world document!': TitleResult(source='<no source>', headings={'# Parent Node': ['Hello, world!']})})}))

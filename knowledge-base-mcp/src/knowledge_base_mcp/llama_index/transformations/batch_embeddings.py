@@ -15,19 +15,24 @@ from knowledge_base_mcp.utils.logging import BASE_LOGGER
 logger: Logger = BASE_LOGGER.getChild(__name__)
 
 
-class LeafNodeEmbedding(TransformComponent):
-    """Embeds leaf nodes."""
+class BatchedNodeEmbedding(TransformComponent):
+    """Embeds nodes in sequential batches."""
 
     model_config: ClassVar[ConfigDict] = ConfigDict(use_attribute_docstrings=True, arbitrary_types_allowed=True)
 
     batch_size: int = Field(default=64, description="The number of nodes to embed in each batch.")
+
+    leaf_node_only: bool = Field(default=False, description="Whether to only embed leaf nodes.")
 
     embed_model: BaseEmbedding
 
     def _get_batches(self, nodes: Sequence[BaseNode]) -> list[Sequence[BaseNode]]:
         """Get batches of nodes."""
 
-        leaf_nodes: list[BaseNode] = [node for node in nodes if node.child_nodes is None and not isinstance(node, Document)]
+        if self.leaf_node_only:
+            leaf_nodes: list[BaseNode] = [node for node in nodes if node.child_nodes is None and not isinstance(node, Document)]
+        else:
+            leaf_nodes = list(nodes)
 
         if len(leaf_nodes) > 1000:
             logger.warning(f"Large batch of {len(leaf_nodes)} leaf nodes, embedding in batches of {self.batch_size}")
