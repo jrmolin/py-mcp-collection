@@ -7,7 +7,8 @@ from knowledge_base_mcp.llama_index.readers.github import GithubIssuesReader
 if TYPE_CHECKING:
     from llama_index.core.schema import Document
 
-@pytest.mark.not_on_ci  
+
+@pytest.mark.not_on_ci
 def test_github_reader():
     client = GithubIssuesReader(
         owner="strawgate",
@@ -31,6 +32,7 @@ def test_github_reader():
 
     assert first_issue.metadata["issue"] == 11
     assert first_comment.metadata["issue"] == 11
+
 
 @pytest.mark.not_on_ci
 async def test_github_reader_async():

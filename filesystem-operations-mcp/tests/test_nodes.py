@@ -1,4 +1,3 @@
-import subprocess
 import tempfile
 from pathlib import Path
 
@@ -278,7 +277,7 @@ class TestDirectoryEntry:
         #         repo_url = "https://github.com/elastic/beats.git"
         #         clone_path = "./playground/beats"
         #         git_clone_command = f"git clone --depth 1 --branch {commit} --single-branch {repo_url} {clone_path}"
-        #         _ = subprocess.run(git_clone_command, check=False, shell=True)  # noqa: S602
+        #         _ = subprocess.run(git_clone_command, check=False, shell=True)
 
         #     return root_dir.resolve()
 

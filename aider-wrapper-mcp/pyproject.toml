@@ -1,6 +1,6 @@
 [project]
 name = "aider_wrapper_mcp"
-version = "0.5.0"
+version = "0.5.1"
 description = "An MCP Server that wraps the Aider tool for AI-driven code modifications."
 readme = "README.md"
 requires-python = ">=3.10,<3.13"

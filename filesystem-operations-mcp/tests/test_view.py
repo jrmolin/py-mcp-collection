@@ -94,12 +94,18 @@ async def test_file_exportable_field_preview(file_system: FileSystem):
     assert expensive_fields["preview"][2] == "1. First point"
     assert expensive_fields["preview"][3] == "2. Second point"
 
+
 @pytest.mark.asyncio
 async def test_file_exportable_field_summarize(file_system: FileSystem):
-
-    _ = await file_system.create_file(file_system.path / "notes.md", "# Important notes: The first important note is about the first point. The second important note is about the second point.")
+    _ = await file_system.create_file(
+        file_system.path / "notes.md",
+        "# Important notes: The first important note is about the first point. The second important note is about the second point.",
+    )
     node = file_system.get_file("notes.md")
     file_fields = FileExportableField(summarize=True)
     result = await file_fields.aapply(node)
     assert "summary" in result
-    assert result["summary"] == "Important notes: The first important note is about the first point. The second important note is about the second point."
+    assert (
+        result["summary"]
+        == "Important notes: The first important note is about the first point. The second important note is about the second point."
+    )

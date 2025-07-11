@@ -1,7 +1,7 @@
 import re
+import zipfile
 from functools import cached_property
 from typing import Any, override
-import zipfile
 
 import nltk
 from nltk.downloader import Downloader
@@ -16,8 +16,9 @@ from sumy.utils import get_stop_words  # pyright: ignore[reportUnknownVariableTy
 
 from filesystem_operations_mcp.logging import BASE_LOGGER
 
+
 def _get_sentence_tokenizer(self, language):
-    """ We are overriding this as we need to replace punkt with punkt_tab in sumy"""
+    """We are overriding this as we need to replace punkt with punkt_tab in sumy"""
     if language in self.SPECIAL_SENTENCE_TOKENIZERS:
         return self.SPECIAL_SENTENCE_TOKENIZERS[language]
     try:

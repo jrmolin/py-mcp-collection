@@ -135,7 +135,7 @@ wheels = [
 
 [[package]]
 name = "aider-wrapper-mcp"
-version = "0.5.0"
+version = "0.5.1"
 source = { editable = "." }
 dependencies = [
     { name = "aider-chat" },
