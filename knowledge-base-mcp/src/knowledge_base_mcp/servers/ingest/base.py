@@ -103,9 +103,12 @@ class BaseIngestServer(BaseKnowledgeBaseServer, ABC):
         preamble = f"{pipeline.name} ({worker_id})"
         logger.info(f"{preamble} Starting...")
 
-        async def _process_batch(batch_of_nodes: Sequence[BaseNode]) -> None:
+        async def _process_batch(batch_of_nodes: Sequence[BaseNode], as_async: bool = True) -> None:
             """Process a batch of nodes."""
-            nodes = await pipeline.arun(nodes=batch_of_nodes)
+            if as_async:
+                nodes = await pipeline.arun(nodes=batch_of_nodes)
+            else:
+                nodes = pipeline.run(nodes=batch_of_nodes)
 
             _ = ingest_result.merge(
                 other=IngestResult(
@@ -137,8 +140,13 @@ class BaseIngestServer(BaseKnowledgeBaseServer, ABC):
 
         if len(nodes_to_process) > 0:
             logger.info(f"{preamble} Received end of stream. Flushing final batch.")
-            _ = await _process_batch(batch_of_nodes=nodes_to_process)
-            nodes_to_process.clear()
+            try:
+                # Avoid scheduling a task during shutdown so we avoid a scheduling deadlock
+                _ = await _process_batch(batch_of_nodes=nodes_to_process, as_async=False)
+            except Exception:
+                logger.exception(f"{preamble} Received an unknown error while flushing final batch.")
+            finally:
+                nodes_to_process.clear()
 
         logger.info(f"{preamble} Done.")
 

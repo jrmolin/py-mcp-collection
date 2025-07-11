@@ -8,7 +8,7 @@ from elasticsearch import AsyncElasticsearch
 from fastmcp import FastMCP
 from fastmcp.tools import FunctionTool
 
-from strawgate_es_mcp.data_stream.summarize import DataStreamSummary, summarize_data_streams
+from strawgate_es_mcp.data_stream.summarize import DataStreamSummary, new_data_stream_summaries
 
 _ = load_dotenv()
 
@@ -24,12 +24,12 @@ async def build_server(es: AsyncElasticsearch, include_tags: list[str], exclude_
         exclude_tags=set(exclude_tags) if exclude_tags else None,
     )
 
-    async def summarize_data_stream(data_streams: Annotated[list[str], "The data streams to summarize"]) -> list[DataStreamSummary]:
+    async def summarize_data_streams(data_streams: Annotated[list[str], "The data streams to summarize"]) -> list[DataStreamSummary]:
         """Summarize the data stream, providing field information and sample rows for each requested data stream"""
-        return await summarize_data_streams(es, data_streams)
+        return await new_data_stream_summaries(es, data_streams)
 
     custom_tools = [
-        summarize_data_stream,
+        summarize_data_streams,
     ]
 
     relevant_clients = [
@@ -108,13 +108,21 @@ async def build_server(es: AsyncElasticsearch, include_tags: list[str], exclude_
 @click.command()
 @click.option("--es-host", type=str, envvar="ES_HOST", required=False, help="the host of the elasticsearch cluster")
 @click.option("--api-key", type=str, envvar="ES_API_KEY", required=False, help="the api key of the elasticsearch cluster")
-@click.option("--transport", type=click.Choice(["stdio", "sse"]), default="sse", help="the transport to use for the MCP")
+@click.option("--transport", type=click.Choice(["stdio", "sse"]), default="stdio", help="the transport to use for the MCP")
 @click.option("--include-tags", type=str, envvar="INCLUDE_TAGS", required=False, multiple=True, help="the tags to include in the MCP")
 @click.option("--exclude-tags", type=str, envvar="EXCLUDE_TAGS", required=False, multiple=True, help="the tags to exclude from the MCP")
 async def cli(es_host: str, api_key: str, transport: Literal["stdio", "sse"], include_tags: list[str], exclude_tags: list[str]):
     es = build_es_client(es_host, api_key)
 
-    mcp = await build_server(es, include_tags, exclude_tags)
+    expanded_include_tags: list[str] = []
+    for tag in include_tags:
+        expanded_include_tags.extend(tag.strip() for tag in tag.split(","))
+
+    expanded_exclude_tags: list[str] = []
+    for tag in exclude_tags:
+        expanded_exclude_tags.extend(tag.strip() for tag in tag.split(","))
+
+    mcp = await build_server(es, expanded_include_tags, expanded_exclude_tags)
 
     _ = await es.ping()
 

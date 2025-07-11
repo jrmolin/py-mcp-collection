@@ -3,6 +3,12 @@ name: Publish File System Operations MCP to PyPI
 on:
   release:
     types: [created]
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -36,4 +42,5 @@ jobs:
         run: uv build
 
       - name: "Publish to PyPi ${matrix.package}"
+        if: github.event_name == 'release' && github.event.action == 'created'
         run: uv publish -v dist/*

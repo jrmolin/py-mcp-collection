@@ -251,6 +251,7 @@ class TestDirectoryEntry:
             ]
 
             first_file = descendants[0]
+            assert first_file.name == "code_with_hello_world.py"
             first_match_lines = first_file.matches.lines()
             assert len(first_match_lines) == 2
             assert first_match_lines[0] == "def hello():"

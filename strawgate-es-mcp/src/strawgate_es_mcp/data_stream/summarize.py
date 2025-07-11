@@ -26,7 +26,7 @@ class DataStreamSummary(BaseModel):
     sample_rows: list[DataStreamRowExample] = Field(description="A small set of rows from the data stream")
 
 
-async def summarize_data_stream(es: AsyncElasticsearch, data_stream: str) -> DataStreamSummary:
+async def new_data_stream_summary(es: AsyncElasticsearch, data_stream: str) -> DataStreamSummary:
     """
     Summarize the data stream.
     """
@@ -98,5 +98,5 @@ async def summarize_data_stream(es: AsyncElasticsearch, data_stream: str) -> Dat
     return DataStreamSummary(data_stream=data_stream, fields=field_summaries, sample_rows=row_examples)
 
 
-async def summarize_data_streams(es: AsyncElasticsearch, data_streams: list[str]) -> list[DataStreamSummary]:
-    return [await summarize_data_stream(es, data_stream) for data_stream in data_streams]
+async def new_data_stream_summaries(es: AsyncElasticsearch, data_streams: list[str]) -> list[DataStreamSummary]:
+    return [await new_data_stream_summary(es, data_stream) for data_stream in data_streams]
