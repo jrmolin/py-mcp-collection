@@ -242,8 +242,9 @@ class TestDirectoryEntry:
 
         async def test_two(self, root_directory: DirectoryEntry):
             descendants: list[FileEntryWithMatches] = [file async for file in root_directory.asearch_files(["hello"])]
+            descendants.sort(key=lambda x: x.name)
             assert len(descendants) == 3
-            descendant_names = sorted([d.name for d in descendants])
+            descendant_names = [d.name for d in descendants]
             assert descendant_names == [
                 "code_with_hello_world.py",
                 "script_with_hello.sh",
