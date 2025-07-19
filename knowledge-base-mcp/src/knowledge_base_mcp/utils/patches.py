@@ -117,7 +117,7 @@ async def arun_transformations(
     in_place: bool = True,
     cache: IngestionCache | None = None,
     cache_collection: str | None = None,
-    **kwargs: Any,
+    **kwargs: Any,  # pyright: ignore[reportAny]
 ) -> Sequence[BaseNode]:
     """
     Run a series of transformations on a set of nodes.
@@ -144,15 +144,16 @@ async def arun_transformations(
 
     transform_type = "doc -> node" if starting_document_count > 0 else "node -> node"
     if len(nodes) > 1:
+        suffix = f"({starting_document_count} documents and {starting_node_count} nodes)"
         logger.info(
-            f"Running {len(transformations)} {transform_type} transformations on {starting_nodes} nodes ({starting_document_count} documents and {starting_node_count} nodes)"
+            f"Running {len(transformations)} {transform_type} transformations on {starting_nodes} nodes {suffix}"
         )
 
     for transform in transformations:
         _ = timer_group.start_timer(name=transform.__class__.__name__)
 
         if cache is not None:
-            hash = get_transformation_hash(nodes, transform)
+            hash = get_transformation_hash(nodes, transform)  # noqa: A001
 
             cached_nodes = cache.get(hash, collection=cache_collection)
             if cached_nodes is not None:
@@ -187,10 +188,10 @@ def node_to_metadata_dict(
     # Using mode="json" here because BaseNode may have fields of type bytes (e.g. images in ImageBlock),
     # which would cause serialization issues.
     node_dict = node.model_dump(mode="json")
-    metadata: dict[str, Any] = node_dict.get("metadata", {})
+    metadata: dict[str, Any] = node_dict.get("metadata", {})  # pyright: ignore[reportAny]
 
     if flat_metadata:
-        utils._validate_is_flat_dict(metadata)
+        utils._validate_is_flat_dict(metadata)  # pyright: ignore[reportUnknownMemberType, reportPrivateUsage]
 
     # store entire node as json string - some minor text duplication
     if remove_text and text_field in node_dict:

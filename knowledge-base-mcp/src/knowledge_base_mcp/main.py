@@ -177,9 +177,9 @@ def duckdb_group() -> None:
 async def duckdb_memory(ctx: click.Context) -> None:
     from llama_index.storage.docstore.duckdb import DuckDBDocumentStore
     from llama_index.storage.index_store.duckdb import DuckDBIndexStore
+    from llama_index.storage.kvstore.duckdb import DuckDBKVStore
 
     from knowledge_base_mcp.stores.vector_stores.duckdb import EnhancedDuckDBVectorStore
-    from knowledge_base_mcp.vendored.kvstore.duckdb import DuckDBKVStore
 
     logger.info("Loading DuckDB document and code stores in memory")
 
@@ -208,22 +208,23 @@ async def duckdb_memory(ctx: click.Context) -> None:
 async def duckdb_persistent(ctx: click.Context, db_dir: Path, db_docs: str, db_vectors: str) -> None:
     from llama_index.storage.docstore.duckdb import DuckDBDocumentStore
     from llama_index.storage.index_store.duckdb import DuckDBIndexStore
+    from llama_index.storage.kvstore.duckdb import DuckDBKVStore
 
     from knowledge_base_mcp.stores.vector_stores.duckdb import EnhancedDuckDBVectorStore
-    from knowledge_base_mcp.vendored.kvstore.duckdb import DuckDBKVStore
 
     cli_ctx: PartialCliContext = ctx.obj  # pyright: ignore[reportAny]
 
     logger.info(f"Loading DuckDB document in persistent mode: {db_dir / db_docs}")
 
     docs_db_path: Path = db_dir / db_docs
+    docs_vectors_db_path: Path = db_dir / db_vectors
 
     docs_vector_store: EnhancedDuckDBVectorStore
 
     if not docs_db_path.exists():
-        docs_vector_store = EnhancedDuckDBVectorStore(database_name=db_vectors, persist_dir=str(db_dir))
+        docs_vector_store = EnhancedDuckDBVectorStore(database_name=str(docs_vectors_db_path), persist_dir=str(db_dir))
     else:
-        docs_vector_store = EnhancedDuckDBVectorStore.from_local(database_path=str(docs_db_path))  # pyright: ignore[reportAssignmentType, reportUnknownMemberType]
+        docs_vector_store = EnhancedDuckDBVectorStore.from_local(database_path=str(docs_vectors_db_path))  # pyright: ignore[reportAssignmentType, reportUnknownMemberType]
 
     # code_kv_store = DuckDBKVStore(client=code_vector_store.client)
     docs_kv_store = DuckDBKVStore(database_name=db_docs, persist_dir=str(db_dir))
@@ -260,25 +261,25 @@ async def run(ctx: click.Context, transport: Transport, search_only: bool):
         knowledge_base_client=knowledge_base_client,
         reranker_model=cli_ctx.docs_stores.rerank_model_name,
     )
-    await kbmcp.import_server(server=docs_search_server.as_search_server(), prefix="docs")
+    _ = await kbmcp.import_server(server=docs_search_server.as_search_server(), prefix="docs")
 
     # GitHub MCP Registration
     github_server: GitHubServer = GitHubServer(knowledge_base_client=knowledge_base_client)
-    await kbmcp.import_server(server=github_server.as_search_server(), prefix="github")
+    _ = await kbmcp.import_server(server=github_server.as_search_server(), prefix="github")
 
     if not search_only:
-        await kbmcp.import_server(server=github_server.as_ingest_server())
+        _ = await kbmcp.import_server(server=github_server.as_ingest_server())
 
         # Filesystem Ingest MCP Registration
         filesystem_ingest_server: FilesystemIngestServer = FilesystemIngestServer(knowledge_base_client=knowledge_base_client)
-        await kbmcp.import_server(server=filesystem_ingest_server.as_ingest_server())
+        _ = await kbmcp.import_server(server=filesystem_ingest_server.as_ingest_server())
 
         # Management MCP Registration
         kb_management_server: KnowledgeBaseManagementServer = KnowledgeBaseManagementServer(knowledge_base_client=knowledge_base_client)
-        await kbmcp.import_server(server=kb_management_server.as_management_server())
+        _ = await kbmcp.import_server(server=kb_management_server.as_management_server())
 
         web_ingest_server: WebIngestServer = WebIngestServer(knowledge_base_client=knowledge_base_client)
-        await kbmcp.import_server(server=web_ingest_server.as_ingest_server())
+        _ = await kbmcp.import_server(server=web_ingest_server.as_ingest_server())
 
     # Run the server
     await kbmcp.run_async(transport=transport)

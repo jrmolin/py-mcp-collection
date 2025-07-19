@@ -16,7 +16,7 @@ class FastDirectoryReader(SimpleDirectoryReader):
 
     async def afile(self, input_file: Path) -> list[Document]:
         """Load a file."""
-        documents = await self.aload_file(  # pyright: ignore[reportUnknownMemberType]
+        return await self.aload_file(  # pyright: ignore[reportUnknownMemberType]
             input_file=input_file,
             file_metadata=self.file_metadata,  # pyright: ignore[reportUnknownMemberType]
             file_extractor=self.file_extractor,
@@ -26,8 +26,6 @@ class FastDirectoryReader(SimpleDirectoryReader):
             raise_on_error=self.raise_on_error,
             fs=self.fs,
         )
-
-        return documents
 
     @override
     async def alazy_load_data(  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -57,7 +55,7 @@ class FastDirectoryReader(SimpleDirectoryReader):
         for input_file in files_to_process:
             input_file_relative_path: Path | PurePosixPath | None = None
 
-            if input_file_in_input_dir := input_file.is_relative_to(resolved_input_dir):
+            if input_file.is_relative_to(resolved_input_dir):
                 input_file_relative_path = input_file.relative_to(resolved_input_dir)
 
             documents = await self.aload_file(  # pyright: ignore[reportUnknownMemberType]

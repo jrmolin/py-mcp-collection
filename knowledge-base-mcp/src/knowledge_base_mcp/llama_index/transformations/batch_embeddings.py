@@ -14,6 +14,7 @@ from knowledge_base_mcp.utils.logging import BASE_LOGGER
 
 logger: Logger = BASE_LOGGER.getChild(__name__)
 
+LARGE_BATCH_SIZE_THRESHOLD = 1000
 
 class BatchedNodeEmbedding(TransformComponent):
     """Embeds nodes in sequential batches."""
@@ -34,7 +35,7 @@ class BatchedNodeEmbedding(TransformComponent):
         else:
             leaf_nodes = list(nodes)
 
-        if len(leaf_nodes) > 1000:
+        if len(leaf_nodes) > LARGE_BATCH_SIZE_THRESHOLD:
             logger.warning(f"Large batch of {len(leaf_nodes)} leaf nodes, embedding in batches of {self.batch_size}")
 
         return [leaf_nodes[i : i + self.batch_size] for i in range(0, len(leaf_nodes), self.batch_size)]

@@ -8,6 +8,7 @@ from llama_index.core.schema import BaseNode, Document, MediaResource, Node, Nod
 from llama_index.core.storage import StorageContext
 from llama_index.embeddings.fastembed import FastEmbedEmbedding
 from llama_index.storage.docstore.duckdb import DuckDBDocumentStore
+from llama_index.storage.kvstore.duckdb import DuckDBKVStore
 from llama_index.vector_stores.duckdb import DuckDBVectorStore
 from syrupy.assertion import SnapshotAssertion
 
@@ -16,7 +17,6 @@ from knowledge_base_mcp.main import DEFAULT_DOCS_CROSS_ENCODER_MODEL
 from knowledge_base_mcp.servers.ingest.filesystem import FilesystemIngestServer
 from knowledge_base_mcp.servers.search.docs import DocumentationSearchServer
 from knowledge_base_mcp.stores.vector_stores.duckdb import EnhancedDuckDBVectorStore
-from knowledge_base_mcp.vendored.kvstore.duckdb import DuckDBKVStore
 
 if TYPE_CHECKING:
     from knowledge_base_mcp.servers.models.documentation import KnowledgeBaseResult
@@ -116,6 +116,7 @@ class TestSearch:
     @pytest.fixture
     async def vector_store_index_with_documents(self, vector_store_index: VectorStoreIndex):
         document = Document(
+            id_="doc1",
             text="Hello, world!",
             metadata={
                 "knowledge_base": "test",
@@ -125,6 +126,7 @@ class TestSearch:
         )
 
         parent_node = Node(
+            id_="parent_node",
             text_resource=MediaResource(text="Hello, world!"),
             extra_info={
                 **document.metadata,
@@ -133,6 +135,7 @@ class TestSearch:
         )
 
         node_one = Node(
+            id_="node_one",
             text_resource=MediaResource(text="I'm just a Node, I am not a document!"),
             extra_info={
                 **document.metadata,
@@ -141,6 +144,7 @@ class TestSearch:
         )
 
         node_two = Node(
+            id_="node_two",
             text_resource=MediaResource(text="I'm the second node, better than the first one!"),
             extra_info={
                 **document.metadata,
@@ -149,6 +153,7 @@ class TestSearch:
         )
 
         node_three = Node(
+            id_="node_three",
             text_resource=MediaResource(text="I'm the third node, better than any other node!"),
             extra_info={
                 **document.metadata,

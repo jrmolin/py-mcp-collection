@@ -147,7 +147,7 @@ class VectorIndexRetriever(BaseRetriever):
             return [
                 node.node_id
                 for node in query_result.nodes  # no folding
-                if node.as_related_node_info().node_type != ObjectType.TEXT
+                if node.as_related_node_info().node_type != ObjectType.TEXT and node.get_content() == ""
             ]
         elif query_result.ids:
             return [

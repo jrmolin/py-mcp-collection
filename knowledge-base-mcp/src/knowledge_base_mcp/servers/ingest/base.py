@@ -35,6 +35,7 @@ class IngestResult(BaseModel):
     documents: int = Field(default=0, description="The number of documents ingested.")
     parsed_nodes: int = Field(default=0, description="The number of nodes ingested.")
     ingested_nodes: int = Field(default=0, description="The number of nodes ingested into the knowledge base.")
+    errors: int = Field(default=0, description="The number of errors encountered while ingesting.")
 
     last_update: datetime.datetime = Field(default_factory=datetime.datetime.now, exclude=True)
 
@@ -43,6 +44,7 @@ class IngestResult(BaseModel):
         self.documents += other.documents
         self.parsed_nodes += other.parsed_nodes
         self.ingested_nodes += other.ingested_nodes
+        self.errors += other.errors
         self.last_update = max(self.last_update, other.last_update)
         return self
 
@@ -103,20 +105,18 @@ class BaseIngestServer(BaseKnowledgeBaseServer, ABC):
         preamble = f"{pipeline.name} ({worker_id})"
         logger.info(f"{preamble} Starting...")
 
-        async def _process_batch(batch_of_nodes: Sequence[BaseNode], as_async: bool = True) -> None:
+        async def _process_batch(batch_of_nodes: Sequence[BaseNode]) -> None:
             """Process a batch of nodes."""
-            if as_async:
+            try:
                 nodes = await pipeline.arun(nodes=batch_of_nodes)
-            else:
-                nodes = pipeline.run(nodes=batch_of_nodes)
+            except Exception:
+                logger.exception(f"{preamble} Received an unknown error while processing batch.")
+                ingest_result.errors += 1
+                return
 
-            _ = ingest_result.merge(
-                other=IngestResult(
-                    documents=len([node for node in nodes if isinstance(node, Document)]),
-                    parsed_nodes=len([node for node in nodes if not isinstance(node, Document)]),
-                    ingested_nodes=len(nodes),
-                )
-            )
+            ingest_result.documents += len([node for node in nodes if isinstance(node, Document)])
+            ingest_result.parsed_nodes += len([node for node in nodes if not isinstance(node, Document)])
+            ingest_result.ingested_nodes += len(nodes)
 
         nodes_to_process: Sequence[BaseNode] = []
 
@@ -133,20 +133,15 @@ class BaseIngestServer(BaseKnowledgeBaseServer, ABC):
                         nodes_to_process.clear()
 
             except (EndOfStream, ClosedResourceError):
-                logger.info(f"{preamble} Received end of stream. Exiting.")
+                logger.debug(f"{preamble} Received end of stream. Exiting.")
 
             except Exception:
                 logger.exception(f"{preamble} Received an unknown error")
 
         if len(nodes_to_process) > 0:
-            logger.info(f"{preamble} Received end of stream. Flushing final batch.")
-            try:
-                # Avoid scheduling a task during shutdown so we avoid a scheduling deadlock
-                _ = await _process_batch(batch_of_nodes=nodes_to_process, as_async=False)
-            except Exception:
-                logger.exception(f"{preamble} Received an unknown error while flushing final batch.")
-            finally:
-                nodes_to_process.clear()
+            logger.debug(f"{preamble} Received end of stream. Flushing final batch.")
+            _ = await _process_batch(batch_of_nodes=nodes_to_process)
+            nodes_to_process.clear()
 
         logger.info(f"{preamble} Done.")
 
@@ -162,7 +157,7 @@ class BaseIngestServer(BaseKnowledgeBaseServer, ABC):
         queue_nodes, process_queued_nodes = create_memory_object_stream[Sequence[BaseNode]](max_buffer_size=16)  # In Batches
         queue_documents, process_queued_documents = create_memory_object_stream[Sequence[Document]](
             max_buffer_size=256
-        )  # Individual Documents
+        )  # This is a sequence but we will generally be passed sequences with 1 document in them
 
         async with create_task_group() as tg:
             for i in range(2):

@@ -7,13 +7,13 @@ from llama_index.core.schema import BaseNode, MetadataMode
 from llama_index.core.storage import StorageContext
 from llama_index.embeddings.fastembed import FastEmbedEmbedding
 from llama_index.storage.docstore.duckdb import DuckDBDocumentStore
+from llama_index.storage.kvstore.duckdb import DuckDBKVStore
 from llama_index.vector_stores.duckdb import DuckDBVectorStore
 from syrupy.assertion import SnapshotAssertion
 
 from knowledge_base_mcp.clients.knowledge_base import KnowledgeBaseClient
 from knowledge_base_mcp.main import DEFAULT_DOCS_CROSS_ENCODER_MODEL
 from knowledge_base_mcp.servers.github import GitHubSearchResponse, GitHubServer
-from knowledge_base_mcp.vendored.kvstore.duckdb import DuckDBKVStore
 
 if TYPE_CHECKING:
     from knowledge_base_mcp.servers.ingest.base import IngestResult
