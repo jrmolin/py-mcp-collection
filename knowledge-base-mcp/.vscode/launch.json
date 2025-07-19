@@ -5,6 +5,19 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Knowledge Base MCP: Auto",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "knowledge_base_mcp.main",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false,
+            "args": [
+                "auto",
+                "run",
+                "--transport=sse"
+            ]
+        },
+        {
             "name": "Knowledge Base MCP: Elasticsearch",
             "type": "debugpy",
             "request": "launch",

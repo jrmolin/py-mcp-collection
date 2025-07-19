@@ -16,6 +16,7 @@ logger: Logger = BASE_LOGGER.getChild(__name__)
 
 LARGE_BATCH_SIZE_THRESHOLD = 1000
 
+
 class BatchedNodeEmbedding(TransformComponent):
     """Embeds nodes in sequential batches."""
 

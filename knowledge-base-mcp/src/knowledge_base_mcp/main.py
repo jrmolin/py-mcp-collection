@@ -116,6 +116,24 @@ def cli(
     logger.info("Done loading document and code models")
 
 
+@cli.group(name="auto")
+@click.option(
+    "--source", envvar="KB_SOURCE", type=click.Choice(["elasticsearch", "duckdb_memory", "duckdb_persistent"]), default="duckdb_persistent"
+)
+@click.pass_context
+async def auto(ctx: click.Context, source: str) -> None:
+    """Determine the source of the knowledge base from the available environment variables."""
+    if source == "elasticsearch":
+        _ = await ctx.invoke(elasticsearch)
+    elif source == "duckdb_memory":
+        _ = await ctx.invoke(duckdb_memory)
+    elif source == "duckdb_persistent":
+        _ = await ctx.invoke(duckdb_persistent)
+    else:
+        logger.info("Set to auto mode but no source set, defaulting to a local and persistent duckdb database")
+        _ = await ctx.invoke(duckdb_persistent)
+
+
 @cli.group(name="elasticsearch")
 @click.option("--url", type=str, envvar="ES_URL", default="http://localhost:9200")
 @click.option("--index-docs-vectors", type=str, envvar="ES_INDEX_DOCS_VECTORS", default="kbmcp-docs-vectors")
@@ -285,6 +303,7 @@ async def run(ctx: click.Context, transport: Transport, search_only: bool):
     await kbmcp.run_async(transport=transport)
 
 
+auto.add_command(cmd=run)
 duckdb_memory.add_command(cmd=run)
 elasticsearch.add_command(cmd=run)
 

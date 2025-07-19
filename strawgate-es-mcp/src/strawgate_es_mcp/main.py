@@ -1,4 +1,5 @@
 import asyncio
+import re
 from collections.abc import Callable
 from typing import Annotated, Any, Literal
 
@@ -17,7 +18,13 @@ def build_es_client(es_host: str, api_key: str) -> AsyncElasticsearch:
     return AsyncElasticsearch(es_host, api_key=api_key)
 
 
-async def build_server(es: AsyncElasticsearch, include_tags: list[str], exclude_tags: list[str]):
+async def build_server(
+    es: AsyncElasticsearch,
+    include_tags: list[str],
+    exclude_tags: list[str],
+    include_tools_patterns: list[str],
+    exclude_tools_patterns: list[str],
+):
     mcp = FastMCP[Any](
         name="Strawgate Elasticsearch MCP",
         include_tags=set(include_tags) if include_tags else None,
@@ -90,6 +97,12 @@ async def build_server(es: AsyncElasticsearch, include_tags: list[str], exclude_
                 if not isinstance(tool_function, Callable):
                     continue
 
+                if include_tools_patterns and not any(re.match(pattern, tool) for pattern in include_tools_patterns):
+                    continue
+
+                if exclude_tools_patterns and any(re.match(pattern, tool) for pattern in exclude_tools_patterns):
+                    continue
+
                 tool_tags = {client_prefix}
 
                 client_mcp.add_tool(FunctionTool.from_function(fn=tool_function, tags=tool_tags))  # pyright: ignore[reportUnknownArgumentType]
@@ -111,7 +124,31 @@ async def build_server(es: AsyncElasticsearch, include_tags: list[str], exclude_
 @click.option("--transport", type=click.Choice(["stdio", "sse"]), default="stdio", help="the transport to use for the MCP")
 @click.option("--include-tags", type=str, envvar="INCLUDE_TAGS", required=False, multiple=True, help="the tags to include in the MCP")
 @click.option("--exclude-tags", type=str, envvar="EXCLUDE_TAGS", required=False, multiple=True, help="the tags to exclude from the MCP")
-async def cli(es_host: str, api_key: str, transport: Literal["stdio", "sse"], include_tags: list[str], exclude_tags: list[str]):
+@click.option(
+    "--include-tools-patterns",
+    type=str,
+    envvar="INCLUDE_TOOLS_PATTERNS",
+    required=False,
+    multiple=True,
+    help="the patterns to include in the MCP",
+)
+@click.option(
+    "--exclude-tools-patterns",
+    type=str,
+    envvar="EXCLUDE_TOOLS_PATTERNS",
+    required=False,
+    multiple=True,
+    help="the patterns to exclude from the MCP",
+)
+async def cli(
+    es_host: str,
+    api_key: str,
+    transport: Literal["stdio", "sse"],
+    include_tags: list[str],
+    exclude_tags: list[str],
+    include_tools_patterns: list[str],
+    exclude_tools_patterns: list[str],
+) -> None:
     es = build_es_client(es_host, api_key)
 
     expanded_include_tags: list[str] = []
@@ -122,7 +159,7 @@ async def cli(es_host: str, api_key: str, transport: Literal["stdio", "sse"], in
     for tag in exclude_tags:
         expanded_exclude_tags.extend(tag.strip() for tag in tag.split(","))
 
-    mcp = await build_server(es, expanded_include_tags, expanded_exclude_tags)
+    mcp = await build_server(es, expanded_include_tags, expanded_exclude_tags, include_tools_patterns, exclude_tools_patterns)
 
     _ = await es.ping()
 
@@ -130,7 +167,7 @@ async def cli(es_host: str, api_key: str, transport: Literal["stdio", "sse"], in
 
 
 def run_mcp():
-    asyncio.run(cli())
+    asyncio.run(main=cli())
 
 
 if __name__ == "__main__":

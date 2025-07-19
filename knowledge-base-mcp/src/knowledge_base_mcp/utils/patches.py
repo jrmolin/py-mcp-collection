@@ -145,9 +145,7 @@ async def arun_transformations(
     transform_type = "doc -> node" if starting_document_count > 0 else "node -> node"
     if len(nodes) > 1:
         suffix = f"({starting_document_count} documents and {starting_node_count} nodes)"
-        logger.info(
-            f"Running {len(transformations)} {transform_type} transformations on {starting_nodes} nodes {suffix}"
-        )
+        logger.info(f"Running {len(transformations)} {transform_type} transformations on {starting_nodes} nodes {suffix}")
 
     for transform in transformations:
         _ = timer_group.start_timer(name=transform.__class__.__name__)

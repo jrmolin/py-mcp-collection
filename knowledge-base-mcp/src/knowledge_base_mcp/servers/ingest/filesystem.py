@@ -1,6 +1,7 @@
 import asyncio
 import tempfile
 from logging import Logger
+from pathlib import Path
 from types import CoroutineType
 from typing import TYPE_CHECKING, Annotated, Any, override
 
@@ -17,6 +18,8 @@ from knowledge_base_mcp.utils.patches import apply_patches
 
 if TYPE_CHECKING:
     from types import CoroutineType
+
+    from git.cmd import Git
 
 apply_patches()
 
@@ -154,7 +157,7 @@ class FilesystemIngestServer(BaseIngestServer):
         knowledge_base: NewKnowledgeBaseField,
         repository_url: Annotated[str, Field(description="The URL of the git repository to clone.")],
         branch: Annotated[str, Field(description="The branch to clone.")],
-        path: Annotated[str, Field(description="The path in the repository to ingest.")],
+        paths: Annotated[list[str], Field(description="The paths in the git repository to ingest.")],
         background: bool = True,
         context: Context | None = None,
     ) -> IngestResult | None:
@@ -165,7 +168,7 @@ class FilesystemIngestServer(BaseIngestServer):
             knowledge_base=knowledge_base,
             repository_url=repository_url,
             branch=branch,
-            path=path,
+            paths=paths,
         )
 
         if background:
@@ -179,7 +182,7 @@ class FilesystemIngestServer(BaseIngestServer):
         knowledge_base: NewKnowledgeBaseField,
         repository_url: Annotated[str, Field(description="The URL of the git repository to clone.")],
         branch: Annotated[str, Field(description="The branch to clone.")],
-        path: Annotated[str, Field(description="The path in the repository to ingest.")],
+        paths: Annotated[list[str], Field(description="The paths in the git repository to ingest.")],
         exclude: DirectoryExcludeField = None,
         extensions: DirectoryFilterExtensionsField = None,
         context: Context | None = None,
@@ -187,23 +190,50 @@ class FilesystemIngestServer(BaseIngestServer):
         """Create a new knowledge base from a git repository."""
 
         await self._log_info(
-            context=context, message=f"Creating {knowledge_base} from {repository_url} at {path} with {extensions} and {exclude}"
+            context=context,
+            message=f"Creating {knowledge_base} from {repository_url} at {paths} with {extensions} and {exclude}",
         )
 
         if extensions is None:
             extensions = [".md", ".ad", ".adoc", ".asc", ".asciidoc"]
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            await self._log_info(context=context, message=f"Cloning {repository_url} to {temp_dir}")
-            repo = Repo.clone_from(url=repository_url, to_path=temp_dir, depth=1, single_branch=True)
-            _ = repo.git.checkout(branch)  # pyright: ignore[reportAny]
-            await self._log_info(context=context, message=f"Done cloning {repository_url} to {temp_dir}")
+            temp_path = Path(temp_dir)
 
-            return await self._load_directory(
-                context=context,
-                knowledge_base=knowledge_base,
-                path=temp_dir,
-                extensions=extensions,
-                exclude=exclude,
-                recursive=True,
+            await self._log_info(context=context, message=f"Cloning {repository_url} to {temp_path}")
+            repo = Repo.clone_from(
+                url=repository_url,
+                to_path=temp_path,
+                depth=1,
+                multi_options=["--no-checkout", "--sparse"],
+                single_branch=True,
+                filter="blob:none",
             )
+            git: Git = repo.git
+
+            await self._log_info(context=context, message="Initializing sparse checkout")
+
+            git.sparse_checkout("init", "--no-cone")  # pyright: ignore[reportAny]
+
+            git.sparse_checkout("set", paths)  # pyright: ignore[reportAny]
+
+            await self._log_info(context=context, message="Checking out branch")
+            _ = repo.git.checkout(branch)  # pyright: ignore[reportAny]
+
+            await self._log_info(context=context, message=f"Done cloning {repository_url} to {temp_path}")
+
+            ingest_result: IngestResult = IngestResult()
+
+            for path in paths:
+                path_result = await self._load_directory(
+                    context=context,
+                    knowledge_base=knowledge_base,
+                    path=str(temp_path / path),
+                    extensions=extensions,
+                    exclude=exclude,
+                    recursive=True,
+                )
+
+                _ = ingest_result.merge(path_result)
+
+            return ingest_result

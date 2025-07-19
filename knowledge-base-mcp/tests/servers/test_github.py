@@ -19,41 +19,6 @@ if TYPE_CHECKING:
     from knowledge_base_mcp.servers.ingest.base import IngestResult
 
 
-embedding_model: FastEmbedEmbedding | None = None
-try:
-    embedding_model = FastEmbedEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2", embedding_cache=None)
-    test = embedding_model._model.embed(["Hello, world!"])  # pyright: ignore[reportPrivateUsage]
-    fastembed_available = True
-except Exception:
-    fastembed_available = False
-
-
-@pytest.fixture
-def duckdb_vector_store():
-    return DuckDBVectorStore(
-        index_name="test",
-        embedding_model=embedding_model,
-        nodes=[],
-    )
-
-
-@pytest.fixture
-def duckdb_docstore(duckdb_vector_store: DuckDBVectorStore):
-    kv_store = DuckDBKVStore(client=duckdb_vector_store.client)
-    return DuckDBDocumentStore(duckdb_kvstore=kv_store)
-
-
-@pytest.fixture
-def vector_store_index(duckdb_vector_store: DuckDBVectorStore, duckdb_docstore: DuckDBDocumentStore):
-    storage_context = StorageContext.from_defaults(vector_store=duckdb_vector_store, docstore=duckdb_docstore)
-    return VectorStoreIndex(storage_context=storage_context, embed_model=embedding_model, nodes=[])
-
-
-@pytest.fixture
-def knowledge_base_client(vector_store_index: VectorStoreIndex):
-    return KnowledgeBaseClient(vector_store_index=vector_store_index, reranker_model=DEFAULT_DOCS_CROSS_ENCODER_MODEL)
-
-
 @pytest.fixture
 def github_server(knowledge_base_client: KnowledgeBaseClient):
     return GitHubServer(knowledge_base_client=knowledge_base_client)
@@ -167,6 +132,50 @@ class TestIngest:
         assert node_two.metadata["type"] == "comment"
 
         assert prepare_nodes_for_snapshot(nodes) == yaml_snapshot
+
+    @pytest.mark.not_on_ci
+    async def test_ingest_logstash_comments(
+        self, github_server: GitHubServer, vector_store_index: VectorStoreIndex, yaml_snapshot: SnapshotAssertion
+    ):
+        ingest_result: IngestResult = await github_server.load_github_issues(
+            knowledge_base="logstash",
+            owner="elastic",
+            repo="logstash",
+            include_comments=True,
+        )
+
+        assert ingest_result.parsed_nodes > 7000
+
+        nodes_by_id: dict[str, BaseNode] = vector_store_index.docstore.docs
+
+        nodes: list[BaseNode] = list(nodes_by_id.values())
+
+        # Sort the nodes by the "id" field in the metadata
+        nodes.sort(key=lambda x: x.metadata.get("id"))  # pyright: ignore[reportArgumentType]
+
+        # Get the node with a "number" metadata field of 1
+        node_one: BaseNode = next(node for node in nodes if node.metadata.get("issue") == 1487 and node.metadata.get("type") == "issue")
+
+        assert node_one.metadata["knowledge_base"] == "logstash"
+        assert node_one.metadata["knowledge_base_type"] == "github_issues"
+        assert node_one.metadata["type"] == "issue"
+        assert node_one.metadata["issue"] == 1487
+
+        assert node_one.metadata["title"] == "New output: unix"
+        assert node_one.metadata["state"] == "open"
+
+        node_two: BaseNode = next(node for node in nodes if node.metadata.get("issue") == 1487 and node.metadata.get("type") == "comment")
+
+        node_two_content: str = node_two.get_content(metadata_mode=MetadataMode.NONE)
+
+        assert (
+            "@mezzatto This is actually a cool idea! If you have already a working plugin, would be very good to add it to logstash-plugins org. Makes sense?"
+            in node_two_content
+        )
+
+        assert node_two.metadata["knowledge_base"] == "logstash"
+        assert node_two.metadata["knowledge_base_type"] == "github_issues"
+        assert node_two.metadata["type"] == "comment"
 
 
 @pytest.mark.not_on_ci

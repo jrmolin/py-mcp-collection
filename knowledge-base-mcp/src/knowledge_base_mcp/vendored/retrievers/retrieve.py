@@ -96,11 +96,7 @@ class VectorIndexRetriever(BaseRetriever):
     ) -> List[NodeWithScore]:
         if self._vector_store.is_embedding_query:
             if query_bundle.embedding is None and len(query_bundle.embedding_strs) > 0:
-                query_bundle.embedding = (
-                    self._embed_model.get_agg_embedding_from_queries(
-                        query_bundle.embedding_strs
-                    )
-                )
+                query_bundle.embedding = self._embed_model.get_agg_embedding_from_queries(query_bundle.embedding_strs)
         return self._get_nodes_with_embeddings(query_bundle)
 
     @dispatcher.span
@@ -109,16 +105,10 @@ class VectorIndexRetriever(BaseRetriever):
         if self._vector_store.is_embedding_query:
             if query_bundle.embedding is None and len(query_bundle.embedding_strs) > 0:
                 embed_model = self._embed_model
-                embedding = await embed_model.aget_agg_embedding_from_queries(
-                    query_bundle.embedding_strs
-                )
-        return await self._aget_nodes_with_embeddings(
-            QueryBundle(query_str=query_bundle.query_str, embedding=embedding)
-        )
+                embedding = await embed_model.aget_agg_embedding_from_queries(query_bundle.embedding_strs)
+        return await self._aget_nodes_with_embeddings(QueryBundle(query_str=query_bundle.query_str, embedding=embedding))
 
-    def _build_vector_store_query(
-        self, query_bundle_with_embeddings: QueryBundle
-    ) -> VectorStoreQuery:
+    def _build_vector_store_query(self, query_bundle_with_embeddings: QueryBundle) -> VectorStoreQuery:
         return VectorStoreQuery(
             query_embedding=query_bundle_with_embeddings.embedding,
             similarity_top_k=self._similarity_top_k,
@@ -132,9 +122,7 @@ class VectorIndexRetriever(BaseRetriever):
             hybrid_top_k=self._hybrid_top_k,
         )
 
-    def _determine_nodes_to_fetch(
-        self, query_result: VectorStoreQueryResult
-    ) -> list[str]:
+    def _determine_nodes_to_fetch(self, query_result: VectorStoreQueryResult) -> list[str]:
         """
         Determine the nodes to fetch from the docstore.
 
@@ -150,13 +138,9 @@ class VectorIndexRetriever(BaseRetriever):
                 if node.as_related_node_info().node_type != ObjectType.TEXT and node.get_content() == ""
             ]
         elif query_result.ids:
-            return [
-                self._index.index_struct.nodes_dict[idx] for idx in query_result.ids
-            ]
+            return [self._index.index_struct.nodes_dict[idx] for idx in query_result.ids]
         else:
-            raise ValueError(
-                "Vector store query result should return at least one of nodes or ids."
-            )
+            raise ValueError("Vector store query result should return at least one of nodes or ids.")
 
     def _insert_fetched_nodes_into_query_result(
         self, query_result: VectorStoreQueryResult, fetched_nodes: List[BaseNode]
@@ -167,9 +151,7 @@ class VectorIndexRetriever(BaseRetriever):
         If the vector store does not store text, all nodes are inserted into the query result.
         If the vector store stores text, we replace non-text nodes with those fetched from the docstore.
         """
-        fetched_nodes_by_id: Dict[str, BaseNode] = {
-            node.node_id: node for node in fetched_nodes
-        }
+        fetched_nodes_by_id: Dict[str, BaseNode] = {node.node_id: node for node in fetched_nodes}
 
         new_nodes: List[BaseNode] = []
 
@@ -183,15 +165,11 @@ class VectorIndexRetriever(BaseRetriever):
             for node_id in query_result.ids:
                 new_nodes.append(fetched_nodes_by_id[node_id])
         else:
-            raise ValueError(
-                "Vector store query result should return at least one of nodes or ids."
-            )
+            raise ValueError("Vector store query result should return at least one of nodes or ids.")
 
         return new_nodes
 
-    def _convert_nodes_to_scored_nodes(
-        self, query_result: VectorStoreQueryResult
-    ) -> List[NodeWithScore]:
+    def _convert_nodes_to_scored_nodes(self, query_result: VectorStoreQueryResult) -> List[NodeWithScore]:
         """Create scored nodes from the vector store query result."""
         node_with_scores: List[NodeWithScore] = []
 
@@ -204,28 +182,20 @@ class VectorIndexRetriever(BaseRetriever):
 
         return node_with_scores
 
-    def _get_nodes_with_embeddings(
-        self, query_bundle_with_embeddings: QueryBundle
-    ) -> List[NodeWithScore]:
+    def _get_nodes_with_embeddings(self, query_bundle_with_embeddings: QueryBundle) -> List[NodeWithScore]:
         query = self._build_vector_store_query(query_bundle_with_embeddings)
         query_result = self._vector_store.query(query, **self._kwargs)
 
         # Fetch any missing nodes from the docstore and insert them into the query result
-        fetched_nodes: List[BaseNode] = self._docstore.get_nodes(
-            node_ids=self._determine_nodes_to_fetch(query_result), raise_error=False
-        )
+        fetched_nodes: List[BaseNode] = self._docstore.get_nodes(node_ids=self._determine_nodes_to_fetch(query_result), raise_error=False)
 
-        query_result.nodes = self._insert_fetched_nodes_into_query_result(
-            query_result, fetched_nodes
-        )
+        query_result.nodes = self._insert_fetched_nodes_into_query_result(query_result, fetched_nodes)
 
         log_vector_store_query_result(query_result)
 
         return self._convert_nodes_to_scored_nodes(query_result)
 
-    async def _aget_nodes_with_embeddings(
-        self, query_bundle_with_embeddings: QueryBundle
-    ) -> List[NodeWithScore]:
+    async def _aget_nodes_with_embeddings(self, query_bundle_with_embeddings: QueryBundle) -> List[NodeWithScore]:
         query = self._build_vector_store_query(query_bundle_with_embeddings)
         query_result = await self._vector_store.aquery(query, **self._kwargs)
 
@@ -234,9 +204,7 @@ class VectorIndexRetriever(BaseRetriever):
             node_ids=self._determine_nodes_to_fetch(query_result), raise_error=False
         )
 
-        query_result.nodes = self._insert_fetched_nodes_into_query_result(
-            query_result, fetched_nodes
-        )
+        query_result.nodes = self._insert_fetched_nodes_into_query_result(query_result, fetched_nodes)
 
         log_vector_store_query_result(query_result)
 
