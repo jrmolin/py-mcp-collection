@@ -71,7 +71,7 @@ class FileSystem(DirectoryEntry):
         async for file in self.afind_files(max_depth=depth):
             yield file
 
-    async def create_file(self, path: FilePath, content: FileContent):
+    async def create_file(self, path: FilePath, content: FileContent) -> None:
         """Creates a file.
 
         Returns:
@@ -84,7 +84,7 @@ class FileSystem(DirectoryEntry):
 
         await FileEntry.create_file(path=path, content=content)
 
-    async def delete_file(self, path: FilePath):
+    async def delete_file(self, path: FilePath) -> None:
         """Deletes a file.
 
         Returns:
@@ -99,7 +99,7 @@ class FileSystem(DirectoryEntry):
 
         await file_entry.delete()
 
-    async def append_file(self, path: FilePath, content: FileAppendContent):
+    async def append_file(self, path: FilePath, content: FileAppendContent) -> None:
         """Appends content to a file.
 
         Returns:
@@ -113,7 +113,7 @@ class FileSystem(DirectoryEntry):
         file_entry = FileEntry(path=path, filesystem=self)
         await file_entry.apply_patch(patch=FileAppendPatch(lines=[content]))
 
-    async def delete_file_lines(self, path: FilePath, line_numbers: FileDeleteLineNumbers):
+    async def delete_file_lines(self, path: FilePath, line_numbers: FileDeleteLineNumbers) -> None:
         """Deletes lines from a file.
 
         Returns:
@@ -127,8 +127,9 @@ class FileSystem(DirectoryEntry):
         file_entry = FileEntry(path=path, filesystem=self)
         await file_entry.apply_patch(patch=FileDeletePatch(line_numbers=line_numbers))
 
-    async def replace_file_lines_bulk(self, path: FilePath, patches: FileReplacePatches):
-        """Replaces lines in a file using find/replace style patch.
+    async def replace_file_lines_bulk(self, path: FilePath, patches: FileReplacePatches) -> None:
+        """Replaces lines in a file using find/replace style patch. It is recommended to read the file after applying
+        patches to ensure the changes were applied correctly and that you have the updated content for the file.
 
         Returns:
             None if the lines were replaced successfully, otherwise an error message.
@@ -142,13 +143,15 @@ class FileSystem(DirectoryEntry):
         await file_entry.apply_patches(patches=patches)
 
     async def replace_file_lines(self, path: FilePath, start_line_number: int, current_lines: list[str], new_lines: list[str]):
-        """Replaces lines in a file using find/replace style patch.
+        """Replaces lines in a file using find/replace style patch. It is recommended to read the file after applying
+        patches to ensure the changes were applied correctly and that you have the updated content for the file.
         """
         file_entry = FileEntry(path=self.path / Path(path), filesystem=self)
         await file_entry.apply_patch(patch=FileReplacePatch(start_line_number=start_line_number, current_lines=current_lines, new_lines=new_lines))
 
-    async def insert_file_lines_bulk(self, path: FilePath, patches: FileInsertPatches):
-        """Inserts lines into a file.
+    async def insert_file_lines_bulk(self, path: FilePath, patches: FileInsertPatches) -> None:
+        """Inserts lines into a file. It is recommended to read the file after applying patches to ensure the changes
+        were applied correctly and that you have the updated content for the file.
 
         Returns:
             None if the lines were inserted successfully, otherwise an error message.
@@ -156,8 +159,12 @@ class FileSystem(DirectoryEntry):
         file_entry = FileEntry(path=self.path / Path(path), filesystem=self)
         await file_entry.apply_patches(patches=patches)
 
-    async def insert_file_lines(self, path: FilePath, line_number: int, current_line: str, lines: list[str]):
-        """Inserts lines into a file.
+    async def insert_file_lines(self, path: FilePath, line_number: int, current_line: str, lines: list[str]) -> None:
+        """Inserts lines into a file. It is recommended to read the file after applying patches to ensure the changes
+        were applied correctly and that you have the updated content for the file.
+
+        Returns:
+            None if the lines were inserted successfully, otherwise an error message.
         """
         file_entry = FileEntry(path=self.path / Path(path), filesystem=self)
         await file_entry.apply_patch(patch=FileInsertPatch(line_number=line_number, current_line=current_line, lines=lines))

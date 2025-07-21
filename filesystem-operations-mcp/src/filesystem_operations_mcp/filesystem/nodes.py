@@ -216,7 +216,8 @@ class FileSystemEntry(BaseNode):
 
 class FileLines(RootModel[dict[int, str]]):
     root: dict[int, str] = Field(
-        default_factory=dict, description="The lines of the file as a dictionary of line numbers and lines of text"
+        default_factory=dict,
+        description="A set of key-value pairs where the key is the line number and the value is the line of text at that line number.",
     )
 
     def lines(self) -> list[str]:

@@ -280,11 +280,11 @@ sdist = { url = "https://files.pythonhosted.org/packages/a2/55/8f8cab2afd404cf57
 
 [[package]]
 name = "docstring-parser"
-version = "0.16"
+version = "0.17.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/08/12/9c22a58c0b1e29271051222d8906257616da84135af9ed167c9e28f85cb3/docstring_parser-0.16.tar.gz", hash = "sha256:538beabd0af1e2db0146b6bd3caa526c35a34d61af9fd2887f3a8a27a739aa6e", size = 26565, upload-time = "2024-03-15T10:39:44.419Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b2/9d/c3b43da9515bd270df0f80548d9944e389870713cc1fe2b8fb35fe2bcefd/docstring_parser-0.17.0.tar.gz", hash = "sha256:583de4a309722b3315439bb31d64ba3eebada841f2e2cee23b99df001434c912", size = 27442, upload-time = "2025-07-21T07:35:01.868Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d5/7c/e9fcff7623954d86bdc17782036cbf715ecab1bec4847c008557affe1ca8/docstring_parser-0.16-py3-none-any.whl", hash = "sha256:bf0a1387354d3691d102edef7ec124f219ef639982d096e26e3b60aeffa90637", size = 36533, upload-time = "2024-03-15T10:39:41.527Z" },
+    { url = "https://files.pythonhosted.org/packages/55/e2/2537ebcff11c1ee1ff17d8d0b6f4db75873e3b0fb32c2d4a2ee31ecb310a/docstring_parser-0.17.0-py3-none-any.whl", hash = "sha256:cf2569abd23dce8099b300f9b4fa8191e9582dda731fd533daf54c4551658708", size = 36896, upload-time = "2025-07-21T07:35:00.684Z" },
 ]
 
 [[package]]
@@ -341,7 +341,7 @@ wheels = [
 
 [[package]]
 name = "filesystem-operations-mcp"
-version = "0.5.9"
+version = "0.6.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -1139,16 +1139,16 @@ wheels = [
 
 [[package]]
 name = "rpygrep"
-version = "0.1.1"
+version = "0.1.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
     { name = "pydantic" },
     { name = "ripgrep" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/60/07/cc11ef47cbd42c0b6bed35ce9fb39fdd424cc83144cbc3ed304898b0199e/rpygrep-0.1.1.tar.gz", hash = "sha256:fb21a978df7736e2a5b1e0b76f5ea694f0923e637f55a386e0ad7e66f5ea8ec1", size = 34762, upload-time = "2025-07-09T01:32:46.458Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b2/2b/c2b05d3f39c7e3656f8f3bc59b36480c8bd73abdda31d566666ae9d4bf88/rpygrep-0.1.2.tar.gz", hash = "sha256:ac0b75d79845e5b4282c1700d3c18e1c2b6375740f653542cb0d8060ef1c79da", size = 35286, upload-time = "2025-07-21T07:01:51.591Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d6/55/5c3f3256d9db9ac43ab69b50925fbf280afad514cf42055c74031998be09/rpygrep-0.1.1-py3-none-any.whl", hash = "sha256:c547b37f37a46e63c45804b047c9249d41118bc58e6f202872e2a03a5fa35ea9", size = 9953, upload-time = "2025-07-09T01:32:45.285Z" },
+    { url = "https://files.pythonhosted.org/packages/72/67/76b64bac60a520be32ecd5db4c5b06b99aac1e83033f40a9cdec9101c8b2/rpygrep-0.1.2-py3-none-any.whl", hash = "sha256:f587c873e1dc57f3a3f88e36aacc02ab5e97c5c05b0e5418bdb0d1b030d79d15", size = 9971, upload-time = "2025-07-21T07:01:50.444Z" },
 ]
 
 [[package]]

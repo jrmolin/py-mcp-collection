@@ -35,13 +35,15 @@ class FileInsertPatch(BaseFilePatch):
     """The type of patch."""
 
     line_number: int = Field(..., examples=[1])
-    """The line number to insert the lines at."""
+    """The line number to apply the patch to. `lines` will be inserted immediately before the line at `line_number`.
+    Line numbers are indexed from 1 and available via the read_file_lines tool.
+    """
 
     current_line: str = Field(..., examples=["the current line of text at the line number"])
-    """The current line of text at `line_number`, new lines will be inserted immediately before this line."""
+    """To validate the patch, provide the current line of text at `line_number`."""
 
-    lines: list[str] = Field(..., examples=["Line to insert before the current line", "Line to insert after the current line"])
-    """The lines to insert into the file."""
+    lines: list[str] = Field(..., examples=["Line 1 to insert before the current line", "Line 2 to insert after the current line"])
+    """The lines to insert immediately before `line_number`, i.e. immediately before `current_line`."""
 
     @override
     def apply(self, lines: list[str]) -> list[str]:
@@ -98,13 +100,22 @@ class FileReplacePatch(BaseFilePatch):
     """The type of patch."""
 
     start_line_number: int = Field(...)
-    """The line number to start replacing at. The line at this number and the lines referenced in `current_lines` will be replaced."""
+    """The line number to start replacing at. The line at this number and the lines referenced in `current_lines` will be replaced.
+
+    Line numbers are indexed from 1 and available via the read_file_lines tool.
+    """
 
     current_lines: list[str] = Field(...)
-    """The lines to replace. Must match the lines at `start_line_number` to `start_line_number + len(current_lines) - 1` exactly."""
+    """To validate the patch, provide the lines as they exist now.
+
+    Must match the lines at `start_line_number` to `start_line_number + len(current_lines) - 1` exactly.
+    """
 
     new_lines: list[str] = Field(...)
-    """The lines to replace the existing lines with. Does not have to match the length of `current_lines`."""
+    """The lines to replace the existing lines with.
+
+    Does not have to match the length of `current_lines`.
+    """
 
     @override
     def apply(self, lines: list[str]) -> list[str]:

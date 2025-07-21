@@ -64,6 +64,8 @@ async def cli(root_dir: str, mcp_transport: Literal["stdio", "sse", "streamable-
     _ = mcp.add_tool(FunctionTool.from_function(file_system.create_file))
     _ = mcp.add_tool(FunctionTool.from_function(file_system.append_file))
     _ = mcp.add_tool(FunctionTool.from_function(file_system.delete_file_lines))
+    _ = mcp.add_tool(FunctionTool.from_function(file_system.replace_file_lines_bulk))
+    _ = mcp.add_tool(FunctionTool.from_function(file_system.insert_file_lines_bulk))
     _ = mcp.add_tool(FunctionTool.from_function(file_system.replace_file_lines))
     _ = mcp.add_tool(FunctionTool.from_function(file_system.insert_file_lines))
     _ = mcp.add_tool(FunctionTool.from_function(file_system.delete_file))
