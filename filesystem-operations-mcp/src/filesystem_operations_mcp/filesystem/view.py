@@ -19,7 +19,7 @@ from filesystem_operations_mcp.logging import BASE_LOGGER
 logger = BASE_LOGGER.getChild("view")
 
 
-MAX_SUMMARY_BYTES = 2000
+MAX_SUMMARY_BYTES = 1000
 ASYNC_READ_THRESHOLD = 1000
 
 
@@ -153,12 +153,6 @@ class FileExportableField(BaseModel):
         summary = summarizer.summarize("\n".join(lines))
         return {"summary": summary[:MAX_SUMMARY_BYTES]}
 
-    # def apply(self, node: FileEntry | FileEntryWithMatches) -> dict[str, Any]:
-    #     """Apply the file fields to a file entry."""
-    #     includes: set[str] = self.to_model_dump_include() | {"relative_path_str", "matches", "matches_limit_reached"}
-
-    #     return dict(node.model_dump(include=includes, exclude_none=True).items())
-
     def apply_read_lines_count(self, node: FileEntry | FileEntryWithMatches) -> int | None:
         """Get the lines to read from the file."""
         if node.type == FileEntryTypeEnum.BINARY:
@@ -179,24 +173,6 @@ class FileExportableField(BaseModel):
             counts.append(self.preview_lines)
 
         return max(counts) if counts else None
-
-    # async def get_lines_for_file(self, node: FileEntry | FileEntryWithMatches, line_count: int) -> FileLines:
-    #     """Get the lines to read from the file."""
-    #     counts: list[int] = []
-
-    #     if self.summarize and node.type == FileEntryTypeEnum.CODE:
-    #         counts.append(1000)
-
-    #     if self.summarize and node.type == FileEntryTypeEnum.TEXT:
-    #         counts.append(100)
-
-    #     if self.read:
-    #         counts.append(self.read_limit)
-
-    #     if self.preview:
-    #         counts.append(self.preview_limit)
-
-    #     return await node.afile_lines(count=line_count)
 
     def apply(self, node: FileEntry | FileEntryWithMatches) -> tuple[dict[str, Any], int | None]:
         """Apply the file fields to a file entry."""
@@ -280,15 +256,94 @@ class ResponseModel(BaseModel):
 
 def customizable_file_materializer(
     func: Callable[..., AsyncIterator[FileEntry | FileEntryWithMatches]],
+    default_file_fields: FileExportableField,
 ) -> Callable[..., Awaitable[ResponseModel]]:
     @makefun_wraps(
         func,
         append_args=[
             inspect.Parameter(
-                "file_fields",
+                "basename",
                 inspect.Parameter.KEYWORD_ONLY,
-                default=FileExportableField(),
-                annotation=FileExportableField,
+                default=default_file_fields.basename,
+                annotation=Annotated[bool, FileExportableField.model_fields["basename"]],
+            ),
+            inspect.Parameter(
+                "extension",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=default_file_fields.extension,
+                annotation=Annotated[bool, FileExportableField.model_fields["extension"]],
+            ),
+            inspect.Parameter(
+                "type",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=default_file_fields.type,
+                annotation=Annotated[bool, FileExportableField.model_fields["type"]],
+            ),
+            inspect.Parameter(
+                "mime_type",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=default_file_fields.mime_type,
+                annotation=Annotated[bool, FileExportableField.model_fields["mime_type"]],
+            ),
+            inspect.Parameter(
+                "size",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=default_file_fields.size,
+                annotation=Annotated[bool, FileExportableField.model_fields["size"]],
+            ),
+            inspect.Parameter(
+                "read",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=default_file_fields.read,
+                annotation=Annotated[bool, FileExportableField.model_fields["read"]],
+            ),
+            inspect.Parameter(
+                "read_lines",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=default_file_fields.read_lines,
+                annotation=Annotated[int, FileExportableField.model_fields["read_lines"]],
+            ),
+            inspect.Parameter(
+                "preview",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=default_file_fields.preview,
+                annotation=Annotated[bool, FileExportableField.model_fields["preview"]],
+            ),
+            inspect.Parameter(
+                "preview_lines",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=default_file_fields.preview_lines,
+                annotation=Annotated[int, FileExportableField.model_fields["preview_lines"]],
+            ),
+            inspect.Parameter(
+                "summarize",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=default_file_fields.summarize,
+                annotation=Annotated[bool, FileExportableField.model_fields["summarize"]],
+            ),
+            inspect.Parameter(
+                "created_at",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=default_file_fields.created_at,
+                annotation=Annotated[bool, FileExportableField.model_fields["created_at"]],
+            ),
+            inspect.Parameter(
+                "modified_at",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=default_file_fields.modified_at,
+                annotation=Annotated[bool, FileExportableField.model_fields["modified_at"]],
+            ),
+            inspect.Parameter(
+                "owner",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=default_file_fields.owner,
+                annotation=Annotated[bool, FileExportableField.model_fields["owner"]],
+            ),
+            inspect.Parameter(
+                "group",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=default_file_fields.group,
+                annotation=Annotated[bool, FileExportableField.model_fields["group"]],
             ),
             inspect.Parameter(
                 "max_results",
@@ -299,7 +354,20 @@ def customizable_file_materializer(
         ],
     )
     async def wrapper(
-        file_fields: FileExportableField,
+        basename: bool,
+        extension: bool,
+        type: bool,  # noqa: A002
+        mime_type: bool,
+        size: bool,
+        read: bool,
+        read_lines: int,
+        preview: bool,
+        preview_lines: int,
+        summarize: bool,
+        created_at: bool,
+        modified_at: bool,
+        owner: bool,
+        group: bool,
         max_results: int,
         *args: Any,  # pyright: ignore[reportAny]
         **kwargs: Any,  # pyright: ignore[reportAny]
@@ -308,6 +376,23 @@ def customizable_file_materializer(
         timers: dict[str, float] = {
             "start": time.perf_counter(),
         }
+
+        file_fields = FileExportableField(
+            read=read,
+            read_lines=read_lines,
+            preview=preview,
+            preview_lines=preview_lines,
+            summarize=summarize,
+            created_at=created_at,
+            modified_at=modified_at,
+            basename=basename,
+            extension=extension,
+            type=type,
+            mime_type=mime_type,
+            size=size,
+            owner=owner,
+            group=group,
+        )
 
         errors: list[str] = []
 
@@ -353,44 +438,5 @@ def customizable_file_materializer(
         logger.info(f"Time taken to gather and prepare {len(results_by_path)} files: {total_time} seconds")
 
         return ResponseModel(files=results_by_path, errors=errors, max_results=max_results, duration=total_time)
-
-    return wrapper
-
-
-def customizable_file(
-    func: Callable[..., FileEntry | FileEntryWithMatches],
-) -> Callable[..., Awaitable[dict[str, Any]]]:
-    @makefun_wraps(
-        func,
-        append_args=[
-            inspect.Parameter(
-                "file_fields",
-                inspect.Parameter.KEYWORD_ONLY,
-                default=FileExportableField(),
-                annotation=FileExportableField,
-            ),
-        ],
-    )
-    async def wrapper(
-        file_fields: FileExportableField,
-        *args: Any,  # pyright: ignore[reportAny]
-        **kwargs: Any,  # pyright: ignore[reportAny]
-    ) -> dict[str, Any]:
-        start_time = time.perf_counter()
-
-        result = func(*args, **kwargs)
-
-        model, line_count = file_fields.apply(result)
-
-        if line_count:
-            model = await file_fields.aapply(result)
-
-        model["name"] = result.name
-        model.pop("relative_path_str")
-
-        end_time = time.perf_counter()
-        logger.info(f"Time taken to apply file fields: {end_time - start_time} seconds")
-
-        return model
 
     return wrapper

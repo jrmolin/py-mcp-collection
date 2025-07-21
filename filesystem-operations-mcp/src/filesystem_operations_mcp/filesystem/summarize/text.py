@@ -24,11 +24,10 @@ def _get_sentence_tokenizer(self, language):
     try:
         return PunktTokenizer(language)
     except (LookupError, zipfile.BadZipfile) as e:
-        raise LookupError(
-            "NLTK tokenizers are missing or the language is not supported.\n"
-            """Download them by following command: python -c "import nltk; nltk.download('punkt_tab')"\n"""
-            "Original error was:\n" + str(e)
-        )
+        msg = "NLTK tokenizers are missing or the language is not supported.\n"
+        msg += """Download them by following command: python -c "import nltk; nltk.download('punkt_tab')"\n"""
+        msg += "Original error was:\n" + str(e)
+        raise LookupError(msg) from e
 
 
 Tokenizer._get_sentence_tokenizer = _get_sentence_tokenizer

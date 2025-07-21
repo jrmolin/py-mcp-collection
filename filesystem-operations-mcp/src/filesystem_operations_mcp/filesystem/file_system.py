@@ -61,12 +61,12 @@ class FileSystem(DirectoryEntry):
         root_node = BaseNode(path=path)
         super().__init__(path=path, filesystem=root_node)
 
-    async def get_root(self) -> AsyncIterator[FileEntry]:
+    async def aget_root(self) -> AsyncIterator[FileEntry]:
         """Gets the items in the root of the filesystem."""
         async for file in self.afind_files(max_depth=1):
             yield file
 
-    async def get_structure(self, depth: Depth = 2) -> AsyncIterator[FileEntry]:
+    async def aget_structure(self, depth: Depth = 2) -> AsyncIterator[FileEntry]:
         """Gets the structure of the filesystem up to the given depth."""
         async for file in self.afind_files(max_depth=depth):
             yield file

@@ -149,8 +149,8 @@ class TestDirectoryEntry:
         assert node.relative_path == Path("subdir/nested.txt")
         assert node.relative_path_str == "subdir/nested.txt"
 
-    def test_get_files(self, root_directory: DirectoryEntry):
-        files = root_directory.get_files(["nested.txt", "script_with_hello.sh"])
+    async def test_get_files(self, root_directory: DirectoryEntry):
+        files = [file async for file in root_directory.aget_files(["nested.txt", "script_with_hello.sh"])]
         assert len(files) == 2
         assert {f.name for f in files} == {"nested.txt", "script_with_hello.sh"}
 
@@ -163,11 +163,10 @@ class TestDirectoryEntry:
     class TestFindFiles:
         async def test(self, root_directory: DirectoryEntry):
             descendants: list[FileEntry] = [file async for file in root_directory.afind_files()]
-            assert len(descendants) == 5
+            assert len(descendants) == 4
             descendant_names = sorted([d.name for d in descendants])
             assert descendant_names == [
                 "code_with_hello_world.py",
-                "data.json",
                 "nested.txt",
                 "script_with_hello.sh",
                 "test_with_hello_world.txt",
@@ -175,21 +174,19 @@ class TestDirectoryEntry:
 
         async def test_depth_one(self, root_directory: DirectoryEntry):
             descendants: list[FileEntry] = [file async for file in root_directory.afind_files(max_depth=1)]
-            assert len(descendants) == 3
+            assert len(descendants) == 2
             descendant_names = sorted([d.name for d in descendants])
             assert descendant_names == [
                 "code_with_hello_world.py",
-                "data.json",
                 "test_with_hello_world.txt",
             ]
 
         async def test_depth_one_with_excludes(self, root_directory: DirectoryEntry):
             descendants: list[FileEntry] = [file async for file in root_directory.afind_files(max_depth=1, excluded_globs=["*.txt"])]
-            assert len(descendants) == 2
+            assert len(descendants) == 1
             descendant_names = sorted([d.name for d in descendants])
             assert descendant_names == [
                 "code_with_hello_world.py",
-                "data.json",
             ]
 
         async def test_excludes_includes(self, root_directory: DirectoryEntry):
@@ -214,11 +211,10 @@ class TestDirectoryEntry:
 
         async def test_excludes_subdir(self, root_directory: DirectoryEntry):
             descendants: list[FileEntry] = [file async for file in root_directory.afind_files(excluded_globs=["subdir"])]
-            assert len(descendants) == 3
+            assert len(descendants) == 2
             descendant_names = sorted([d.name for d in descendants])
             assert descendant_names == [
                 "code_with_hello_world.py",
-                "data.json",
                 "test_with_hello_world.txt",
             ]
 

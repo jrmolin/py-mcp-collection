@@ -12,6 +12,13 @@
             "module": "strawgate_es_mcp.main",
             "args": []
         },
+        {
+            "name": "Python Debugger: Module SSE",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "strawgate_es_mcp.main",
+            "args": ["--transport", "sse"]
+        },
         // Debug Tests config
         {
             "name": "Python: Debug Tests",

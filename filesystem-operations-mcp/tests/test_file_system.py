@@ -80,30 +80,30 @@ async def file_system(temp_dir: Path):
 
 @pytest.mark.asyncio
 async def test_get_root(file_system: FileSystem):
-    files = [file async for file in file_system.get_root()]
-    assert len(files) == 13
+    files = [file async for file in file_system.aget_root()]
+    assert len(files) == 11
 
 
 @pytest.mark.asyncio
 async def test_get_structure(file_system: FileSystem):
-    files = [file async for file in file_system.get_structure(depth=1)]
-    assert len(files) == 13  # root, nested, deeper
+    files = [file async for file in file_system.aget_structure(depth=1)]
+    assert len(files) == 11  # root, nested, deeper
 
     # Test with different depths
-    structure = [file async for file in file_system.get_structure(depth=2)]
-    assert len(structure) == 15
+    structure = [file async for file in file_system.aget_structure(depth=2)]
+    assert len(structure) == 12
 
 
 @pytest.mark.asyncio
 async def test_file_type_detection(file_system: FileSystem):
     # Test files with extensions
-    files: list[FileEntry] = file_system.get_files(["code.py", "data.json", "readme.md"])
+    files: list[FileEntry] = [file async for file in file_system.aget_files(["code.py", "data.json", "readme.md"])]
     assert files[0].type == FileEntryTypeEnum.CODE
     assert files[1].type == FileEntryTypeEnum.DATA
     assert files[2].type == FileEntryTypeEnum.TEXT
 
     # Test files without extensions
-    files = file_system.get_files(["no_extension_code", "no_extension_data", "no_extension_text"])
+    files = [file async for file in file_system.aget_files(["no_extension_code", "no_extension_data", "no_extension_text"])]
     assert files[0].type == FileEntryTypeEnum.CODE
     assert files[1].type == FileEntryTypeEnum.DATA
     assert files[2].type == FileEntryTypeEnum.TEXT
@@ -112,6 +112,6 @@ async def test_file_type_detection(file_system: FileSystem):
 @pytest.mark.asyncio
 async def test_special_characters(file_system: FileSystem):
     # Test files with spaces, dashes, and underscores
-    files = file_system.get_files(["file with spaces.txt", "file-with-dashes.txt", "file_with_underscores.txt"])
+    files = [file async for file in file_system.aget_files(["file with spaces.txt", "file-with-dashes.txt", "file_with_underscores.txt"])]
     assert len(files) == 3
     assert all(f.type == FileEntryTypeEnum.TEXT for f in files)

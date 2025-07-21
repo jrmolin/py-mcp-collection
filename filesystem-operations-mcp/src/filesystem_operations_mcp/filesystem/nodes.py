@@ -482,9 +482,10 @@ class FileEntryWithMatches(FileEntry):
 class DirectoryEntry(FileSystemEntry):
     """A directory entry in the virtual filesystem."""
 
-    def get_files(self, paths: list[str | Path]) -> list[FileEntry]:
+    async def aget_files(self, paths: list[str | Path]) -> AsyncIterator[FileEntry]:
         """Get a list of specific file entries by path."""
-        return [self.get_file(path) for path in paths]
+        for path in paths:
+            yield self.get_file(path)
 
     def get_file(self, path: str | Path) -> FileEntry:
         """Get a specific file entry by path."""
@@ -509,8 +510,18 @@ class DirectoryEntry(FileSystemEntry):
         *,
         included_globs: INCLUDE_FILES_GLOBS = None,
         excluded_globs: EXCLUDE_FILES_GLOBS = None,
-        included_types: RIPGREP_TYPES_PARAM = None,
-        excluded_types: RIPGREP_TYPES_PARAM = None,
+        included_types: Annotated[
+            list[RIPGREP_TYPE_LIST] | None,
+            Field(description="The types (not extensions!) of files to search for."),
+        ] = None,
+        excluded_types: Annotated[
+            list[RIPGREP_TYPE_LIST] | None,
+            Field(
+                description="""The types (not extensions!) of files to exclude from the search.
+                Many common types are excluded by default, be sure to overwrite the default if you want to include them.
+                """
+            ),
+        ] = DEFAULT_EXCLUDED_TYPES,
         max_depth: DEPTH_PARAM = 3,
     ) -> AsyncIterator[FileEntry]:
         """Find files in the directory using a mix of Globs and types, with the ability to limit the depth of the search."""
@@ -554,12 +565,22 @@ class DirectoryEntry(FileSystemEntry):
         *,
         included_globs: INCLUDE_FILES_GLOBS = None,
         excluded_globs: EXCLUDE_FILES_GLOBS = None,
-        included_types: RIPGREP_TYPES_PARAM = None,
-        excluded_types: RIPGREP_TYPES_PARAM = DEFAULT_EXCLUDED_TYPES,
+        included_types: Annotated[
+            list[RIPGREP_TYPE_LIST] | None,
+            Field(description="The types (not extensions!) of files to search for."),
+        ] = None,
+        excluded_types: Annotated[
+            list[RIPGREP_TYPE_LIST] | None,
+            Field(
+                description="""The types (not extensions!) of files to exclude from the search.
+                Many common types are excluded by default, be sure to overwrite the default if you want to include them.
+                """
+            ),
+        ] = DEFAULT_EXCLUDED_TYPES,
         before_context: BEFORE_CONTEXT_PARAM = 1,
         after_context: AFTER_CONTEXT_PARAM = 1,
         max_depth: DEPTH_PARAM = 10,
-        matches_per_file: MATCHES_PER_FILE_PARAM = 5,
+        matches_per_file: MATCHES_PER_FILE_PARAM = 3,
         case_sensitive: CASE_SENSITIVE_PARAM = False,
     ) -> AsyncIterator[FileEntryWithMatches]:
         """Search for files in the directory using a mix of Globs and types, with the ability to limit the depth of the search."""
