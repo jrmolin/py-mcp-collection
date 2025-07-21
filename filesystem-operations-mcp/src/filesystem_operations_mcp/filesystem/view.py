@@ -208,15 +208,26 @@ class FileExportableField(BaseModel):
             model.update({"preview": file_lines.first(self.preview_lines).model_dump()})
 
         if self.summarize and node.type == FileEntryTypeEnum.CODE:
-            model.update(self._apply_code_summary(node, lines=file_lines.first(1000).lines()))
+            try:
+                model.update(self._apply_code_summary(node, lines=file_lines.first(1000).lines()))
+            except Exception as e:
+                model.update({"code_summary_skipped": str(e)})
+                logger.warning(f"Error applying code summary: {e}")
 
         if self.summarize and node.type == FileEntryTypeEnum.TEXT:
-            if node.mime_type == "text/markdown":
-                model.update(self._apply_markdown_summary(lines=file_lines.first(100).lines()))
-            elif node.extension == ".asciidoc":
-                model.update(self._apply_asciidoc_summary(lines=file_lines.first(100).lines()))
-            else:
-                model.update(self._apply_text_summary(lines=file_lines.first(100).lines()))
+            try:
+                if node.mime_type == "text/markdown":
+                    model.update(self._apply_markdown_summary(lines=file_lines.first(100).lines()))
+                elif node.extension == ".asciidoc":
+                    model.update(self._apply_asciidoc_summary(lines=file_lines.first(100).lines()))
+                else:
+                    model.update(self._apply_text_summary(lines=file_lines.first(100).lines()))
+            except Exception as e:
+                model.update({"text_summary_skipped": str(e)})
+                logger.warning(f"Error applying text summary: {e}")
+
+        if "summary" in model and not model["summary"]:
+            model.pop("summary")
 
         return model
 
