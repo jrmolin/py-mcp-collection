@@ -258,6 +258,7 @@ def customizable_file_materializer(
     func: Callable[..., AsyncIterator[FileEntry | FileEntryWithMatches]],
     default_file_fields: FileExportableField,
 ) -> Callable[..., Awaitable[ResponseModel]]:
+
     @makefun_wraps(
         func,
         append_args=[
@@ -438,5 +439,11 @@ def customizable_file_materializer(
         logger.info(f"Time taken to gather and prepare {len(results_by_path)} files: {total_time} seconds")
 
         return ResponseModel(files=results_by_path, errors=errors, max_results=max_results, duration=total_time)
+
+    signature = inspect.signature(func)
+
+    signature = signature.replace(return_annotation=ResponseModel)
+
+    wrapper.__signature__ = signature  # pyright: ignore[reportFunctionMemberAccess]
 
     return wrapper

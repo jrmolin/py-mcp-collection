@@ -48,29 +48,29 @@ async def cli(root_dir: str, mcp_transport: Literal["stdio", "sse", "streamable-
         summarize=default_summarize,
     )
 
-    mcp.add_tool(
+    _ = mcp.add_tool(
         FunctionTool.from_function(name="find_files", fn=customizable_file_materializer(file_system.afind_files, default_file_fields))
     )
-    mcp.add_tool(
+    _ = mcp.add_tool(
         FunctionTool.from_function(name="search_files", fn=customizable_file_materializer(file_system.asearch_files, default_file_fields))
     )
-    mcp.add_tool(
+    _ = mcp.add_tool(
         FunctionTool.from_function(name="get_structure", fn=customizable_file_materializer(file_system.aget_structure, default_file_fields))
     )
-    mcp.add_tool(
+    _ = mcp.add_tool(
         FunctionTool.from_function(name="get_files", fn=customizable_file_materializer(file_system.aget_files, default_file_fields))
     )
 
-    mcp.add_tool(FunctionTool.from_function(file_system.create_file))
-    mcp.add_tool(FunctionTool.from_function(file_system.append_file))
-    mcp.add_tool(FunctionTool.from_function(file_system.delete_file_lines))
-    mcp.add_tool(FunctionTool.from_function(file_system.replace_file_lines))
-    mcp.add_tool(FunctionTool.from_function(file_system.insert_file_lines))
-    mcp.add_tool(FunctionTool.from_function(file_system.delete_file))
-    mcp.add_tool(FunctionTool.from_function(file_system.read_file_lines))
+    _ = mcp.add_tool(FunctionTool.from_function(file_system.create_file))
+    _ = mcp.add_tool(FunctionTool.from_function(file_system.append_file))
+    _ = mcp.add_tool(FunctionTool.from_function(file_system.delete_file_lines))
+    _ = mcp.add_tool(FunctionTool.from_function(file_system.replace_file_lines))
+    _ = mcp.add_tool(FunctionTool.from_function(file_system.insert_file_lines))
+    _ = mcp.add_tool(FunctionTool.from_function(file_system.delete_file))
+    _ = mcp.add_tool(FunctionTool.from_function(file_system.read_file_lines))
 
-    mcp.add_tool(FunctionTool.from_function(file_system.create_directory))
-    mcp.add_tool(FunctionTool.from_function(file_system.delete_directory))
+    _ = mcp.add_tool(FunctionTool.from_function(file_system.create_directory))
+    _ = mcp.add_tool(FunctionTool.from_function(file_system.delete_directory))
 
     await mcp.run_async(transport=mcp_transport)
 

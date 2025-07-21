@@ -341,7 +341,7 @@ wheels = [
 
 [[package]]
 name = "filesystem-operations-mcp"
-version = "0.5.3"
+version = "0.5.7"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
