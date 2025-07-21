@@ -127,7 +127,7 @@ class FileSystem(DirectoryEntry):
         file_entry = FileEntry(path=path, filesystem=self)
         await file_entry.apply_patch(patch=FileDeletePatch(line_numbers=line_numbers))
 
-    async def replace_file_lines(self, path: FilePath, patches: FileReplacePatches):
+    async def replace_file_lines_bulk(self, path: FilePath, patches: FileReplacePatches):
         """Replaces lines in a file using find/replace style patch.
 
         Returns:
@@ -141,7 +141,13 @@ class FileSystem(DirectoryEntry):
         file_entry = FileEntry(path=path, filesystem=self)
         await file_entry.apply_patches(patches=patches)
 
-    async def insert_file_lines(self, path: FilePath, patches: FileInsertPatches):
+    async def replace_file_lines(self, path: FilePath, start_line_number: int, current_lines: list[str], new_lines: list[str]):
+        """Replaces lines in a file using find/replace style patch.
+        """
+        file_entry = FileEntry(path=self.path / Path(path), filesystem=self)
+        await file_entry.apply_patch(patch=FileReplacePatch(start_line_number=start_line_number, current_lines=current_lines, new_lines=new_lines))
+
+    async def insert_file_lines_bulk(self, path: FilePath, patches: FileInsertPatches):
         """Inserts lines into a file.
 
         Returns:
@@ -149,6 +155,12 @@ class FileSystem(DirectoryEntry):
         """
         file_entry = FileEntry(path=self.path / Path(path), filesystem=self)
         await file_entry.apply_patches(patches=patches)
+
+    async def insert_file_lines(self, path: FilePath, line_number: int, current_line: str, lines: list[str]):
+        """Inserts lines into a file.
+        """
+        file_entry = FileEntry(path=self.path / Path(path), filesystem=self)
+        await file_entry.apply_patch(patch=FileInsertPatch(line_number=line_number, current_line=current_line, lines=lines))
 
     async def read_file_lines(self, path: FilePath, start: FileReadStart = 1, count: FileReadCount = 100) -> FileLines:
         """Reads the content of a file.

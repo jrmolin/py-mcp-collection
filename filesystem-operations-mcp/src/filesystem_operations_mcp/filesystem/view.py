@@ -384,7 +384,6 @@ def customizable_file_materializer(
         *args: Any,  # pyright: ignore[reportAny]
         **kwargs: Any,  # pyright: ignore[reportAny]
     ) -> ResponseModel:
-        logger.info(f"Handling request to {func.__name__} with args: {args} and kwargs: {kwargs}")
         timers: dict[str, float] = {
             "start": time.perf_counter(),
         }
@@ -405,6 +404,8 @@ def customizable_file_materializer(
             owner=owner,
             group=group,
         )
+
+        logger.info(f"Handling request to {func.__name__} with file_fields: {file_fields} args: {args} and kwargs: {kwargs}")
 
         errors: list[str] = []
 
