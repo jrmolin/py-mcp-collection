@@ -124,14 +124,14 @@ def cli(
 async def auto(ctx: click.Context, source: str) -> None:
     """Determine the source of the knowledge base from the available environment variables."""
     if source == "elasticsearch":
-        _ = await ctx.invoke(elasticsearch)
+        await ctx.invoke(elasticsearch)
     elif source == "duckdb_memory":
-        _ = await ctx.invoke(duckdb_memory)
+        await ctx.invoke(duckdb_memory)
     elif source == "duckdb_persistent":
-        _ = await ctx.invoke(duckdb_persistent)
+        await ctx.invoke(duckdb_persistent)
     else:
         logger.info("Set to auto mode but no source set, defaulting to a local and persistent duckdb database")
-        _ = await ctx.invoke(duckdb_persistent)
+        await ctx.invoke(duckdb_persistent)
 
 
 @cli.group(name="elasticsearch")
@@ -234,22 +234,14 @@ async def duckdb_persistent(ctx: click.Context, db_dir: Path, db_docs: str, db_v
 
     logger.info(f"Loading DuckDB document in persistent mode: {db_dir / db_docs}")
 
-    docs_db_path: Path = db_dir / db_docs
-    docs_vectors_db_path: Path = db_dir / db_vectors
+    if not db_dir.exists():
+        db_dir.mkdir(parents=True, exist_ok=True)
 
-    docs_vector_store: EnhancedDuckDBVectorStore
-
-    if not docs_db_path.exists():
-        docs_vector_store = EnhancedDuckDBVectorStore(database_name=str(docs_vectors_db_path), persist_dir=str(db_dir))
-    else:
-        docs_vector_store = EnhancedDuckDBVectorStore.from_local(database_path=str(docs_vectors_db_path))  # pyright: ignore[reportAssignmentType, reportUnknownMemberType]
-
-    # code_kv_store = DuckDBKVStore(client=code_vector_store.client)
     docs_kv_store = DuckDBKVStore(database_name=db_docs, persist_dir=str(db_dir))
 
     ctx.obj = CliContext(
         docs_stores=Store(
-            vectors=docs_vector_store,
+            vectors=EnhancedDuckDBVectorStore(database_name=db_vectors, persist_dir=str(db_dir)),
             document=DuckDBDocumentStore(duckdb_kvstore=docs_kv_store),
             index=DuckDBIndexStore(duckdb_kvstore=docs_kv_store),
             embeddings=cli_ctx.document_embeddings,

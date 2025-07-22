@@ -4,15 +4,9 @@ from typing import TYPE_CHECKING
 import pytest
 from llama_index.core.indices.vector_store import VectorStoreIndex
 from llama_index.core.schema import BaseNode, MetadataMode
-from llama_index.core.storage import StorageContext
-from llama_index.embeddings.fastembed import FastEmbedEmbedding
-from llama_index.storage.docstore.duckdb import DuckDBDocumentStore
-from llama_index.storage.kvstore.duckdb import DuckDBKVStore
-from llama_index.vector_stores.duckdb import DuckDBVectorStore
 from syrupy.assertion import SnapshotAssertion
 
 from knowledge_base_mcp.clients.knowledge_base import KnowledgeBaseClient
-from knowledge_base_mcp.main import DEFAULT_DOCS_CROSS_ENCODER_MODEL
 from knowledge_base_mcp.servers.github import GitHubSearchResponse, GitHubServer
 
 if TYPE_CHECKING:
