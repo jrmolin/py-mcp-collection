@@ -8,6 +8,7 @@ from typing import Annotated, Any, ClassVar, Self
 from makefun import wraps as makefun_wraps  # pyright: ignore[reportUnknownVariableType]
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 from pydantic.fields import computed_field
+from pydantic.functional_serializers import model_serializer
 
 from filesystem_operations_mcp.filesystem.nodes import FileEntry, FileEntryTypeEnum, FileEntryWithMatches
 from filesystem_operations_mcp.filesystem.summarize.code import summarize_code
@@ -186,7 +187,7 @@ class FileExportableField(BaseModel):
 
         return model, self.apply_read_lines_count(node)
 
-    async def aapply(self, node: FileEntry | FileEntryWithMatches) -> dict[str, Any]:
+    async def aapply(self, node: FileEntry | FileEntryWithMatches) -> dict[str, Any]:  # noqa: PLR0912
         lines_to_read = self.apply_read_lines_count(node)
 
         if lines_to_read and lines_to_read < ASYNC_READ_THRESHOLD:
@@ -237,39 +238,60 @@ class ResponseModel(BaseModel):
 
     model_config: ClassVar[ConfigDict] = ConfigDict(arbitrary_types_allowed=True, use_attribute_docstrings=True)
 
-    errors: list[str] | bool = Field(default=False, description="An optional error message to include in the response.")
+    warnings: list[str] = Field(default_factory=list, description="An optional list of warnings to include in the response.")
+
+    errors: list[str] = Field(default_factory=list, description="An optional error message to include in the response.")
 
     max_results: int = Field(..., description="The maximum number of results to return.", exclude=True)
 
     duration: float = Field(default=0, description="The duration of the request in seconds.")
 
-    files: dict[str, Any] = Field(default_factory=dict, description="The files in the response.")
+    results: dict[str, Any] = Field(default_factory=dict, description="The files in the response.")
     """The files in the response."""
 
-    @field_serializer("files")
-    def serialize_files(self, files: dict[str, Any]) -> dict[str, Any]:
-        return dict(sorted(files.items(), key=lambda x: x[0]))
+    @field_serializer("results")
+    def serialize_results(self, results: dict[str, Any]) -> dict[str, Any]:
+        return dict(sorted(results.items(), key=lambda x: x[0]))
 
     @computed_field
     @property
-    def files_count(self) -> int:
-        return len(self.files)
+    def result_count(self) -> int:
+        return len(self.results)
 
     @computed_field
     @property
-    def limit_reached(self) -> bool | None:
-        """Whether the limit was reached. If the limit was not reached, return None."""
-        if self.files_count < self.max_results:
-            return None
+    def limit_reached(self) -> bool:
+        """Whether the limit was reached."""
+        return self.result_count >= self.max_results
 
-        return self.files_count >= self.max_results
+    @model_serializer
+    def serialize(self) -> dict[str, Any]:
+        """Serialize the model removing empty fields."""
+        kv: dict[str, Any] = {
+            "result_count": self.result_count,
+            "duration": self.duration,
+        }
+
+        if self.errors:
+            kv["errors"] = self.errors
+
+        if self.warnings:
+            kv["warnings"] = self.warnings
+
+        if self.limit_reached:
+            kv["limit_reached"] = True
+            kv["max_results"] = self.max_results
+
+        if self.results:
+            kv["results"] = self.results
+
+        return kv
 
 
 def customizable_file_materializer(
     func: Callable[..., AsyncIterator[FileEntry | FileEntryWithMatches]],
     default_file_fields: FileExportableField,
 ) -> Callable[..., Awaitable[ResponseModel]]:
-
     @makefun_wraps(
         func,
         append_args=[
@@ -409,6 +431,8 @@ def customizable_file_materializer(
 
         errors: list[str] = []
 
+        warnings: list[str] = []
+
         work_queue: asyncio.Queue[FileEntry | FileEntryWithMatches] = asyncio.Queue()
 
         result_iter: AsyncIterator[FileEntry | FileEntryWithMatches] = func(*args, **kwargs)
@@ -418,7 +442,9 @@ def customizable_file_materializer(
         async for node in result_iter:
             if max_results and len(results_by_path) >= max_results:
                 logger.info(f"Reached max results: {max_results} for call to {func.__name__} with args: {args} and kwargs: {kwargs}")
-                errors.append(f"Reached max_results {max_results} results. To get more results, refine the query or increase max_results.")
+                warnings.append(
+                    f"Reached max_results {max_results} results. To get more results, refine the query or increase max_results."
+                )
                 break
 
             model, line_count = file_fields.apply(node)
@@ -450,9 +476,9 @@ def customizable_file_materializer(
 
         logger.info(f"Time taken to gather and prepare {len(results_by_path)} files: {total_time} seconds")
 
-        return ResponseModel(files=results_by_path, errors=errors, max_results=max_results, duration=total_time)
+        return ResponseModel(results=results_by_path, errors=errors, warnings=warnings, max_results=max_results, duration=total_time)
 
-    signature = inspect.signature(func)
+    signature = inspect.signature(wrapper)
 
     signature = signature.replace(return_annotation=ResponseModel)
 

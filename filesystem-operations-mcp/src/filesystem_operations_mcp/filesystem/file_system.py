@@ -1,8 +1,10 @@
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
-from pydantic import Field
+from pydantic import Field, model_serializer
+from pydantic.fields import computed_field
+from pydantic.main import BaseModel
 
 from filesystem_operations_mcp.filesystem.errors import FilesystemServerOutsideRootError
 from filesystem_operations_mcp.filesystem.nodes import BaseNode, DirectoryEntry, FileEntry, FileLines
@@ -54,6 +56,28 @@ FileReadStart = Annotated[int, Field(description="The index-1 line number to sta
 FileReadCount = Annotated[int, Field(description="The number of lines to read.", examples=[100])]
 
 
+class FileSystemStructureResponse(BaseModel):
+    max_results: int = Field(description="The maximum number of results to return.", exclude=True)
+    directories: list[str] = Field(description="The results of the filesystem structure.")
+
+    @computed_field
+    @property
+    def max_results_reached(self) -> bool:
+        return len(self.directories) >= self.max_results
+
+    @model_serializer
+    def serialize(self) -> dict[str, Any]:
+        kv: dict[str, Any] = {
+            "directories": self.directories,
+        }
+
+        if self.max_results_reached:
+            kv["max_results_reached"] = True
+            kv["max_results"] = self.max_results
+
+        return kv
+
+
 class FileSystem(DirectoryEntry):
     """A virtual filesystem rooted in a specific directory on disk."""
 
@@ -66,10 +90,26 @@ class FileSystem(DirectoryEntry):
         async for file in self.afind_files(max_depth=1):
             yield file
 
-    async def aget_structure(self, depth: Depth = 2) -> AsyncIterator[FileEntry]:
-        """Gets the structure of the filesystem up to the given depth."""
-        async for file in self.afind_files(max_depth=depth):
-            yield file
+    def get_structure(self, depth: Depth = 2, max_results: int = 200) -> FileSystemStructureResponse:
+        """Gets the structure of the filesystem up to the given depth. Structure includes directories only
+        and does not include files. Structure is gathered depth-first, up to the given depth. This means that
+        any descendants deeper than the given depth will not be included in the results.
+
+        Once the max results limit is reached, the response will include a flag indicating that the limit was reached.
+        """
+
+        accumulated_results: list[str] = []
+
+        for descendent in self.get_descendent_directories(root=self, depth=depth):
+            accumulated_results.append(descendent.relative_path_str)
+
+            if len(accumulated_results) >= max_results:
+                break
+
+        return FileSystemStructureResponse(
+            max_results=max_results,
+            directories=accumulated_results,
+        )
 
     async def create_file(self, path: FilePath, content: FileContent) -> None:
         """Creates a file.
@@ -147,7 +187,9 @@ class FileSystem(DirectoryEntry):
         patches to ensure the changes were applied correctly and that you have the updated content for the file.
         """
         file_entry = FileEntry(path=self.path / Path(path), filesystem=self)
-        await file_entry.apply_patch(patch=FileReplacePatch(start_line_number=start_line_number, current_lines=current_lines, new_lines=new_lines))
+        await file_entry.apply_patch(
+            patch=FileReplacePatch(start_line_number=start_line_number, current_lines=current_lines, new_lines=new_lines)
+        )
 
     async def insert_file_lines_bulk(self, path: FilePath, patches: FileInsertPatches) -> None:
         """Inserts lines into a file. It is recommended to read the file after applying patches to ensure the changes

@@ -2,11 +2,12 @@ import asyncio
 from collections.abc import AsyncIterator, Callable
 from functools import wraps
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, get_args
 
 import asyncclick as click
 from fastmcp import FastMCP
 from fastmcp.tools import FunctionTool
+from rpygrep.types import RIPGREP_TYPE_LIST
 
 from filesystem_operations_mcp.filesystem.file_system import FileSystem
 from filesystem_operations_mcp.filesystem.view import FileExportableField, customizable_file_materializer
@@ -35,6 +36,13 @@ def materializer(func: Callable[..., AsyncIterator[Any]]) -> Callable[..., Any]:
     return wrapper
 
 
+def get_file_type_options() -> list[str]:
+    """Get the list of file types that can be used for find and search. File types are not the same as file extensions.
+
+    Instead they represent a "group" of extensions that make it easier to exclude files that are not relevant to the search."""
+    return list[str](get_args(RIPGREP_TYPE_LIST))
+
+
 @click.command()
 @click.option("--root-dir", type=str, default=Path.cwd(), help=ROOT_DIR_HELP)
 @click.option("--mcp-transport", type=click.Choice(["stdio", "sse", "streamable-http"]), default="stdio", help=MCP_TRANSPORT_HELP)
@@ -55,11 +63,13 @@ async def cli(root_dir: str, mcp_transport: Literal["stdio", "sse", "streamable-
         FunctionTool.from_function(name="search_files", fn=customizable_file_materializer(file_system.asearch_files, default_file_fields))
     )
     _ = mcp.add_tool(
-        FunctionTool.from_function(name="get_structure", fn=customizable_file_materializer(file_system.aget_structure, default_file_fields))
+        FunctionTool.from_function(name="get_structure", fn=file_system.get_structure)
     )
     _ = mcp.add_tool(
         FunctionTool.from_function(name="get_files", fn=customizable_file_materializer(file_system.aget_files, default_file_fields))
     )
+
+    _ = mcp.add_tool(FunctionTool.from_function(name="get_file_type_options", fn=get_file_type_options))
 
     _ = mcp.add_tool(FunctionTool.from_function(file_system.create_file))
     _ = mcp.add_tool(FunctionTool.from_function(file_system.append_file))

@@ -21,6 +21,7 @@ async def create_test_structure(root: Path) -> None:
     await create_test_file(root / "code_with_hello_world.py", "def hello():\n    print('Hello, World!')")
     await create_test_file(root / "data.json", '{"key": "value"}')
     await create_test_file(root / "should_be_ignored.env", "secret_key=1234567890")
+    await create_test_file(root / "CaSeSenSiTiVe.txt", "a Case Sensitive File")
 
     # Create a subdirectory with files
     subdir = root / "subdir"
@@ -163,23 +164,25 @@ class TestDirectoryEntry:
     class TestFindFiles:
         async def test(self, root_directory: DirectoryEntry):
             descendants: list[FileEntry] = [file async for file in root_directory.afind_files()]
-            assert len(descendants) == 4
+            assert len(descendants) == 5
             descendant_names = sorted([d.name for d in descendants])
-            assert descendant_names == [
+            assert descendant_names == sorted([
                 "code_with_hello_world.py",
                 "nested.txt",
                 "script_with_hello.sh",
                 "test_with_hello_world.txt",
-            ]
+                "CaSeSenSiTiVe.txt",
+            ])
 
         async def test_depth_one(self, root_directory: DirectoryEntry):
             descendants: list[FileEntry] = [file async for file in root_directory.afind_files(max_depth=1)]
-            assert len(descendants) == 2
+            assert len(descendants) == 3
             descendant_names = sorted([d.name for d in descendants])
-            assert descendant_names == [
+            assert descendant_names == sorted([
                 "code_with_hello_world.py",
                 "test_with_hello_world.txt",
-            ]
+                "CaSeSenSiTiVe.txt",
+            ])
 
         async def test_depth_one_with_excludes(self, root_directory: DirectoryEntry):
             descendants: list[FileEntry] = [file async for file in root_directory.afind_files(max_depth=1, excluded_globs=["*.txt"])]
@@ -211,12 +214,13 @@ class TestDirectoryEntry:
 
         async def test_excludes_subdir(self, root_directory: DirectoryEntry):
             descendants: list[FileEntry] = [file async for file in root_directory.afind_files(excluded_globs=["subdir"])]
-            assert len(descendants) == 2
+            assert len(descendants) == 3
             descendant_names = sorted([d.name for d in descendants])
-            assert descendant_names == [
+            assert descendant_names == sorted([
                 "code_with_hello_world.py",
                 "test_with_hello_world.txt",
-            ]
+                "CaSeSenSiTiVe.txt",
+            ])
 
         async def test_subdir(self, root_directory: DirectoryEntry):
             descendants: list[FileEntry] = [file async for file in root_directory.get_directory("subdir").afind_files()]
@@ -226,6 +230,16 @@ class TestDirectoryEntry:
                 "nested.txt",
                 "script_with_hello.sh",
             ]
+
+        async def test_case_insensitive(self, root_directory: DirectoryEntry):
+            descendants: list[FileEntry] = [file async for file in root_directory.afind_files(included_globs=["**.txt"])]
+            assert len(descendants) == 3
+            descendant_names = sorted([d.name for d in descendants])
+            assert descendant_names == sorted([
+                "CaSeSenSiTiVe.txt",
+                "nested.txt",
+                "test_with_hello_world.txt",
+            ])
 
     class TestSearchFiles:
         async def test(self, root_directory: DirectoryEntry):

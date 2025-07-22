@@ -10,33 +10,38 @@ from fastmcp import FastMCP
 from fastmcp.tools import FunctionTool
 
 from strawgate_es_mcp.data_stream.summarize import DataStreamSummary, new_data_stream_summaries
+from strawgate_es_mcp.search.dsl import search_dsl_tips, search_str_fn_factory
+from strawgate_es_mcp.search.esql import esql_query_tips
 
 _ = load_dotenv()
 
 
-def build_es_client(es_host: str, api_key: str) -> AsyncElasticsearch:
-    return AsyncElasticsearch(es_host, api_key=api_key)
 
+def build_es_client(es_host: str, api_key: str) -> AsyncElasticsearch:
+    return AsyncElasticsearch(es_host, api_key=api_key, http_compress=True)
 
 async def build_server(
     es: AsyncElasticsearch,
-    include_tags: list[str],
-    exclude_tags: list[str],
-    include_tools_patterns: list[str],
-    exclude_tools_patterns: list[str],
+    include_tags: list[str] | None = None,
+    exclude_tags: list[str] | None = None,
+    include_tools_patterns: list[str] | None = None,
+    exclude_tools_patterns: list[str] | None = None,
 ):
     mcp = FastMCP[Any](
         name="Strawgate Elasticsearch MCP",
-        include_tags=set(include_tags) if include_tags else None,
-        exclude_tags=set(exclude_tags) if exclude_tags else None,
+        include_tags=set(include_tags) if include_tags is not None else None,
+        exclude_tags=set(exclude_tags) if exclude_tags is not None else None,
     )
 
     async def summarize_data_streams(data_streams: Annotated[list[str], "The data streams to summarize"]) -> list[DataStreamSummary]:
         """Summarize the data stream, providing field information and sample rows for each requested data stream"""
         return await new_data_stream_summaries(es, data_streams)
 
-    custom_tools = [
+    custom_tools: list[Callable[..., Any]] = [
         summarize_data_streams,
+        search_str_fn_factory(es=es),
+        search_dsl_tips,
+        esql_query_tips,
     ]
 
     relevant_clients = [
@@ -105,15 +110,15 @@ async def build_server(
 
                 tool_tags = {client_prefix}
 
-                client_mcp.add_tool(FunctionTool.from_function(fn=tool_function, tags=tool_tags))  # pyright: ignore[reportUnknownArgumentType]
+                _ = client_mcp.add_tool(FunctionTool.from_function(fn=tool_function, tags=tool_tags))  # pyright: ignore[reportUnknownArgumentType]
 
         _ = await mcp.import_server(client_mcp, prefix=client_prefix)
 
     for custom_tool in custom_tools:
-        mcp.add_tool(FunctionTool.from_function(custom_tool, tags={"custom"}))
+        _ = mcp.add_tool(FunctionTool.from_function(custom_tool, tags={"custom"}))
 
     for standalone_function in standalone_functions:
-        mcp.add_tool(FunctionTool.from_function(standalone_function, tags={"standalone"}))
+        _ = mcp.add_tool(FunctionTool.from_function(standalone_function, tags={"standalone"}))
 
     return mcp
 

@@ -1,5 +1,5 @@
 import mimetypes
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Generator, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -8,7 +8,7 @@ from functools import cached_property
 from io import TextIOWrapper
 from os import stat_result
 from pathlib import Path
-from typing import Annotated, Any, ClassVar, Literal
+from typing import Annotated, Any, ClassVar, Literal, Self, get_args
 
 from aiofiles import open as aopen
 from aiofiles.os import mkdir as amkdir
@@ -73,7 +73,7 @@ EXCLUDE_EXTRA_TYPES: list[RIPGREP_TYPE_LIST] = [
 ]
 EXCLUDE_DATA_TYPES: list[RIPGREP_TYPE_LIST] = ["csv", "jsonl", "json", "xml", "yaml", "toml"]
 
-DEFAULT_EXCLUDED_TYPES: list[RIPGREP_TYPE_LIST] = sorted(EXCLUDE_BINARY_TYPES + EXCLUDE_EXTRA_TYPES + EXCLUDE_DATA_TYPES)
+DEFAULT_EXCLUDED_TYPES: list[str] = sorted(EXCLUDE_BINARY_TYPES + EXCLUDE_EXTRA_TYPES + EXCLUDE_DATA_TYPES)
 
 
 magika = init_magika()
@@ -83,18 +83,13 @@ PATTERNS_PARAM = Annotated[list[str], Field(description="A list of patterns to s
 BEFORE_CONTEXT_PARAM = Annotated[int, Field(description="The number of lines of context to include before the match.")]
 AFTER_CONTEXT_PARAM = Annotated[int, Field(description="The number of lines of context to include after the match.")]
 
-INCLUDE_FILES_GLOBS = Annotated[list[str] | None, Field(description="A list of globs to include in the search.")]
-EXCLUDE_FILES_GLOBS = Annotated[list[str] | None, Field(description="A list of globs to exclude from the search.")]
+INCLUDE_FILES_GLOBS = Annotated[list[str] | str | None, Field(description="A list of globs to include in the search.")]
+EXCLUDE_FILES_GLOBS = Annotated[list[str] | str | None, Field(description="A list of globs to exclude from the search.")]
 
 DEPTH_PARAM = Annotated[int, Field(description="The depth of the search.")]
 MATCHES_PER_FILE_PARAM = Annotated[int, Field(description="The maximum number of matches to return per file.")]
 
 CASE_SENSITIVE_PARAM = Annotated[bool, Field(description="Whether the search should be case sensitive.")]
-
-type RIPGREP_TYPES_PARAM = Annotated[
-    list[RIPGREP_TYPE_LIST] | None,
-    Field(description="The types (not extensions!) of files to search for."),
-]
 
 
 class BaseNode(BaseModel):
@@ -445,11 +440,6 @@ class FileEntry(FileSystemEntry):
         async with aopen(self.path, mode="w", encoding="utf-8") as f:
             _ = await f.write("\n".join(lines))
 
-    # async def preview_contents(self, head: int) -> str:
-    #     """The first `head` bytes of the file."""
-    #     async with self._aopen(mode="r") as f:
-    #         return await f.read(head)
-
     @classmethod
     async def create_file(cls, path: Path, content: str) -> None:
         """Creates a file."""
@@ -498,6 +488,19 @@ class DirectoryEntry(FileSystemEntry):
 
         return DirectoryEntry(path=self.path / path, filesystem=self)
 
+    def get_descendent_directories(self, root: "DirectoryEntry", depth: int) -> Generator["DirectoryEntry"]:
+        """Get a list of child directory entries by path."""
+        if depth == 0:
+            return
+
+        # Recurse
+        for path in self.path.iterdir():
+            if path.is_dir() and not path.name.startswith("."):
+                directory_entry = DirectoryEntry(path=path, filesystem=root)
+                yield directory_entry
+                if depth > 1:
+                    yield from directory_entry.get_descendent_directories(root=root, depth=depth - 1)
+
     @property
     def _ripgrep_find(self) -> RipGrepFind:
         return RipGrepFind(working_directory=self.path).one_file_system().max_depth(10)
@@ -512,53 +515,37 @@ class DirectoryEntry(FileSystemEntry):
         included_globs: INCLUDE_FILES_GLOBS = None,
         excluded_globs: EXCLUDE_FILES_GLOBS = None,
         included_types: Annotated[
-            list[RIPGREP_TYPE_LIST] | None,
+            list[str] | None,
             Field(description="The types (not extensions!) of files to search for."),
         ] = None,
         excluded_types: Annotated[
-            list[RIPGREP_TYPE_LIST] | None,
+            list[str] | None,
             Field(
                 description="""The types (not extensions!) of files to exclude from the search.
                 Many common types are excluded by default, be sure to overwrite the default if you want to include them.
                 """
             ),
         ] = DEFAULT_EXCLUDED_TYPES,
-        max_depth: DEPTH_PARAM = 3,
+        max_depth: DEPTH_PARAM = 6,
     ) -> AsyncIterator[FileEntry]:
-        """Find files in the directory using a mix of Globs and types, with the ability to limit the depth of the search."""
+        """Find files in the directory using a mix of Globs and types, with the ability to limit the depth of the search.
+
+        Honors gitignore files. If no globs are provided, all non-ignored files are in scope."""
+        included_globs_list, excluded_globs_list, included_type_list, excluded_type_list = prepare_ripgrep_arguments(
+            included_globs, excluded_globs, included_types, excluded_types
+        )
+
         ripgrep = (
-            self._ripgrep_find.include_types(included_types or [])
-            .exclude_types(excluded_types or [])
-            .include_globs(included_globs or [])
-            .exclude_globs(excluded_globs or [])
+            self._ripgrep_find.include_types(included_type_list)
+            .exclude_types(excluded_type_list)
+            .include_globs(included_globs_list)
+            .exclude_globs(excluded_globs_list)
             .max_depth(max_depth)  # Don't fold
         )
 
         async for matched_path in ripgrep.arun():
             file_entry = FileEntry(path=self.path / matched_path, filesystem=self.filesystem)
             yield file_entry
-
-    # def find_files(
-    #     self,
-    #     *,
-    #     included_globs: INCLUDE_FILES_GLOBS = None,
-    #     excluded_globs: EXCLUDE_FILES_GLOBS = None,
-    #     included_types: RIPGREP_TYPES_PARAM = None,
-    #     excluded_types: RIPGREP_TYPES_PARAM = None,
-    #     max_depth: DEPTH_PARAM = 20,
-    # ) -> Iterator[FileEntry]:
-    #     """Returns a list of descendant files of the directory."""
-
-    #     ripgrep = (
-    #         self._ripgrep_find.include_types(included_types or [])
-    #         .exclude_types(excluded_types or [])
-    #         .include_globs(included_globs or [])
-    #         .exclude_globs(excluded_globs or [])
-    #         .max_depth(max_depth)  # Don't fold
-    #     )
-
-    #     for matched_path in ripgrep.run():
-    #         yield FileEntry(path=self.path / matched_path, filesystem=self.filesystem)
 
     async def asearch_files(
         self,
@@ -567,11 +554,11 @@ class DirectoryEntry(FileSystemEntry):
         included_globs: INCLUDE_FILES_GLOBS = None,
         excluded_globs: EXCLUDE_FILES_GLOBS = None,
         included_types: Annotated[
-            list[RIPGREP_TYPE_LIST] | None,
+            list[str] | None,
             Field(description="The types (not extensions!) of files to search for."),
         ] = None,
         excluded_types: Annotated[
-            list[RIPGREP_TYPE_LIST] | None,
+            list[str] | None,
             Field(
                 description="""The types (not extensions!) of files to exclude from the search.
                 Many common types are excluded by default, be sure to overwrite the default if you want to include them.
@@ -580,17 +567,27 @@ class DirectoryEntry(FileSystemEntry):
         ] = DEFAULT_EXCLUDED_TYPES,
         before_context: BEFORE_CONTEXT_PARAM = 1,
         after_context: AFTER_CONTEXT_PARAM = 1,
-        max_depth: DEPTH_PARAM = 10,
+        max_depth: DEPTH_PARAM = 6,
         matches_per_file: MATCHES_PER_FILE_PARAM = 3,
         case_sensitive: CASE_SENSITIVE_PARAM = False,
     ) -> AsyncIterator[FileEntryWithMatches]:
-        """Search for files in the directory using a mix of Globs and types, with the ability to limit the depth of the search."""
+        """Search the contents of files in the filesystem using a mix of Globs and types, with the ability to limit the depth
+        of the search.
+
+        Honors gitignore files. If no patterns are provided, no files are returned.
+
+        This operation is functionally similar to a `grep` command.
+        """
+        included_globs_list, excluded_globs_list, included_type_list, excluded_type_list = prepare_ripgrep_arguments(
+            included_globs, excluded_globs, included_types, excluded_types
+        )
+
         ripgrep = (
-            self._ripgrep_search.include_types(included_types or [])
-            .add_safe_defaults()
-            .exclude_types(excluded_types or [])
-            .include_globs(included_globs or [])
-            .exclude_globs(excluded_globs or [])
+            self._ripgrep_search.add_safe_defaults()
+            .include_types(included_type_list)
+            .exclude_types(excluded_type_list)
+            .include_globs(included_globs_list)
+            .exclude_globs(excluded_globs_list)
             .before_context(before_context)
             .after_context(after_context)
             .add_patterns(patterns)
@@ -608,45 +605,6 @@ class DirectoryEntry(FileSystemEntry):
                 matches=search_result_to_file_lines(file_match),
                 matches_limit_reached=len(file_match.matches) >= matches_per_file,
             )
-
-    # def search_files(
-    #     self,
-    #     patterns: PATTERNS_PARAM,
-    #     *,
-    #     included_globs: INCLUDE_FILES_GLOBS = None,
-    #     excluded_globs: EXCLUDE_FILES_GLOBS = None,
-    #     included_types: RIPGREP_TYPES_PARAM = None,
-    #     excluded_types: RIPGREP_TYPES_PARAM = None,
-    #     before_context: BEFORE_CONTEXT_PARAM = 1,
-    #     after_context: AFTER_CONTEXT_PARAM = 1,
-    #     max_depth: DEPTH_PARAM = 10,
-    #     matches_per_file: MATCHES_PER_FILE_PARAM = 10,
-    #     case_sensitive: CASE_SENSITIVE_PARAM = False,
-    # ) -> Iterator[FileEntryWithMatches]:
-    #     ripgrep = (
-    #         self._ripgrep_search.include_types(included_types or [])
-    #         .add_safe_defaults()
-    #         .exclude_types(excluded_types or [])
-    #         .include_globs(included_globs or [])
-    #         .exclude_globs(excluded_globs or [])
-    #         .before_context(before_context)
-    #         .after_context(after_context)
-    #         .add_patterns(patterns)
-    #         .max_depth(max_depth)
-    #         .max_count(matches_per_file)
-    #         .case_sensitive(case_sensitive)
-    #     )
-
-    #     result: Iterator[RipGrepSearchResult] = ripgrep.run()
-
-    #     for file_match in result:
-    #         file_entry = FileEntryWithMatches(
-    #             path=file_match.path,
-    #             filesystem=self.filesystem,
-    #             matches=search_result_to_file_entry_matches(file_match, before_context, after_context),
-    #         )
-
-    #         yield file_entry
 
     async def create_directory(
         self,
@@ -743,3 +701,33 @@ def search_result_to_file_entry_matches(
         )
 
     return file_entry_matches
+
+
+def prepare_ripgrep_arguments(
+    included_globs: INCLUDE_FILES_GLOBS,
+    excluded_globs: EXCLUDE_FILES_GLOBS,
+    included_types: list[str] | str | None,
+    excluded_types: list[str] | str | None,
+) -> tuple[list[str], list[str], list[RIPGREP_TYPE_LIST], list[RIPGREP_TYPE_LIST]]:
+    if included_globs is None:
+        included_globs = []
+
+    if excluded_globs is None:
+        excluded_globs = []
+
+    if isinstance(included_globs, str):
+        included_globs = [included_globs]
+
+    if isinstance(excluded_globs, str):
+        excluded_globs = [excluded_globs]
+
+    included_type_list: list[RIPGREP_TYPE_LIST] = []
+    excluded_type_list: list[RIPGREP_TYPE_LIST] = []
+
+    if included_types:
+        included_type_list = [t for t in included_types if t in get_args(RIPGREP_TYPE_LIST)]  # pyright: ignore[reportAssignmentType]
+
+    if excluded_types:
+        excluded_type_list = [t for t in excluded_types if t in get_args(RIPGREP_TYPE_LIST)]  # pyright: ignore[reportAssignmentType]
+
+    return included_globs, excluded_globs, included_type_list, excluded_type_list
