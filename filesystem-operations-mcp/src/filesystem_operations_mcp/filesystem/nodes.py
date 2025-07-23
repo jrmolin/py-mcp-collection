@@ -405,7 +405,7 @@ class FileEntry(FileSystemEntry):
 
     async def aget_total_lines(self) -> int:
         """The total number of lines in the file."""
-        count = 1
+        count = 0
 
         async for _ in self.alines_iter():
             count += 1
