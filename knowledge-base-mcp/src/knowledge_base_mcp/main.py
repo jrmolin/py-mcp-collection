@@ -116,31 +116,13 @@ def cli(
     logger.info("Done loading document and code models")
 
 
-@cli.group(name="auto")
-@click.option(
-    "--source", envvar="KB_SOURCE", type=click.Choice(["elasticsearch", "duckdb_memory", "duckdb_persistent"]), default="duckdb_persistent"
-)
-@click.pass_context
-async def auto(ctx: click.Context, source: str) -> None:
-    """Determine the source of the knowledge base from the available environment variables."""
-    if source == "elasticsearch":
-        await ctx.invoke(elasticsearch)
-    elif source == "duckdb_memory":
-        await ctx.invoke(duckdb_memory)
-    elif source == "duckdb_persistent":
-        await ctx.invoke(duckdb_persistent)
-    else:
-        logger.info("Set to auto mode but no source set, defaulting to a local and persistent duckdb database")
-        await ctx.invoke(duckdb_persistent)
-
-
 @cli.group(name="elasticsearch")
-@click.option("--url", type=str, envvar="ES_URL", default="http://localhost:9200")
-@click.option("--index-docs-vectors", type=str, envvar="ES_INDEX_DOCS_VECTORS", default="kbmcp-docs-vectors")
-@click.option("--index-docs-kv", type=str, envvar="ES_INDEX_DOCS_KV", default="kbmcp-docs-kv")
-@click.option("--username", type=str, envvar="ES_USERNAME", default=None)
-@click.option("--password", type=str, envvar="ES_PASSWORD", default=None)
-@click.option("--api-key", type=str, envvar="ES_API_KEY", default=None)
+@click.option("--url", type=str, envvar="ES_URL", default="http://localhost:9200", show_envvar=True)
+@click.option("--index-docs-vectors", type=str, envvar="ES_INDEX_DOCS_VECTORS", default="kbmcp-docs-vectors", show_envvar=True)
+@click.option("--index-docs-kv", type=str, envvar="ES_INDEX_DOCS_KV", default="kbmcp-docs-kv", show_envvar=True)
+@click.option("--username", type=str, envvar="ES_USERNAME", default=None, show_envvar=True)
+@click.option("--password", type=str, envvar="ES_PASSWORD", default=None, show_envvar=True)
+@click.option("--api-key", type=str, envvar="ES_API_KEY", default=None, show_envvar=True)
 @click.pass_context
 async def elasticsearch(
     ctx: click.Context,
@@ -191,8 +173,9 @@ def duckdb_group() -> None:
 
 
 @duckdb_group.group(name="memory")
+@click.option("--db-in-memory", envvar="DUCKDB_MEMORY_DB_IN_MEMORY", type=bool, default=True)
 @click.pass_context
-async def duckdb_memory(ctx: click.Context) -> None:
+async def duckdb_memory(ctx: click.Context, db_in_memory: bool) -> None:  # noqa: ARG001  # pyright: ignore[reportUnusedParameter]
     from llama_index.storage.docstore.duckdb import DuckDBDocumentStore
     from llama_index.storage.index_store.duckdb import DuckDBIndexStore
     from llama_index.storage.kvstore.duckdb import DuckDBKVStore
@@ -219,11 +202,11 @@ async def duckdb_memory(ctx: click.Context) -> None:
 
 
 @duckdb_group.group(name="persistent")
-@click.option("--db-dir", type=click.Path(path_type=Path), default="./storage")
-@click.option("--db-docs", type=str, default="documents.duckdb")
-@click.option("--db-vectors", type=str, default="vectors.duckdb")
+@click.option("--db-dir", envvar="DUCKDB_PERSISTENT_DB_DIR", type=click.Path(path_type=Path), default="./storage")
+@click.option("--db-name-docs", envvar="DUCKDB_PERSISTENT_DB_NAME_DOCS", type=str, default="documents.duckdb")
+@click.option("--db-name-vectors", envvar="DUCKDB_PERSISTENT_DB_NAME_VECTORS", type=str, default="vectors.duckdb")
 @click.pass_context
-async def duckdb_persistent(ctx: click.Context, db_dir: Path, db_docs: str, db_vectors: str) -> None:
+async def duckdb_persistent(ctx: click.Context, db_dir: Path, db_name_docs: str, db_name_vectors: str) -> None:
     from llama_index.storage.docstore.duckdb import DuckDBDocumentStore
     from llama_index.storage.index_store.duckdb import DuckDBIndexStore
     from llama_index.storage.kvstore.duckdb import DuckDBKVStore
@@ -232,16 +215,16 @@ async def duckdb_persistent(ctx: click.Context, db_dir: Path, db_docs: str, db_v
 
     cli_ctx: PartialCliContext = ctx.obj  # pyright: ignore[reportAny]
 
-    logger.info(f"Loading DuckDB document in persistent mode: {db_dir / db_docs}")
+    logger.info(f"Loading DuckDB document in persistent mode: {db_dir / db_name_docs}")
 
     if not db_dir.exists():
         db_dir.mkdir(parents=True, exist_ok=True)
 
-    docs_kv_store = DuckDBKVStore(database_name=db_docs, persist_dir=str(db_dir))
+    docs_kv_store = DuckDBKVStore(database_name=db_name_docs, persist_dir=str(db_dir))
 
     ctx.obj = CliContext(
         docs_stores=Store(
-            vectors=EnhancedDuckDBVectorStore(database_name=db_vectors, persist_dir=str(db_dir)),
+            vectors=EnhancedDuckDBVectorStore(database_name=db_name_vectors, persist_dir=str(db_dir)),
             document=DuckDBDocumentStore(duckdb_kvstore=docs_kv_store),
             index=DuckDBIndexStore(duckdb_kvstore=docs_kv_store),
             embeddings=cli_ctx.document_embeddings,
@@ -295,14 +278,13 @@ async def run(ctx: click.Context, transport: Transport, search_only: bool):
     await kbmcp.run_async(transport=transport)
 
 
-auto.add_command(cmd=run)
 duckdb_memory.add_command(cmd=run)
 elasticsearch.add_command(cmd=run)
 
 
 def run_mcp():
     logger.info("Starting Knowledge Base MCP")
-    asyncio.run(main=cli())  # pyright: ignore[reportAny]
+    asyncio.run(main=cli(auto_envvar_prefix=None))  # pyright: ignore[reportAny]
 
 
 if __name__ == "__main__":
