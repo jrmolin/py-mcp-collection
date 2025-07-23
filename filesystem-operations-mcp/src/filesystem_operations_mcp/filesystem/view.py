@@ -195,7 +195,7 @@ class FileExportableField(BaseModel):
 
         if self.preview:
             lines_to_preview = self._calculate_preview_lines()
-            preview_lines = file_lines.first(count=lines_to_preview) 
+            preview_lines = file_lines.first(count=lines_to_preview)
             preview_is_full_file = len(preview_lines.lines()) < lines_to_preview
             model.update({"preview": preview_lines.model_dump()})
             model.update({"preview_is_full_file": preview_is_full_file})

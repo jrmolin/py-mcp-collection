@@ -87,17 +87,15 @@ async def test_get_root(file_system: FileSystem):
 @pytest.mark.asyncio
 async def test_get_structure(file_system: FileSystem):
     filesystem_structure = file_system.get_structure(depth=1)
-    assert len(filesystem_structure.directories) == 1 # nested
+    assert len(filesystem_structure.directories) == 1  # nested
 
     # Test with different depths
     filesystem_structure = file_system.get_structure(depth=2)
-    assert len(filesystem_structure.directories) == 2 # nested, deeper
-
+    assert len(filesystem_structure.directories) == 2  # nested, deeper
 
     filesystem_structure = file_system.get_structure(depth=2, max_results=1)
-    assert len(filesystem_structure.directories) == 1 # nested
+    assert len(filesystem_structure.directories) == 1  # nested
     assert filesystem_structure.max_results_reached
-
 
 
 @pytest.mark.asyncio

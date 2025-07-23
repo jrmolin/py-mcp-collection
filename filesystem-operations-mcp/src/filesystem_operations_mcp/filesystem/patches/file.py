@@ -29,7 +29,21 @@ class BaseFilePatch(BaseModel, ABC):  # pyright: ignore[reportUnsafeMultipleInhe
 
 
 class FileInsertPatch(BaseFilePatch):
-    """A patch for inserting lines into a file."""
+    """A patch for inserting lines into a file.
+
+    Example (Inserting line 1 before line 2):
+    1: Line 1
+    2: Line 2
+    3: Line 3
+
+    FileInsertPatch(line_number=2, current_line="Line 2", lines=["New Line a", "New Line b"])
+
+    1: Line 1
+    2: New Line a
+    3: New Line b
+    4: line 2
+    5: Line 3
+    """
 
     patch_type: Literal["insert"] = Field(default="insert", exclude=True)
     """The type of patch."""
@@ -60,7 +74,21 @@ class FileInsertPatch(BaseFilePatch):
 
 
 class FileAppendPatch(BaseFilePatch):
-    """A patch for appending lines to a file."""
+    """A patch for appending lines to a file.
+
+    Example (Appending 2 new lines to the end of the file):
+    1: Line 1
+    2: Line 2
+    3: Line 3
+
+    FileAppendPatch(lines=["Line 4", "Line 5"])
+
+    1: Line 1
+    2: Line 2
+    3: Line 3
+    4: Line 4
+    5: Line 5
+    """
 
     patch_type: Literal["append"] = Field(default="append", exclude=True)
     """The type of patch."""
@@ -75,7 +103,17 @@ class FileAppendPatch(BaseFilePatch):
 
 
 class FileDeletePatch(BaseFilePatch):
-    """A patch to delete lines from a file."""
+    """A patch to delete lines from a file.
+
+    Example (Deleting line 1 and line 2):
+    1: Line 1
+    2: Line 2
+    3: Line 3
+
+    FileDeletePatch(line_numbers=[1, 2])
+
+    1: Line 3
+    """
 
     patch_type: Literal["delete"] = Field(default="delete", exclude=True)
     """The type of patch."""
@@ -94,7 +132,18 @@ class FileDeletePatch(BaseFilePatch):
 
 
 class FileReplacePatch(BaseFilePatch):
-    """A patch to replace lines in a file."""
+    """A patch to replace lines in a file.
+
+    Example (Finding line 1 and 2 and replacing them with just 1 new line):
+    1: Line 1
+    2: Line 2
+    3: Line 3
+
+    FileReplacePatch(start_line_number=1, current_lines=["Line 1", "Line 2"], new_lines=["New Line 1"])
+
+    1: New Line 1
+    2: Line 3
+    """
 
     patch_type: Literal["replace"] = Field(default="replace", exclude=True)
     """The type of patch."""

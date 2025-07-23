@@ -1,4 +1,5 @@
 from pathlib import Path
+from textwrap import dedent
 
 
 class FilesystemServerError(Exception):
@@ -75,7 +76,10 @@ class FilePatchDoesNotMatchError(FilesystemServerError):
 
     def __init__(self, starting_line_number: int, current_lines: list[str], file_lines: list[str]):
         super().__init__(
-            f"Patch starting at line {starting_line_number}. Patch lines {current_lines} do not match the file lines {file_lines}"
+            dedent(
+                text=f"""Patch starting at line {starting_line_number}.
+            Patch lines {current_lines} do not match the contents of the file at line {starting_line_number}: file lines {file_lines}"""
+            )
         )
 
 

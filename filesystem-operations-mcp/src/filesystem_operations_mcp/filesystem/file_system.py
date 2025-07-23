@@ -21,8 +21,8 @@ FileContent = Annotated[str, Field(description="The content of the file.")]
 FileAppendContent = Annotated[
     str,
     Field(
-        description="The content to append to the file.",
-        examples=[FileAppendPatch(lines=["This content will be appended to the file!"])],
+        description="The content to append to the end of the file.",
+        examples=[FileAppendPatch(lines=["This content will be appended to end ofthe file!"])],
     ),
 ]
 FileDeleteLineNumbers = Annotated[
@@ -35,7 +35,7 @@ FileDeleteLineNumbers = Annotated[
 FileReplacePatches = Annotated[
     list[FileReplacePatch],
     Field(
-        description="The patches to apply to the file.",
+        description="A set of patches to apply to the file.",
         examples=[
             FileReplacePatch(start_line_number=1, current_lines=["Line 1"], new_lines=["New Line 1"]),
             FileReplacePatch(start_line_number=2, current_lines=["Line 2", "Line 3"], new_lines=["New Line 2", "New Line 3"]),
@@ -45,7 +45,7 @@ FileReplacePatches = Annotated[
 FileInsertPatches = Annotated[
     list[FileInsertPatch],
     Field(
-        description="The patches to apply to the file.",
+        description="A set of patches to apply to the file.",
         examples=[FileInsertPatch(line_number=1, current_line="Line 1", lines=["New Line 1"])],
     ),
 ]
@@ -196,7 +196,13 @@ class FileSystem(DirectoryEntry):
         file_entry = FileEntry(path=path, filesystem=self)
         await file_entry.apply_patches(patches=patches)
 
-    async def replace_file_lines(self, path: FilePath, start_line_number: int, current_lines: list[str], new_lines: list[str]):
+    async def replace_file_lines(
+        self,
+        path: FilePath,
+        start_line_number: Annotated[int, FileReplacePatch.model_fields["start_line_number"]],
+        current_lines: Annotated[list[str], FileReplacePatch.model_fields["current_lines"]],
+        new_lines: Annotated[list[str], FileReplacePatch.model_fields["new_lines"]],
+    ) -> None:
         """Replaces lines in a file using find/replace style patch. It is recommended to read the file after applying
         patches to ensure the changes were applied correctly and that you have the updated content for the file.
         """
@@ -215,7 +221,22 @@ class FileSystem(DirectoryEntry):
         file_entry = FileEntry(path=self.path / Path(path), filesystem=self)
         await file_entry.apply_patches(patches=patches)
 
-    async def insert_file_lines(self, path: FilePath, line_number: int, current_line: str, lines: list[str]) -> None:
+    async def insert_file_lines(
+        self,
+        path: FilePath,
+        line_number: Annotated[
+            int,
+            FileInsertPatch.model_fields["line_number"],
+        ],
+        current_line: Annotated[
+            str,
+            FileInsertPatch.model_fields["current_line"],
+        ],
+        lines: Annotated[
+            list[str],
+            FileInsertPatch.model_fields["lines"],
+        ],
+    ) -> None:
         """Inserts lines into a file. It is recommended to read the file after applying patches to ensure the changes
         were applied correctly and that you have the updated content for the file.
 
@@ -246,8 +267,9 @@ class FileSystem(DirectoryEntry):
             total_lines=await file_entry.aget_total_lines(),
         )
 
-
-    async def read_file_lines_bulk(self, paths: FilePaths, start: FileReadStart = 1, count: FileReadCount = 250) -> list[ReadFileLinesResponse]:
+    async def read_file_lines_bulk(
+        self, paths: FilePaths, start: FileReadStart = 1, count: FileReadCount = 250
+    ) -> list[ReadFileLinesResponse]:
         """Reads the content of a list of files. It will read up to `count` lines starting from `start`. So if you want
         to read the first 100 lines, you would just pass `count=100`. If you want the following 100 lines, you
         would pass `start=101` and `count=100`.
@@ -264,7 +286,4 @@ class FileSystem(DirectoryEntry):
 
         paths = paths[:10]
 
-        return [
-            await self.read_file_lines(path=path, start=start, count=count)
-            for path in paths
-        ]
+        return [await self.read_file_lines(path=path, start=start, count=count) for path in paths]

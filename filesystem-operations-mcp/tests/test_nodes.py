@@ -11,7 +11,6 @@ from filesystem_operations_mcp.filesystem.nodes import (
     FileEntry,
     FileEntryTypeEnum,
     FileEntryWithMatches,
-    FileLines,
 )
 
 
@@ -140,11 +139,10 @@ class TestFileEntry:
         assert file_lines.root == {1: "#!/bin/bash", 2: "echo 'Hello'"}
 
     async def test_file_alines_skip(self, root_directory: DirectoryEntry):
-
         multi_line_node = root_directory.get_file(path="./subdir/script_with_hello.sh")
 
         file_lines = await multi_line_node.afile_lines(count=1, start=2)
-        assert file_lines.root == { 2: "echo 'Hello'"}
+        assert file_lines.root == {2: "echo 'Hello'"}
 
     async def test_create_file(self, root_directory: DirectoryEntry, temp_dir: Path):
         await FileEntry.create_file(path=temp_dir / "test_with_hello_world_new.txt", content="Hello, World!")
@@ -185,23 +183,27 @@ class TestDirectoryEntry:
             descendants: list[FileEntry] = [file async for file in root_directory.afind_files()]
             assert len(descendants) == 5
             descendant_names = sorted([d.name for d in descendants])
-            assert descendant_names == sorted([
-                "code_with_hello_world.py",
-                "nested.txt",
-                "script_with_hello.sh",
-                "test_with_hello_world.txt",
-                "CaSeSenSiTiVe.txt",
-            ])
+            assert descendant_names == sorted(
+                [
+                    "code_with_hello_world.py",
+                    "nested.txt",
+                    "script_with_hello.sh",
+                    "test_with_hello_world.txt",
+                    "CaSeSenSiTiVe.txt",
+                ]
+            )
 
         async def test_depth_one(self, root_directory: DirectoryEntry):
             descendants: list[FileEntry] = [file async for file in root_directory.afind_files(max_depth=1)]
             assert len(descendants) == 3
             descendant_names = sorted([d.name for d in descendants])
-            assert descendant_names == sorted([
-                "code_with_hello_world.py",
-                "test_with_hello_world.txt",
-                "CaSeSenSiTiVe.txt",
-            ])
+            assert descendant_names == sorted(
+                [
+                    "code_with_hello_world.py",
+                    "test_with_hello_world.txt",
+                    "CaSeSenSiTiVe.txt",
+                ]
+            )
 
         async def test_depth_one_with_excludes(self, root_directory: DirectoryEntry):
             descendants: list[FileEntry] = [file async for file in root_directory.afind_files(max_depth=1, excluded_globs=["*.txt"])]
@@ -235,11 +237,13 @@ class TestDirectoryEntry:
             descendants: list[FileEntry] = [file async for file in root_directory.afind_files(excluded_globs=["subdir"])]
             assert len(descendants) == 3
             descendant_names = sorted([d.name for d in descendants])
-            assert descendant_names == sorted([
-                "code_with_hello_world.py",
-                "test_with_hello_world.txt",
-                "CaSeSenSiTiVe.txt",
-            ])
+            assert descendant_names == sorted(
+                [
+                    "code_with_hello_world.py",
+                    "test_with_hello_world.txt",
+                    "CaSeSenSiTiVe.txt",
+                ]
+            )
 
         async def test_subdir(self, root_directory: DirectoryEntry):
             descendants: list[FileEntry] = [file async for file in root_directory.get_directory("subdir").afind_files()]
@@ -254,11 +258,13 @@ class TestDirectoryEntry:
             descendants: list[FileEntry] = [file async for file in root_directory.afind_files(included_globs=["**.txt"])]
             assert len(descendants) == 3
             descendant_names = sorted([d.name for d in descendants])
-            assert descendant_names == sorted([
-                "CaSeSenSiTiVe.txt",
-                "nested.txt",
-                "test_with_hello_world.txt",
-            ])
+            assert descendant_names == sorted(
+                [
+                    "CaSeSenSiTiVe.txt",
+                    "nested.txt",
+                    "test_with_hello_world.txt",
+                ]
+            )
 
     class TestSearchFiles:
         async def test(self, root_directory: DirectoryEntry):
