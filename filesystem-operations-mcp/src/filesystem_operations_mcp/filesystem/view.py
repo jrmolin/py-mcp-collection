@@ -3,7 +3,7 @@ import inspect
 import json
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
-from typing import Annotated, Any, ClassVar, Self
+from typing import Annotated, Any, ClassVar, Literal, Self
 
 from makefun import wraps as makefun_wraps  # pyright: ignore[reportUnknownVariableType]
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
@@ -44,18 +44,12 @@ class FileExportableField(BaseModel):
     size: bool = Field(default=True)
     """Size of the file in bytes. """
 
-    read: bool = Field(default=False)
-    """Read the file as a set of lines. The response will be a dictionary of line numbers to lines of text.
-    Will not be included if the file is binary."""
+    preview: Literal["long", "short"] | None = Field(default="short")
+    """Include a preview of the file only if it is text. Short preview will be ignored if summarize is enabled.
 
-    read_lines: int = Field(default=100)
-    """Limit the number of lines to read from the target files."""
-
-    preview: bool = Field(default=False)
-    """Include a preview of the file only if it is text . Preview will be ignored if read or summarize is enabled."""
-
-    preview_lines: int = Field(default=5)
-    """Limit the number of lines to preview from the target files."""
+    The short preview will be the first 5 lines of the file.
+    The long preview will be the first 50 lines of the file.
+    """
 
     summarize: bool = Field(default=False)
     """Include a summary of the file.
@@ -77,11 +71,8 @@ class FileExportableField(BaseModel):
 
     @model_validator(mode="after")
     def validate_read_limit(self) -> Self:
-        if self.read and self.preview:
-            self.preview = False
-
-        if self.summarize and self.preview:
-            self.preview = False
+        if self.summarize and self.preview == "short":
+            self.preview = None
 
         return self
 
@@ -129,6 +120,9 @@ class FileExportableField(BaseModel):
 
         return {"summary": summary}
 
+    def _calculate_preview_lines(self) -> int:
+        return 5 if self.preview == "short" else 50
+
     def _apply_text_summary(self, lines: list[str]) -> dict[str, Any]:
         summary = summarizer.summarize("\n".join(lines))
         return {"summary": summary[:MAX_SUMMARY_BYTES]}
@@ -167,11 +161,8 @@ class FileExportableField(BaseModel):
         if self.summarize and node.type == FileEntryTypeEnum.TEXT:
             counts.append(100)
 
-        if self.read:
-            counts.append(self.read_lines)
-
         if self.preview:
-            counts.append(self.preview_lines)
+            counts.append(self._calculate_preview_lines())
 
         return max(counts) if counts else None
 
@@ -187,7 +178,7 @@ class FileExportableField(BaseModel):
 
         return model, self.apply_read_lines_count(node)
 
-    async def aapply(self, node: FileEntry | FileEntryWithMatches) -> dict[str, Any]:  # noqa: PLR0912
+    async def aapply(self, node: FileEntry | FileEntryWithMatches) -> dict[str, Any]:
         lines_to_read = self.apply_read_lines_count(node)
 
         if lines_to_read and lines_to_read < ASYNC_READ_THRESHOLD:
@@ -202,11 +193,12 @@ class FileExportableField(BaseModel):
             "relative_path_str": node.relative_path_str,
         }
 
-        if self.read:
-            model.update({"read": file_lines.first(self.read_lines).model_dump()})
-
         if self.preview:
-            model.update({"preview": file_lines.first(self.preview_lines).model_dump()})
+            lines_to_preview = self._calculate_preview_lines()
+            preview_lines = file_lines.first(count=lines_to_preview) 
+            preview_is_full_file = len(preview_lines.lines()) < lines_to_preview
+            model.update({"preview": preview_lines.model_dump()})
+            model.update({"preview_is_full_file": preview_is_full_file})
 
         if self.summarize and node.type == FileEntryTypeEnum.CODE:
             try:
@@ -326,28 +318,10 @@ def customizable_file_materializer(
                 annotation=Annotated[bool, FileExportableField.model_fields["size"]],
             ),
             inspect.Parameter(
-                "read",
-                inspect.Parameter.KEYWORD_ONLY,
-                default=default_file_fields.read,
-                annotation=Annotated[bool, FileExportableField.model_fields["read"]],
-            ),
-            inspect.Parameter(
-                "read_lines",
-                inspect.Parameter.KEYWORD_ONLY,
-                default=default_file_fields.read_lines,
-                annotation=Annotated[int, FileExportableField.model_fields["read_lines"]],
-            ),
-            inspect.Parameter(
                 "preview",
                 inspect.Parameter.KEYWORD_ONLY,
                 default=default_file_fields.preview,
-                annotation=Annotated[bool, FileExportableField.model_fields["preview"]],
-            ),
-            inspect.Parameter(
-                "preview_lines",
-                inspect.Parameter.KEYWORD_ONLY,
-                default=default_file_fields.preview_lines,
-                annotation=Annotated[int, FileExportableField.model_fields["preview_lines"]],
+                annotation=Annotated[Literal["long", "short"] | None, FileExportableField.model_fields["preview"]],
             ),
             inspect.Parameter(
                 "summarize",
@@ -393,10 +367,7 @@ def customizable_file_materializer(
         type: bool,  # noqa: A002
         mime_type: bool,
         size: bool,
-        read: bool,
-        read_lines: int,
-        preview: bool,
-        preview_lines: int,
+        preview: Literal["long", "short"] | None,
         summarize: bool,
         created_at: bool,
         modified_at: bool,
@@ -411,10 +382,7 @@ def customizable_file_materializer(
         }
 
         file_fields = FileExportableField(
-            read=read,
-            read_lines=read_lines,
             preview=preview,
-            preview_lines=preview_lines,
             summarize=summarize,
             created_at=created_at,
             modified_at=modified_at,

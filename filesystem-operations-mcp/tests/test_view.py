@@ -55,14 +55,11 @@ async def test_file_exportable_field_default_fields(file_system: FileSystem):
 async def test_file_exportable_field_toggle_fields(file_system: FileSystem):
     node = file_system.get_file("code.py")
     file_fields = FileExportableField(
-        read=True, basename=True, extension=True, created_at=True, modified_at=True, owner=True, group=True, mime_type=True
+        basename=True, extension=True, created_at=True, modified_at=True, owner=True, group=True, mime_type=True
     )
     result, _ = file_fields.apply(node)
-    expensive_fields = await file_fields.aapply(node)
     assert result["stem"] == "code"
     assert result["extension"] == ".py"
-    assert "read" in expensive_fields
-    assert "def hello():" in expensive_fields["read"][1]
     assert "created_at" in result
     assert "modified_at" in result
     assert "owner" in result
@@ -86,7 +83,7 @@ async def test_file_exportable_field_toggle_fields(file_system: FileSystem):
 @pytest.mark.asyncio
 async def test_file_exportable_field_preview(file_system: FileSystem):
     node = file_system.get_file("notes.txt")
-    file_fields = FileExportableField(preview=True)
+    file_fields = FileExportableField(preview="long")
     # result, _ = file_fields.apply(node)
     expensive_fields = await file_fields.aapply(node)
     assert "preview" in expensive_fields

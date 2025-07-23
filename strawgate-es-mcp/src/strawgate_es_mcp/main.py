@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from elasticsearch import AsyncElasticsearch
 from fastmcp import FastMCP
 from fastmcp.tools import FunctionTool
+from fastmcp.tools.tool import Tool
 
 from strawgate_es_mcp.data_stream.summarize import DataStreamSummary, new_data_stream_summaries
 from strawgate_es_mcp.search.dsl import search_dsl_tips, search_str_fn_factory
@@ -16,9 +17,9 @@ from strawgate_es_mcp.search.esql import esql_query_tips
 _ = load_dotenv()
 
 
-
 def build_es_client(es_host: str, api_key: str) -> AsyncElasticsearch:
     return AsyncElasticsearch(es_host, api_key=api_key, http_compress=True)
+
 
 async def build_server(
     es: AsyncElasticsearch,
@@ -37,11 +38,21 @@ async def build_server(
         """Summarize the data stream, providing field information and sample rows for each requested data stream"""
         return await new_data_stream_summaries(es, data_streams)
 
-    custom_tools: list[Callable[..., Any]] = [
-        summarize_data_streams,
-        search_str_fn_factory(es=es),
-        search_dsl_tips,
-        esql_query_tips,
+    summarize_tools = [
+        Tool.from_function(summarize_data_streams, tags={"summarize", "custom"}),
+    ]
+
+    tips_tools = [
+        Tool.from_function(search_dsl_tips, tags={"search", "tips", "custom"}),
+        Tool.from_function(esql_query_tips, tags={"esql", "tips", "custom"}),
+    ]
+
+    search_tools = [
+        Tool.from_function(search_str_fn_factory(es=es), tags={"search", "custom"}),
+        Tool.from_function(
+            es.search,
+            tags={"search"},
+        ),
     ]
 
     relevant_clients = [
@@ -86,8 +97,6 @@ async def build_server(
         es.xpack,
     ]
 
-    standalone_functions = [es.search]
-
     for client in relevant_clients:
         client_mcp = FastMCP[Any](name=client.__class__.__name__)
 
@@ -114,11 +123,14 @@ async def build_server(
 
         _ = await mcp.import_server(client_mcp, prefix=client_prefix)
 
-    for custom_tool in custom_tools:
-        _ = mcp.add_tool(FunctionTool.from_function(custom_tool, tags={"custom"}))
+    for search_tool in search_tools:
+        _ = mcp.add_tool(search_tool)
 
-    for standalone_function in standalone_functions:
-        _ = mcp.add_tool(FunctionTool.from_function(standalone_function, tags={"standalone"}))
+    for summarize_tool in summarize_tools:
+        _ = mcp.add_tool(summarize_tool)
+
+    for tips_tool in tips_tools:
+        _ = mcp.add_tool(tips_tool)
 
     return mcp
 
@@ -164,7 +176,13 @@ async def cli(
     for tag in exclude_tags:
         expanded_exclude_tags.extend(tag.strip() for tag in tag.split(","))
 
-    mcp = await build_server(es, expanded_include_tags, expanded_exclude_tags, include_tools_patterns, exclude_tools_patterns)
+    mcp = await build_server(
+        es,
+        include_tags=expanded_include_tags if expanded_include_tags else None,
+        exclude_tags=expanded_exclude_tags if expanded_exclude_tags else None,
+        include_tools_patterns=include_tools_patterns,
+        exclude_tools_patterns=exclude_tools_patterns,
+    )
 
     _ = await es.ping()
 

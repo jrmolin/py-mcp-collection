@@ -20,7 +20,7 @@ async def test_tags():
     tools = await server._list_tools()
     tools_by_name = {tool.name: tool for tool in tools}
 
-    assert len(tools) == 6
+    assert len(tools) == 7
     assert "query" in tools_by_name
     assert "async_query" in tools_by_name
     assert "async_query_delete" in tools_by_name

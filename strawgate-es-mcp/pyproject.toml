@@ -1,6 +1,6 @@
 [project]
 name = "strawgate_es_mcp"
-version = "0.5.6"
+version = "0.5.8"
 description = "Strawgate's Es Mcp project"
 readme = "README.md"
 requires-python = ">=3.12"
