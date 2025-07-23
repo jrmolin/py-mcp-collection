@@ -56,6 +56,19 @@ FileReadStart = Annotated[int, Field(description="The index-1 line number to sta
 FileReadCount = Annotated[int, Field(description="The number of lines to read.", examples=[100])]
 
 
+class ReadFileLinesResponse(BaseModel):
+    path: str = Field(description="The path of the file.")
+    lines: FileLines = Field(description="The lines of text in the file.")
+    max_lines: int = Field(description="The maximum number of lines to read.", exclude=True)
+    total_lines: int = Field(description="The total number of lines in the file.")
+
+    @computed_field
+    @property
+    def max_lines_reached(self) -> bool:
+        """Whether the maximum number of lines has been reached."""
+        return len(self.lines.lines()) >= self.max_lines
+
+
 class FileSystemStructureResponse(BaseModel):
     max_results: int = Field(description="The maximum number of results to return.", exclude=True)
     directories: list[str] = Field(description="The results of the filesystem structure.")
@@ -154,7 +167,8 @@ class FileSystem(DirectoryEntry):
         await file_entry.apply_patch(patch=FileAppendPatch(lines=[content]))
 
     async def delete_file_lines(self, path: FilePath, line_numbers: FileDeleteLineNumbers) -> None:
-        """Deletes lines from a file.
+        """Deletes lines from a file. It is recommended to read the file again after applying patches
+        to ensure the changes were applied correctly and that you have the updated content for the file.
 
         Returns:
             None if the lines were deleted successfully, otherwise an error message.
@@ -211,11 +225,46 @@ class FileSystem(DirectoryEntry):
         file_entry = FileEntry(path=self.path / Path(path), filesystem=self)
         await file_entry.apply_patch(patch=FileInsertPatch(line_number=line_number, current_line=current_line, lines=lines))
 
-    async def read_file_lines(self, path: FilePath, start: FileReadStart = 1, count: FileReadCount = 100) -> FileLines:
-        """Reads the content of a file.
+    async def read_file_lines(self, path: FilePath, start: FileReadStart = 1, count: FileReadCount = 250) -> ReadFileLinesResponse:
+        """Reads the content of a file. It will read up to `count` lines starting from `start`. So if you want
+        to read the first 100 lines, you would just pass `count=100`. If you want the following 100 lines, you
+        would pass `start=101` and `count=100`.
+
+        If the response includes `max_lines_reached=False`, that means that the file has additional lines that
+        have not been read yet.
 
         Returns:
             The content of the file.
         """
         file_entry = FileEntry(path=self.path / Path(path), filesystem=self)
-        return await file_entry.afile_lines(start=start, count=count)
+        lines = await file_entry.afile_lines(start=start, count=count)
+
+        return ReadFileLinesResponse(
+            path=file_entry.relative_path_str,
+            lines=lines,
+            max_lines=count,
+            total_lines=await file_entry.aget_total_lines(),
+        )
+
+
+    async def read_file_lines_bulk(self, paths: FilePaths, start: FileReadStart = 1, count: FileReadCount = 250) -> list[ReadFileLinesResponse]:
+        """Reads the content of a list of files. It will read up to `count` lines starting from `start`. So if you want
+        to read the first 100 lines, you would just pass `count=100`. If you want the following 100 lines, you
+        would pass `start=101` and `count=100`.
+
+        If the response includes `max_lines_reached=False`, that means that the file has additional lines that
+        have not been read yet.
+
+        You can provide a maximum of 10 files at a time. If more than 10 files are provided, only the first 10
+        files will be read.
+
+        Returns:
+            The content of the files.
+        """
+
+        paths = paths[:10]
+
+        return [
+            await self.read_file_lines(path=path, start=start, count=count)
+            for path in paths
+        ]

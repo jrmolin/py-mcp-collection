@@ -8,7 +8,8 @@ from functools import cached_property
 from io import TextIOWrapper
 from os import stat_result
 from pathlib import Path
-from typing import Annotated, Any, ClassVar, Literal, Self, get_args
+from textwrap import dedent
+from typing import Annotated, Any, ClassVar, Literal, get_args
 
 from aiofiles import open as aopen
 from aiofiles.os import mkdir as amkdir
@@ -83,8 +84,20 @@ PATTERNS_PARAM = Annotated[list[str], Field(description="A list of patterns to s
 BEFORE_CONTEXT_PARAM = Annotated[int, Field(description="The number of lines of context to include before the match.")]
 AFTER_CONTEXT_PARAM = Annotated[int, Field(description="The number of lines of context to include after the match.")]
 
-INCLUDE_FILES_GLOBS = Annotated[list[str] | str | None, Field(description="A list of globs to include in the search.")]
-EXCLUDE_FILES_GLOBS = Annotated[list[str] | str | None, Field(description="A list of globs to exclude from the search.")]
+INCLUDE_FILES_GLOBS = Annotated[
+    list[str] | str | None,
+    Field(
+        description=dedent("""A list of globs to include in the search. To find a specific file anywhere in the filesystem, you " \
+        can either use `**/README.md` or just `README.md`. To find a specific file in a subdirectory, you can use `subdir/README.md`.
+        """).strip(),
+    ),
+]
+EXCLUDE_FILES_GLOBS = Annotated[
+    list[str] | str | None,
+    Field(
+        description="A list of globs to exclude from the search.",
+    ),
+]
 
 DEPTH_PARAM = Annotated[int, Field(description="The depth of the search.")]
 MATCHES_PER_FILE_PARAM = Annotated[int, Field(description="The maximum number of matches to return per file.")]
@@ -390,6 +403,15 @@ class FileEntry(FileSystemEntry):
 
         return lines
 
+    async def aget_total_lines(self) -> int:
+        """The total number of lines in the file."""
+        count = 1
+
+        async for _ in self.alines_iter():
+            count += 1
+
+        return count
+
     async def afile_lines(self, count: int | None = None, start: int = 1) -> FileLines:
         """The lines of the file as a list of strings.
 
@@ -648,7 +670,7 @@ def is_binary_mime_type(mime_type: str) -> bool:
     if mime_type.startswith(("image/", "video/", "audio/")):
         return True
 
-    if mime_type.startswith("application/") and not (mime_type.endswith(("json", "xml"))):  # noqa: SIM103
+    if mime_type.startswith("application/") and not (mime_type.endswith(("json", "xml", "sh"))):  # noqa: SIM103
         return True
 
     return False

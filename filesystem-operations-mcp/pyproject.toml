@@ -1,6 +1,6 @@
 [project]
 name = "filesystem_operations_mcp"
-version = "0.6.1"
+version = "0.6.2"
 description = "Filesystem Operations MCP project"
 readme = "README.md"
 requires-python = ">=3.13"

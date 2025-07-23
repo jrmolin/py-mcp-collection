@@ -5,7 +5,14 @@ import pytest
 from aiofiles import open as aopen
 
 from filesystem_operations_mcp.filesystem.file_system import FileSystem
-from filesystem_operations_mcp.filesystem.nodes import BaseNode, DirectoryEntry, FileEntry, FileEntryTypeEnum, FileEntryWithMatches
+from filesystem_operations_mcp.filesystem.nodes import (
+    BaseNode,
+    DirectoryEntry,
+    FileEntry,
+    FileEntryTypeEnum,
+    FileEntryWithMatches,
+    FileLines,
+)
 
 
 # Helper function to create test files
@@ -126,6 +133,18 @@ class TestFileEntry:
     async def test_file_alines(self, root_directory: DirectoryEntry):
         node = root_directory.get_file("test_with_hello_world.txt")
         assert await node.alines() == ["Hello, World!"]
+
+        multi_line_node = root_directory.get_file(path="./subdir/script_with_hello.sh")
+
+        file_lines = await multi_line_node.afile_lines()
+        assert file_lines.root == {1: "#!/bin/bash", 2: "echo 'Hello'"}
+
+    async def test_file_alines_skip(self, root_directory: DirectoryEntry):
+
+        multi_line_node = root_directory.get_file(path="./subdir/script_with_hello.sh")
+
+        file_lines = await multi_line_node.afile_lines(count=1, start=2)
+        assert file_lines.root == { 2: "echo 'Hello'"}
 
     async def test_create_file(self, root_directory: DirectoryEntry, temp_dir: Path):
         await FileEntry.create_file(path=temp_dir / "test_with_hello_world_new.txt", content="Hello, World!")
