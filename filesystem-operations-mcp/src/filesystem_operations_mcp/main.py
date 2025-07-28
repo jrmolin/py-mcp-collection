@@ -1,5 +1,7 @@
 import asyncio
+import tempfile
 from collections.abc import AsyncIterator, Callable
+from contextlib import AsyncExitStack
 from functools import wraps
 from pathlib import Path
 from typing import Any, Literal, get_args
@@ -7,6 +9,7 @@ from typing import Any, Literal, get_args
 import asyncclick as click
 from fastmcp import FastMCP
 from fastmcp.tools import FunctionTool
+from git import Repo
 from rpygrep.types import RIPGREP_TYPE_LIST
 
 from filesystem_operations_mcp.filesystem.file_system import FileSystem
@@ -15,7 +18,9 @@ from filesystem_operations_mcp.logging import BASE_LOGGER
 
 logger = BASE_LOGGER.getChild("main")
 
+ROOT_GIT_URL_HELP = """As an alternative to the root directory, you can specify a git url.
 
+This url will be cloned and set to the root directory of the server."""
 ROOT_DIR_HELP = "The allowed filesystem paths for filesystem operations. Defaults to the current working directory for the server."
 MAX_SIZE_HELP = "The maximum size of a result in bytes before throwing an exception. Defaults to 400 kb or about 100k tokens."
 SERIALIZE_AS_HELP = "The format to serialize the response in. Defaults to Yaml"
@@ -43,49 +48,76 @@ def get_file_type_options() -> list[str]:
     return list[str](get_args(RIPGREP_TYPE_LIST))
 
 
+def clone_git_repository(root_git_url: str, directory: str) -> Path:
+    """Clone a git repository to a temporary directory."""
+    _ = Repo.clone_from(root_git_url, directory, depth=1, single_branch=True)
+    return Path(directory)
+
+
 @click.command()
-@click.option("--root-dir", type=str, default=Path.cwd(), help=ROOT_DIR_HELP)
+@click.option("--root-dir", type=str, default=None, help=ROOT_DIR_HELP)
+@click.option("--root-git-url", type=str, default=None, help=ROOT_GIT_URL_HELP)
 @click.option("--mcp-transport", type=click.Choice(["stdio", "sse", "streamable-http"]), default="stdio", help=MCP_TRANSPORT_HELP)
 @click.option("--default-summarize", type=bool, default=True, help=DEFAULT_SUMMARIZE_HELP)
-async def cli(root_dir: str, mcp_transport: Literal["stdio", "sse", "streamable-http"], default_summarize: bool):
-    mcp: FastMCP[None] = FastMCP(name="Local Filesystem Operations MCP")
+async def cli(
+    root_dir: str | None, root_git_url: str | None, mcp_transport: Literal["stdio", "sse", "streamable-http"], default_summarize: bool
+):
+    if root_dir and root_git_url:
+        msg = "You cannot specify both a root directory and a root git url."
+        raise ValueError(msg)
 
-    file_system = FileSystem(Path(root_dir))
+    root_dir_path = Path(root_dir) if root_dir else Path.cwd()
 
-    default_file_fields = FileExportableField(
-        summarize=default_summarize,
-    )
+    async with AsyncExitStack() as stack:
+        if root_git_url:
+            directory = stack.enter_context(tempfile.TemporaryDirectory())
 
-    _ = mcp.add_tool(
-        tool=FunctionTool.from_function(name="find_files", fn=customizable_file_materializer(file_system.afind_files, default_file_fields))
-    )
-    _ = mcp.add_tool(
-        tool=FunctionTool.from_function(
-            name="search_files", fn=customizable_file_materializer(file_system.asearch_files, default_file_fields)
+            logger.info("Cloning git repository %s to %s", root_git_url, directory)
+
+            root_dir_path = clone_git_repository(root_git_url, directory)
+
+        mcp: FastMCP[None] = FastMCP(name="Local Filesystem Operations MCP")
+
+        file_system = FileSystem(path=root_dir_path)
+
+        default_file_fields = FileExportableField(
+            summarize=default_summarize,
         )
-    )
-    _ = mcp.add_tool(tool=FunctionTool.from_function(name="get_structure", fn=file_system.get_structure))
-    _ = mcp.add_tool(
-        tool=FunctionTool.from_function(name="get_files", fn=customizable_file_materializer(file_system.aget_files, default_file_fields))
-    )
 
-    _ = mcp.add_tool(FunctionTool.from_function(name="get_file_type_options", fn=get_file_type_options))
+        _ = mcp.add_tool(
+            tool=FunctionTool.from_function(
+                name="find_files", fn=customizable_file_materializer(file_system.afind_files, default_file_fields)
+            )
+        )
+        _ = mcp.add_tool(
+            tool=FunctionTool.from_function(
+                name="search_files", fn=customizable_file_materializer(file_system.asearch_files, default_file_fields)
+            )
+        )
+        _ = mcp.add_tool(tool=FunctionTool.from_function(name="get_structure", fn=file_system.get_structure))
+        _ = mcp.add_tool(
+            tool=FunctionTool.from_function(
+                name="get_files", fn=customizable_file_materializer(file_system.aget_files, default_file_fields)
+            )
+        )
 
-    _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.create_file))
-    _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.append_file))
-    _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.delete_file_lines))
-    _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.replace_file_lines_bulk))
-    _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.insert_file_lines_bulk))
-    _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.replace_file_lines))
-    _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.insert_file_lines))
-    _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.delete_file))
-    _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.read_file_lines))
-    _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.read_file_lines_bulk))
+        _ = mcp.add_tool(FunctionTool.from_function(name="get_file_type_options", fn=get_file_type_options))
 
-    _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.create_directory))
-    _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.delete_directory))
+        _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.create_file))
+        _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.append_file))
+        _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.delete_file_lines))
+        _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.replace_file_lines_bulk))
+        _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.insert_file_lines_bulk))
+        _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.replace_file_lines))
+        _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.insert_file_lines))
+        _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.delete_file))
+        _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.read_file_lines))
+        _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.read_file_lines_bulk))
 
-    await mcp.run_async(transport=mcp_transport)
+        _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.create_directory))
+        _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.delete_directory))
+
+        await mcp.run_async(transport=mcp_transport)
 
 
 def run_mcp():
