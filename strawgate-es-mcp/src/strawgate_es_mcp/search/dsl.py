@@ -346,6 +346,7 @@ def search_dsl_tips() -> str:
     """Helpful tips for constructing Elasticsearch Query DSL queries."""
     return QUERY_DSL_TIPS
 
+
 def search_str_fn_factory(es: AsyncElasticsearch) -> Callable[[str], Awaitable[dict[str, Any]]]:
     """Create a tool function that constructs Elasticsearch Query DSL queries."""
 
