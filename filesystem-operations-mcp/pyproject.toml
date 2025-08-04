@@ -1,6 +1,6 @@
 [project]
 name = "filesystem_operations_mcp"
-version = "0.6.7"
+version = "0.6.8"
 description = "Filesystem Operations MCP project"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -11,7 +11,7 @@ dependencies = [
     "async-lru>=2.0.5",
     "asyncclick>=8.1.8",
     "asyncstdlib>=3.13.1",
-    "fastmcp<=2.11.0",
+    "fastmcp<2.11.0",
     "magika>=0.6.2",
     "makefun>=1.16.0",
     "mcp>=1.9.0",

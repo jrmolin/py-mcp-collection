@@ -1,5 +1,3 @@
-
-
 QUERY_ESQL_TIPS = '''
 # ESQL Query Language Guide for Agents
 
