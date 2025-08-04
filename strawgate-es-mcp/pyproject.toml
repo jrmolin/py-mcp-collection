@@ -1,6 +1,6 @@
 [project]
 name = "strawgate_es_mcp"
-version = "0.5.8"
+version = "0.5.9"
 description = "Strawgate's Es Mcp project"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -8,7 +8,7 @@ dependencies = [
     "aiohttp>=3.12.2",
     "asyncclick>=8.1.8",
     "elasticsearch>=8.18.0,<9.0.0",
-    "fastmcp>=2.3.5",
+    "fastmcp<=2.11.0",
     "mcp>=1.9.0",
     "pytest-asyncio>=1.0.0",
     "python-dotenv>=1.1.0",

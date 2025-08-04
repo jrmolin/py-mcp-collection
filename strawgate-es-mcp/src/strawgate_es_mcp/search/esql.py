@@ -1,6 +1,4 @@
-from collections.abc import Awaitable, Callable
 
-from fastmcp.tools import Tool
 
 QUERY_ESQL_TIPS = '''
 # ESQL Query Language Guide for Agents
@@ -693,7 +691,7 @@ FROM logs-*
 *   **`KEEP ...`**: Keeps selected fields for the final output.
 '''  # noqa: E501
 
+
 def esql_query_tips() -> str:
     """Helpful tips for constructing Elasticsearch ESQL queries."""
     return QUERY_ESQL_TIPS
-
