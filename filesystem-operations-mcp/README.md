@@ -1,23 +1,18 @@
-# Filesystem Operations MCP Server
+At the end of the day, every LLM-driven Code Agent is a wrapper around RipGrep along with the ability to read and write files. 
 
-This project provides a FastMCP server that exposes tools for performing bulk file and folder operations. It offers tree-sitter based code summarization and natural language text summarization for navigating codebases.
+# Find 🎯, Summarize 📝,  Modify 🔧
 
-## Features
-
-This server provides a comprehensive set of tools for interacting with the filesystem, designed for efficiency and flexibility:
-
--   **Comprehensive File & Directory Management**: Create, delete, append, insert, and replace content within files, and manage directories with robust error handling.
--   **Intelligent File Type Detection**: Utilizes Magika for highly accurate file type identification, including detection of binary, code, text, and data files, even for those lacking extensions.
--   **Customizable Data Retrieval**: Offers granular control over the returned data for files and directories, allowing users to select specific fields like path, size, type, content previews, and detailed metadata (creation/modification times, owner, group).
--   **Advanced Content Summarization**:
-    -   **Code Summarization**: Leverages Tree-sitter to parse and provide structured summaries of code, extracting definitions and documentation.
-    -   **Text Summarization**: Employs natural language processing techniques to generate concise summaries of text files.
--   **Powerful Search & Filtering**:
-    -   **Glob-based Filtering**: Supports flexible glob patterns for including or excluding files and directories in searches and operations.
-    -   **Content Search**: Enables full-text searches within files, supporting both literal strings and regular expressions, with options to include contextual lines around matches.
--   **Rich Metadata Access**: Provides access to detailed file and directory metadata, including size, creation/modification timestamps, and ownership information.
--   **Hidden Item Control**: Configurable options to include or skip hidden files and directories during various operations.
+This project provides an MCP server that acts as the critical building block for your LLM-driven Code Agent!
+-   **Powerful File 🔍 Search & Discovery 🔎**: Extremely fast filesystem search capabilities. Search for files by name, content, and more.
+-   **Text and Code 📝 Summarization**: Leverages Tree-sitter and (non-LLM, i.e. FREE!) Natural Language Processing to parse and provide structured summaries of code, extracting definitions and documentation.
 -   **Patch-based File Modifications**: Supports precise and validated modifications to file content through insert, append, delete, and replace patches.
+-   **Comprehensive File & Directory Management 📂**: Create, delete, append, insert, and replace content within files, and manage directories with robust error handling.
+-   **Magical File Type Detection 🧙**: Utilizes Magika for highly accurate file type identification, including detection of binary, code, text, and data files, even for those lacking extensions.
+-   **Customizable Data Retrieval 📊**: Offers granular control over the returned data for files and directories, allowing users to select specific fields like path, size, type, content previews, and detailed metadata (creation/modification times, owner, group).
+
+Note: If you're interested in the RipGrep part check out [rpygrep](https://github.com/strawgate/rpygrep).
+
+# Get Started
 
 ## VS Code McpServer Usage
 1. Open the command palette (Ctrl+Shift+P or Cmd+Shift+P).
@@ -31,7 +26,7 @@ This server provides a comprehensive set of tools for interacting with the files
             "Filesystem Operations": {
                 "command": "uvx",
                 "args": [
-                    "git+https://github.com/strawgate/py-mcp-collection.git#subdirectory=filesystem-operations-mcp",
+                    "filesystem-operations-mcp",
                 ]
             }
         }
@@ -46,45 +41,51 @@ Simply add the following to your McpServer configuration. Edit the AlwaysAllow l
     "Filesystem Operations": {
       "command": "uvx",
       "args": [
-        "git+https://github.com/strawgate/py-mcp-collection.git#subdirectory=filesystem-operations-mcp"
+        "filesystem-operations-mcp"
       ],
       "alwaysAllow": []
     },
 ```
 
-## Development
-
-To set up the project, use `uv sync`:
-
-```bash
-uv sync
-```
-
-For development, including testing dependencies:
-
-```bash
-uv sync --group dev
-```
-
-## Usage
-
-### Running the MCP Server
-
-The server can be run using `uv run`:
-
-```bash
-uv run filesystem_operations_mcp
-```
-
-Optional command-line arguments:
-- `--root-dir`: The allowed filesystem paths for filesystem operations. Defaults to the current working directory for the server.
-- `--mcp-transport`: The transport to use for the MCP server. Defaults to stdio (options: stdio, sse, streamable-http).
-
-Note: When running the server, the `--root-dir` parameter determines the base directory for all file operations. Paths provided to the tools are relative to this root directory.
-
 ### Available Tools
 
-The server provides a comprehensive suite of tools, categorized by their function, to facilitate various filesystem operations. Many tools share common parameters for consistent usage.
+The server provides a comprehensive suite of tools, categorized by their function, to facilitate various filesystem operations.
+
+#### File Search & Discovery
+
+-   `find_files(glob: str, directory_path: str, includes: list[str], excludes: list[str], skip_hidden: bool)`: Finds files matching a glob pattern within a directory, with optional filtering.
+-   `search_files(glob: str, pattern: str, pattern_is_regex: bool, directory_path: str, includes: list[str], excludes: list[str], skip_hidden: bool)`: Searches for files containing a specific pattern within a directory, with optional filtering.
+-   `get_file_type_options()`: Returns available file types for filtering operations.
+
+#### File Information & Content
+
+-   `get_files(file_paths: list[str], file_fields: FileExportableField, include_summaries: bool)`: Retrieves detailed information for a list of specified files.
+-   `read_file_lines(file_path: str, start: int, count: int)`: Reads specific lines from a file with pagination support.
+-   `read_file_lines_bulk(file_paths: list[str], start: int, count: int)`: Reads lines from multiple files in bulk.
+
+#### Directory Structure
+
+-   `get_structure(depth: int, includes: list[str], excludes: list[str], skip_hidden: bool, skip_empty: bool, max_results: int)`: Retrieves the directory structure up to a specified depth, with optional filtering and result limiting.
+
+#### File Creation & Modification
+
+-   `create_file(file_path: str, content: list[str])`: Creates a new file with the specified content.
+-   `replace_file(file_path: str, content: list[str])`: Replaces the entire content of a file.
+-   `append_file(file_path: str, content: list[str])`: Appends content to an existing file.
+-   `delete_file(file_path: str)`: Deletes a specified file.
+
+#### Line-level File Modifications
+
+-   `delete_file_lines(file_path: str, line_numbers: list[int])`: Deletes specific lines from a file.
+-   `replace_file_lines(file_path: str, start_line_number: int, current_lines: list[str], new_lines: list[str])`: Replaces specific lines in a file.
+-   `replace_file_lines_bulk(file_path: str, patches: list[FileReplacePatch])`: Replaces lines in a file using bulk patches.
+-   `insert_file_lines(file_path: str, start_line_number: int, current_line: str, before_or_after: str, insert_lines: list[str])`: Inserts lines into a file at a specific position.
+-   `insert_file_lines_bulk(file_path: str, patches: list[FileInsertPatch])`: Inserts lines into a file using bulk patches.
+
+#### Directory Management
+
+-   `create_directory(directory_path: str)`: Creates a new directory.
+-   `delete_directory(directory_path: str, recursive: bool)`: Deletes a directory, optionally recursively.
 
 #### Common Parameters
 
@@ -97,9 +98,8 @@ These parameters are frequently used across multiple tools to refine operations 
 | `file_path` | `str` | The root-relative path to the file for the operation. | `"path/to/file.txt"` |
 | `file_paths` | `list[str]` | A list of root-relative file paths for the operation. | `["path/to/file1.txt", "path/to/file2.txt"]` |
 | `directory_path` | `str` | The root-relative path to the directory for the operation. | `"path/to/directory"` |
-| `directory_paths` | `list[str]` | A list of root-relative directory paths for the operation. | `["path/to/dir1", "path/to/dir2"]` |
 
-**Filtering Parameters** (Used in Directory Operations)
+**Filtering Parameters**
 
 | Parameter | Type | Description | Example |
 |---|---|---|---|
@@ -110,67 +110,43 @@ These parameters are frequently used across multiple tools to refine operations 
 | `skip_empty` | `bool` | Whether to skip empty directories. Defaults to `true`. | `false` |
 | `depth` | `int` | The depth of the directory structure to retrieve. `0` means immediate children only. | `1`, `3` |
 
-**Search Parameters** (Used in Search Operations)
+**Search Parameters**
 
 | Parameter | Type | Description | Example |
 |---|---|---|---|
 | `pattern` | `str` | The string or regex pattern to search for within file contents. | `"hello world"` |
 | `pattern_is_regex` | `bool` | Whether the `pattern` parameter should be treated as a regex pattern. Defaults to `false`. | `true` |
-| `before` | `int` | The number of lines to include before a match in the result. | `2` |
-| `after` | `int` | The number of lines to include after a match in the result. | `2` |
+
+**Content Parameters**
+
+| Parameter | Type | Description | Example |
+|---|---|---|---|
+| `content` | `list[str]` | Lines of content to write to a file. | `["Line 1", "Line 2"]` |
+| `start_line_number` | `int` | The 1-indexed line number to start operations from. | `1` |
+| `count` | `int` | The number of lines to read or process. | `10` |
+| `line_numbers` | `list[int]` | 1-indexed line numbers for deletion operations. | `[1, 3, 5]` |
 
 **Field Selection Parameters**
 
 | Parameter | Type | Description | Example |
 |---|---|---|---|
 | `file_fields` | `FileExportableField` | A Pydantic model to specify which fields of a `FileEntry` to include in the response. | `{"file_path": true, "size": true, "read_text": true}` |
-| `directory_fields` | `DirectoryExportableField` | A Pydantic model to specify which fields of a `DirectoryEntry` to include in the response. | `{"directory_path": true, "files_count": true}` |
 | `include_summaries` | `bool` | Whether to include code and text summaries for files. Defaults to `false`. | `true` |
 
-#### Core Operations
+## Advanced Usage
 
-These tools provide fundamental capabilities for managing and querying the filesystem.
+Optional command-line arguments:
+- `--root-dir`: The allowed filesystem paths for filesystem operations. Defaults to the current working directory for the server.
+- `--root-git-url`: Clone and work with a git repository instead of a local directory.
+- `--mcp-transport`: The transport to use for the MCP server. Defaults to stdio (options: stdio, sse, streamable-http).
+- `--default-summarize`: Whether to enable summarization by default. Defaults to true.
 
-#### File Operations
-
--   `get_files(file_paths: list[str], file_fields: FileExportableField, include_summaries: bool)`: Retrieves detailed information for a list of specified files.
--   `get_text_files(file_paths: list[str], file_fields: FileExportableField, include_summaries: bool)`: Retrieves detailed information for a list of specified text files.
--   `get_file_matches(file_path: str, pattern: str, pattern_is_regex: bool, before: int, after: int)`: Searches for a pattern within a file and returns matching lines with optional context.
--   `find_files(glob: str, directory_path: str, includes: list[str], excludes: list[str], skip_hidden: bool)`: Finds files matching a glob pattern within a directory, with optional filtering.
--   `search_files(glob: str, pattern: str, pattern_is_regex: bool, directory_path: str, includes: list[str], excludes: list[str], skip_hidden: bool)`: Searches for files containing a specific pattern within a directory, with optional filtering.
-
-#### Directory Operations
-
--   `get_root(directory_fields: DirectoryExportableField)`: Retrieves information about the root directory of the filesystem.
--   `get_structure(depth: int, includes: list[str], excludes: list[str], skip_hidden: bool, skip_empty: bool)`: Retrieves the directory structure up to a specified depth, with optional filtering.
--   `get_directories(directory_paths: list[str], directory_fields: DirectoryExportableField)`: Retrieves detailed information for a list of specified directories.
--   `find_dirs(glob: str, directory_path: str, includes: list[str], excludes: list[str], skip_hidden: bool)`: Finds directories matching a glob pattern within a directory, with optional filtering.
-
-#### File Modification Operations
-
--   `create_file(file_path: str, content: str)`: Creates a new file with the specified content.
--   `append_file(file_path: str, content: str)`: Appends content to an existing file.
--   `delete_file_lines(file_path: str, line_numbers: list[int])`: Deletes specific lines from a file.
--   `replace_file_lines(file_path: str, patches: list[FileReplacePatch])`: Replaces lines in a file based on provided patches.
--   `insert_file_lines(file_path: str, patches: list[FileInsertPatch])`: Inserts lines into a file based on provided patches.
--   `delete_file(file_path: str)`: Deletes a specified file.
-
-#### Directory Modification Operations
-
--   `create_directory(directory_path: str)`: Creates a new directory.
--   `delete_directory(directory_path: str)`: Deletes an empty directory.
-
-## Development & Testing
-
-- Tests are located in the `tests/` directory
-- Tests use real filesystem operations with temporary directories
-- Comprehensive test coverage for all major functionality
-- Use `pytest` for running tests:
-
-```bash
-pytest
-```
+Note: When running the server, the `--root-dir` parameter determines the base directory for all file operations. Paths provided to the tools are relative to this root directory.
 
 ## License
 
 See [LICENSE](LICENSE).
+
+## Development
+
+See [CONTRIBUTING](CONTRIBUTING.md).

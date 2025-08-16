@@ -12,10 +12,11 @@ async def create_test_file(path: Path, content: str) -> None:
 # Helper function to create test directory structure
 async def create_test_structure(root: Path) -> None:
     # Create some text files
-    await create_test_file(root / "test_with_Hello_World.txt", "Hello, World!")
-    await create_test_file(root / "code_with_hello_world.py", "def hello():\n    print('hello, world!')")
+    await create_test_file(root / "test_with_hello_world.txt", "Hello, World!")
+    await create_test_file(root / "code_with_hello_world.py", "def hello():\n    print('Hello, World!')")
     await create_test_file(root / "data.json", '{"key": "value"}')
     await create_test_file(root / "should_be_ignored.env", "secret_key=1234567890")
+    await create_test_file(root / "CaSeSenSiTiVe.txt", "a Case Sensitive File")
 
     # Create a subdirectory with files
     subdir = root / "subdir"

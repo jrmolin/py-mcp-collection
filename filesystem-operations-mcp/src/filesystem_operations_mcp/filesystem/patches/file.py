@@ -18,9 +18,16 @@ class BaseFilePatch(BaseModel, ABC):  # pyright: ignore[reportUnsafeMultipleInhe
     def apply(self, lines: list[str]) -> list[str]:
         """Applies the patch to the file."""
 
+    @abstractmethod
+    def verify(self, lines: list[str]) -> None:
+        """Verifies the patch."""
+
     @classmethod
     def validate_line_numbers(cls, line_numbers: list[int], lines: list[str]) -> None:
-        """Checks if the index 1-based line numbers are valid to the index 0-based line numbers array."""
+        """User provided line numbers are 1-indexed, but the file has 0-indexed line numbers.
+
+        This method converts the 1-indexed line numbers to 0-indexed line numbers and validates them.
+        """
         line_count = len(lines)
 
         for line_number in line_numbers:
@@ -36,7 +43,7 @@ class FileInsertPatch(BaseFilePatch):
     2: Line 2
     3: Line 3
 
-    FileInsertPatch(line_number=2, current_line="Line 2", lines=["New Line a", "New Line b"])
+    FileInsertPatch(start_line_number=2, current_line="Line 2", before_or_after="before", insert_lines=["New Line a", "New Line b"])
 
     1: Line 1
     2: New Line a
@@ -48,29 +55,48 @@ class FileInsertPatch(BaseFilePatch):
     patch_type: Literal["insert"] = Field(default="insert", exclude=True)
     """The type of patch."""
 
-    line_number: int = Field(..., examples=[1])
-    """The line number to apply the patch to. `lines` will be inserted immediately before the line at `line_number`.
-    Line numbers are indexed from 1 and available via the read_file_lines tool.
+    start_line_number: int = Field(default=..., examples=[1], ge=1)
+    """The line number to start inserting lines at."""
+
+    before_or_after: Literal["before", "after"] = Field(default="before", examples=["before", "after"])
+    """Whether to insert the lines before or after the `start_line_number`.
+
+    If `before`, the lines will be inserted before the line at `start_line_number`.
+    If `after`, the lines will be inserted after the line at `start_line_number`.
     """
 
-    current_line: str = Field(..., examples=["the current line of text at the line number"])
-    """To validate the patch, provide the current line of text at `line_number`."""
+    current_line: str = Field(default=..., examples=["the current line of text at the line number"])
+    """To validate the patch, provide the current line of text at `start_line_number`."""
 
-    lines: list[str] = Field(..., examples=["Line 1 to insert before the current line", "Line 2 to insert after the current line"])
-    """The lines to insert immediately before `line_number`, i.e. immediately before `current_line`."""
+    insert_lines: list[str] = Field(
+        default=..., examples=["Line 1 to insert before the current line", "Line 2 to insert after the current line"]
+    )
+    """The lines to insert before or after (depending on `before_or_after`) the `start_line_number`."""
+
+    def _get_insert_file_line_number(self, lines: list[str]) -> int:
+        """Gets the file line number for the patch."""
+        if self.before_or_after == "before":
+            return self.start_line_number - 1
+
+        return self.start_line_number
+
+    @override
+    def verify(self, lines: list[str]) -> None:
+        """Verifies the patch."""
+        self.validate_line_numbers([self.start_line_number], lines)
+
+        file_line = lines[self.start_line_number - 1]
+
+        if self.current_line != file_line:
+            raise FilePatchDoesNotMatchError(self.start_line_number, [self.current_line], [file_line])
 
     @override
     def apply(self, lines: list[str]) -> list[str]:
         """Applies the patch to the file."""
-        self.validate_line_numbers([self.line_number], lines)
+        self.verify(lines)
 
-        file_line_number = self.line_number - 1
-        file_line = lines[file_line_number]
-
-        if self.current_line != file_line:
-            raise FilePatchDoesNotMatchError(self.line_number, [self.current_line], [file_line])
-
-        return lines[:file_line_number] + self.lines + lines[file_line_number:]
+        file_line_number = self._get_insert_file_line_number(lines)
+        return lines[:file_line_number] + self.insert_lines + lines[file_line_number:]
 
 
 class FileAppendPatch(BaseFilePatch):
@@ -93,8 +119,12 @@ class FileAppendPatch(BaseFilePatch):
     patch_type: Literal["append"] = Field(default="append", exclude=True)
     """The type of patch."""
 
-    lines: list[str] = Field(...)
-    """The lines to append to the end of thefile."""
+    lines: list[str] = Field(default=...)
+    """The lines to append to the end of the file."""
+
+    @override
+    def verify(self, lines: list[str]) -> None:
+        """Verifies the patch."""
 
     @override
     def apply(self, lines: list[str]) -> list[str]:
@@ -118,13 +148,18 @@ class FileDeletePatch(BaseFilePatch):
     patch_type: Literal["delete"] = Field(default="delete", exclude=True)
     """The type of patch."""
 
-    line_numbers: list[int] = Field(...)
+    line_numbers: list[int] = Field(default=...)
     """The exact line numbers to delete from the file."""
+
+    @override
+    def verify(self, lines: list[str]) -> None:
+        """Verifies the patch."""
+        self.validate_line_numbers(self.line_numbers, lines)
 
     @override
     def apply(self, lines: list[str]) -> list[str]:
         """Applies the patch to the file."""
-        self.validate_line_numbers(self.line_numbers, lines)
+        self.verify(lines)
 
         file_line_numbers = [line_number - 1 for line_number in self.line_numbers]
 
@@ -148,36 +183,48 @@ class FileReplacePatch(BaseFilePatch):
     patch_type: Literal["replace"] = Field(default="replace", exclude=True)
     """The type of patch."""
 
-    start_line_number: int = Field(...)
+    start_line_number: int = Field(default=..., ge=1)
     """The line number to start replacing at. The line at this number and the lines referenced in `current_lines` will be replaced.
 
     Line numbers are indexed from 1 and available via the read_file_lines tool.
     """
 
-    current_lines: list[str] = Field(...)
+    current_lines: list[str] = Field(default=...)
     """To validate the patch, provide the lines as they exist now.
 
     Must match the lines at `start_line_number` to `start_line_number + len(current_lines) - 1` exactly.
     """
 
-    new_lines: list[str] = Field(...)
+    new_lines: list[str] = Field(default=...)
     """The lines to replace the existing lines with.
 
     Does not have to match the length of `current_lines`.
     """
 
-    @override
-    def apply(self, lines: list[str]) -> list[str]:
-        """Applies the patch to the file."""
-        self.validate_line_numbers([self.start_line_number, self.start_line_number + len(self.current_lines) - 1], lines)
-
+    def _get_start_end_line_numbers(self, lines: list[str]) -> tuple[int, int]:
+        """Gets the start and end line numbers for the patch."""
         file_start_line_number = self.start_line_number - 1
         file_end_line_number = self.start_line_number + len(self.current_lines) - 1
+        return file_start_line_number, file_end_line_number
+
+    @override
+    def verify(self, lines: list[str]) -> None:
+        """Verifies the patch."""
+        self.validate_line_numbers([self.start_line_number, self.start_line_number + len(self.current_lines) - 1], lines)
+
+        file_start_line_number, file_end_line_number = self._get_start_end_line_numbers(lines)
 
         current_file_lines = lines[file_start_line_number:file_end_line_number]
 
         if current_file_lines != self.current_lines:
             raise FilePatchDoesNotMatchError(self.start_line_number, self.current_lines, current_file_lines)
+
+    @override
+    def apply(self, lines: list[str]) -> list[str]:
+        """Applies the patch to the file."""
+        self.verify(lines)
+
+        file_start_line_number, file_end_line_number = self._get_start_end_line_numbers(lines)
 
         prepend_lines = lines[:file_start_line_number]
         append_lines = lines[file_end_line_number:]

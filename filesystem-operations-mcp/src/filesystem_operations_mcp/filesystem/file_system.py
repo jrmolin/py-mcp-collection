@@ -1,28 +1,27 @@
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import Field, model_serializer
 from pydantic.fields import computed_field
 from pydantic.main import BaseModel
 
-from filesystem_operations_mcp.filesystem.errors import FilesystemServerOutsideRootError
 from filesystem_operations_mcp.filesystem.nodes import BaseNode, DirectoryEntry, FileEntry, FileLines
 from filesystem_operations_mcp.filesystem.patches.file import FileAppendPatch, FileDeletePatch, FileInsertPatch, FileReplacePatch
 from filesystem_operations_mcp.logging import BASE_LOGGER
 
 logger = BASE_LOGGER.getChild("file_system")
 
-FilePaths = Annotated[list[Path], Field(description="A list of root-relative file paths.")]
-FilePath = Annotated[Path, Field(description="The root-relative path of the file.")]
+FilePaths = Annotated[list[Path], Field(description="A list of file paths relative to the root of the filesystem.")]
+FilePath = Annotated[Path, Field(description="The path of the file relative to the root of the filesystem.")]
 
-FileContent = Annotated[str, Field(description="The content of the file.")]
+FileContent = Annotated[list[str], Field(description="The lines of the file.")]
 
 FileAppendContent = Annotated[
-    str,
+    list[str],
     Field(
         description="The content to append to the end of the file.",
-        examples=[FileAppendPatch(lines=["This content will be appended to end ofthe file!"])],
+        examples=[FileAppendPatch(lines=["This content will be appended to end of the file!", "So will this line!"])],
     ),
 ]
 FileDeleteLineNumbers = Annotated[
@@ -46,27 +45,27 @@ FileInsertPatches = Annotated[
     list[FileInsertPatch],
     Field(
         description="A set of patches to apply to the file.",
-        examples=[FileInsertPatch(line_number=1, current_line="Line 1", lines=["New Line 1"])],
+        examples=[FileInsertPatch(start_line_number=1, current_line="Line 1", before_or_after="before", insert_lines=["New Line 1"])],
     ),
 ]
 
 Depth = Annotated[int, Field(description="The depth of the filesystem to get.", examples=[1, 2, 3])]
 
-FileReadStart = Annotated[int, Field(description="The index-1 line number to start reading from.", examples=[1])]
+FileReadStart = Annotated[int, Field(description="The 1-indexed line number to start reading from.", examples=[1])]
 FileReadCount = Annotated[int, Field(description="The number of lines to read.", examples=[100])]
 
 
 class ReadFileLinesResponse(BaseModel):
     path: str = Field(description="The path of the file.")
-    lines: FileLines = Field(description="The lines of text in the file.")
-    max_lines: int = Field(description="The maximum number of lines to read.", exclude=True)
+    lines: FileLines = Field(description="The lines of text requested from the file.")
     total_lines: int = Field(description="The total number of lines in the file.")
 
     @computed_field
     @property
-    def max_lines_reached(self) -> bool:
-        """Whether the maximum number of lines has been reached."""
-        return len(self.lines.lines()) >= self.max_lines
+    def more_lines_available(self) -> bool:
+        """Whether more lines are available to read."""
+        max_line_number = self.lines.line_numbers()[-1]
+        return max_line_number < self.total_lines
 
 
 class FileSystemStructureResponse(BaseModel):
@@ -76,6 +75,7 @@ class FileSystemStructureResponse(BaseModel):
     @computed_field
     @property
     def max_results_reached(self) -> bool:
+        """Whether the maximum number of results has been reached."""
         return len(self.directories) >= self.max_results
 
     @model_serializer
@@ -124,77 +124,78 @@ class FileSystem(DirectoryEntry):
             directories=accumulated_results,
         )
 
-    async def create_file(self, path: FilePath, content: FileContent) -> None:
+    async def create_file(self, path: FilePath, content: FileContent) -> bool:
         """Creates a file.
 
         Returns:
-            None if the file was created successfully, otherwise an error message.
+            True if the file was created successfully.
         """
-        path = self.path / Path(path)
+        await FileEntry.create_file(path=self._validate_path(path), lines=content)
 
-        if not path.is_relative_to(self.path):
-            raise FilesystemServerOutsideRootError(path, self.path)
+        return True
 
-        await FileEntry.create_file(path=path, content=content)
+    async def replace_file(self, path: FilePath, content: FileContent) -> bool:
+        """Replaces the content of a file.
 
-    async def delete_file(self, path: FilePath) -> None:
+        Returns:
+            True if the file was replaced successfully.
+        """
+        file_entry = FileEntry(path=self._validate_path(path), filesystem=self)
+
+        await file_entry.save(lines=content)
+
+        return True
+
+    async def delete_file(self, path: FilePath) -> bool:
         """Deletes a file.
 
         Returns:
-            None if the file was deleted successfully, otherwise an error message.
+            True if the file was deleted successfully.
         """
-        path = self.path / Path(path)
-
-        if not path.is_relative_to(self.path):
-            raise FilesystemServerOutsideRootError(path, self.path)
-
-        file_entry = FileEntry(path=path, filesystem=self)
+        file_entry = FileEntry(path=self._validate_path(path), filesystem=self)
 
         await file_entry.delete()
 
-    async def append_file(self, path: FilePath, content: FileAppendContent) -> None:
-        """Appends content to a file.
+        return True
+
+    async def append_file(self, path: FilePath, content: FileAppendContent) -> bool:
+        """Appends lines to the end of a file.
 
         Returns:
-            None if the file was appended to successfully, otherwise an error message.
+            True if the file was appended to successfully.
         """
-        path = self.path / Path(path)
+        file_entry = FileEntry(path=self._validate_path(path), filesystem=self)
 
-        if not path.is_relative_to(self.path):
-            raise FilesystemServerOutsideRootError(path, self.path)
+        await file_entry.apply_patch(patch=FileAppendPatch(lines=content))
 
-        file_entry = FileEntry(path=path, filesystem=self)
-        await file_entry.apply_patch(patch=FileAppendPatch(lines=[content]))
+        return True
 
-    async def delete_file_lines(self, path: FilePath, line_numbers: FileDeleteLineNumbers) -> None:
-        """Deletes lines from a file. It is recommended to read the file again after applying patches
-        to ensure the changes were applied correctly and that you have the updated content for the file.
+    async def delete_file_lines(self, path: FilePath, line_numbers: FileDeleteLineNumbers) -> bool:
+        """Deletes lines from a file.
+
+        It is recommended to read the file again after applying patches to ensure the changes were applied correctly
+        and that you have the updated content for the file.
 
         Returns:
-            None if the lines were deleted successfully, otherwise an error message.
+            True if the lines were deleted successfully.
         """
-        path = self.path / Path(path)
+        file_entry = FileEntry(path=self._validate_path(path), filesystem=self)
 
-        if not path.is_relative_to(self.path):
-            raise FilesystemServerOutsideRootError(path, self.path)
-
-        file_entry = FileEntry(path=path, filesystem=self)
         await file_entry.apply_patch(patch=FileDeletePatch(line_numbers=line_numbers))
 
-    async def replace_file_lines_bulk(self, path: FilePath, patches: FileReplacePatches) -> None:
+        return True
+
+    async def replace_file_lines_bulk(self, path: FilePath, patches: FileReplacePatches) -> bool:
         """Replaces lines in a file using find/replace style patch. It is recommended to read the file after applying
         patches to ensure the changes were applied correctly and that you have the updated content for the file.
 
         Returns:
-            None if the lines were replaced successfully, otherwise an error message.
+            True if the lines were replaced successfully.
         """
-        path = self.path / Path(path)
-
-        if not path.is_relative_to(self.path):
-            raise FilesystemServerOutsideRootError(path, self.path)
-
-        file_entry = FileEntry(path=path, filesystem=self)
+        file_entry = FileEntry(path=self._validate_path(path), filesystem=self)
         await file_entry.apply_patches(patches=patches)
+
+        return True
 
     async def replace_file_lines(
         self,
@@ -202,68 +203,84 @@ class FileSystem(DirectoryEntry):
         start_line_number: Annotated[int, FileReplacePatch.model_fields["start_line_number"]],
         current_lines: Annotated[list[str], FileReplacePatch.model_fields["current_lines"]],
         new_lines: Annotated[list[str], FileReplacePatch.model_fields["new_lines"]],
-    ) -> None:
+    ) -> bool:
         """Replaces lines in a file using find/replace style patch. It is recommended to read the file after applying
         patches to ensure the changes were applied correctly and that you have the updated content for the file.
         """
-        file_entry = FileEntry(path=self.path / Path(path), filesystem=self)
+        file_entry = FileEntry(path=self._validate_path(path), filesystem=self)
         await file_entry.apply_patch(
             patch=FileReplacePatch(start_line_number=start_line_number, current_lines=current_lines, new_lines=new_lines)
         )
 
-    async def insert_file_lines_bulk(self, path: FilePath, patches: FileInsertPatches) -> None:
+        return True
+
+    async def insert_file_lines_bulk(self, path: FilePath, patches: FileInsertPatches) -> bool:
         """Inserts lines into a file. It is recommended to read the file after applying patches to ensure the changes
         were applied correctly and that you have the updated content for the file.
 
         Returns:
-            None if the lines were inserted successfully, otherwise an error message.
+            True if the lines were inserted successfully.
         """
-        file_entry = FileEntry(path=self.path / Path(path), filesystem=self)
+        file_entry = FileEntry(path=self._validate_path(path), filesystem=self)
         await file_entry.apply_patches(patches=patches)
+
+        return True
 
     async def insert_file_lines(
         self,
         path: FilePath,
-        line_number: Annotated[
+        start_line_number: Annotated[
             int,
-            FileInsertPatch.model_fields["line_number"],
+            FileInsertPatch.model_fields["start_line_number"],
         ],
         current_line: Annotated[
             str,
             FileInsertPatch.model_fields["current_line"],
         ],
-        lines: Annotated[
-            list[str],
-            FileInsertPatch.model_fields["lines"],
+        before_or_after: Annotated[
+            Literal["before", "after"],
+            FileInsertPatch.model_fields["before_or_after"],
         ],
-    ) -> None:
-        """Inserts lines into a file. It is recommended to read the file after applying patches to ensure the changes
-        were applied correctly and that you have the updated content for the file.
+        insert_lines: Annotated[
+            list[str],
+            FileInsertPatch.model_fields["insert_lines"],
+        ],
+    ) -> bool:
+        """Inserts lines into a file.
 
         Returns:
-            None if the lines were inserted successfully, otherwise an error message.
+            True if the lines were inserted successfully.
         """
-        file_entry = FileEntry(path=self.path / Path(path), filesystem=self)
-        await file_entry.apply_patch(patch=FileInsertPatch(line_number=line_number, current_line=current_line, lines=lines))
+        file_entry = FileEntry(path=self._validate_path(path), filesystem=self)
+
+        await file_entry.apply_patch(
+            patch=FileInsertPatch(
+                start_line_number=start_line_number,
+                current_line=current_line,
+                before_or_after=before_or_after,
+                insert_lines=insert_lines,
+            )
+        )
+
+        return True
 
     async def read_file_lines(self, path: FilePath, start: FileReadStart = 1, count: FileReadCount = 250) -> ReadFileLinesResponse:
         """Reads the content of a file. It will read up to `count` lines starting from `start`. So if you want
         to read the first 100 lines, you would just pass `count=100`. If you want the following 100 lines, you
         would pass `start=101` and `count=100`.
 
-        If the response includes `max_lines_reached=False`, that means that the file has additional lines that
+        If the response includes `more_lines_available=True`, that means that the file has additional lines that
         have not been read yet.
 
         Returns:
             The content of the file.
         """
-        file_entry = FileEntry(path=self.path / Path(path), filesystem=self)
+        file_entry = FileEntry(path=self._validate_path(path), filesystem=self)
         lines = await file_entry.afile_lines(start=start, count=count)
 
         return ReadFileLinesResponse(
             path=file_entry.relative_path_str,
             lines=lines,
-            max_lines=count,
             total_lines=await file_entry.aget_total_lines(),
         )
 
@@ -274,7 +291,7 @@ class FileSystem(DirectoryEntry):
         to read the first 100 lines, you would just pass `count=100`. If you want the following 100 lines, you
         would pass `start=101` and `count=100`.
 
-        If the response includes `max_lines_reached=False`, that means that the file has additional lines that
+        If the response includes `more_lines_available=True`, that means that the file has additional lines that
         have not been read yet.
 
         You can provide a maximum of 10 files at a time. If more than 10 files are provided, only the first 10
