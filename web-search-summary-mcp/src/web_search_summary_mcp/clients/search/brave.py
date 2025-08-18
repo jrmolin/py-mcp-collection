@@ -3,7 +3,7 @@ import os
 from typing import Literal
 
 from aiohttp import ClientResponseError, ClientSession
-from aiohttp.web_exceptions import HTTPTooManyRequests
+from aiohttp.web import HTTPTooManyRequests
 from pydantic import BaseModel
 
 from web_search_summary_mcp.clients.search.base import BaseSearchClient

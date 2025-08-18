@@ -104,7 +104,7 @@ class SummarizeServer(BaseModel):
 
         prompt = f"""
         # Instructions
-        We need to provide an apprioriately-detailed response to the user's query using only information from the results.
+        We need to provide an appropriately-detailed response to the user's query using only information from the results.
         We are not just summarizing the results, we are providing a detailed response to the user's query rooted in the results.
         Do not make/invent any information.
 

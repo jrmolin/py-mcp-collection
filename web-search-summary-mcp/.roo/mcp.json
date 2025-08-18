@@ -4,7 +4,7 @@
       "command": "uv",
       "args": [
         "run",
-        "./src/web_search_mcp/main.py"
+        "./src/web_search_summary_mcp/main.py"
       ]
     }
   }
