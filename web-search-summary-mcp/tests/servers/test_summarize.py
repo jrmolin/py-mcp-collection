@@ -61,7 +61,6 @@ def fastmcp_client(fastmcp_server: FastMCP[None]):
 
 async def test_search(search_server: SummarizeServer):
     response = await search_server.search("What is the latest version of Python?")
-    assert response.summary is None
     assert len(response.results) == 1
     assert response.results[0].title == "Test"
     assert response.results[0].url == "https://test.com"
@@ -107,8 +106,9 @@ async def test_summarize(fastmcp_client: Client, simple_html_page: str):
     with aioresponses() as m:
         m.get("https://test.com", body=simple_html_page)
         async with fastmcp_client as client:
-            response: CallToolResult = await client.call_tool("summarize", arguments={"query": "What is the latest version of Python?"})
-            assert response.data.summary is not None
+            response: CallToolResult = await client.call_tool(
+                "summarize", arguments={"query": "What is the latest version of Python?", "include_results": True}
+            )
             assert len(response.data.results) == 1
             assert response.data.results[0].title == "Test"
             assert response.data.results[0].url == "https://test.com"

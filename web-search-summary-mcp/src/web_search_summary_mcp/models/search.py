@@ -11,5 +11,9 @@ class SearchResult(BaseModel):
 
 
 class SearchResponse(BaseModel):
-    summary: str | None = None
     results: list[SearchResult]
+
+
+class SummaryResponse(BaseModel):
+    summary: str
+    results: list[SearchResult] | None = None

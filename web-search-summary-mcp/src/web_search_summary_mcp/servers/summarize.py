@@ -12,7 +12,7 @@ from web_search_summary_mcp.clients.fetch.base import BaseFetchClient
 from web_search_summary_mcp.clients.fetch.simple import SimpleFetchClient
 from web_search_summary_mcp.clients.search.auto import AutoSearchClient
 from web_search_summary_mcp.clients.search.base import BaseSearchClient
-from web_search_summary_mcp.models.search import SearchResponse
+from web_search_summary_mcp.models.search import SearchResponse, SummaryResponse
 
 
 class SummarizeDepth(StrEnum):
@@ -46,9 +46,12 @@ class SummarizeServer(BaseModel):
     convert_client: BaseConvertClient = Field(default_factory=MarkdownConvertClient)
 
     async def search(self, query: str) -> SearchResponse:
+        """Perform a web search for the given query and return the results."""
         return await self.search_client.search(query)
 
     async def fetch(self, url: str, convert: bool = True) -> str:
+        """Fetch the content of the given URL and return the content as markdown."""
+
         content: str = await self.fetch_client.fetch(url)
 
         if convert:
@@ -57,6 +60,8 @@ class SummarizeServer(BaseModel):
         return content
 
     async def try_fetch(self, url: str, convert: bool = True) -> str | None:
+        """Fetch the content of the given URL and return the content as markdown. Return None if the fetch fails."""
+
         try:
             return await self.fetch(url, convert=convert)
         except Exception as e:
@@ -65,7 +70,13 @@ class SummarizeServer(BaseModel):
             return None
 
     async def search_and_fetch(self, query: str, convert: bool = True) -> SearchResponse:
+        """Perform a web search for the given query and return the results."""
+
         response = await self.search(query)
+
+        if not response.results:
+            msg = "No results were found"
+            raise ValueError(msg)
 
         for result in response.results:
             result.content = await self.try_fetch(result.url, convert=convert)
@@ -79,8 +90,15 @@ class SummarizeServer(BaseModel):
         depth: Annotated[
             SummarizeDepth, "The depth of the summary. i.e. how far beyond answering the exact question should the summary go?"
         ] = SummarizeDepth.MEDIUM,
-    ) -> SearchResponse:
+        include_results: Annotated[bool, "Whether to include the raw search results with the answer"] = False,
+    ) -> SummaryResponse:
+        """Perform a web search for the given query and summarize the results."""
+
         response = await self.search_and_fetch(query)
+
+        if not response.results:
+            msg = "No results were found"
+            raise ValueError(msg)
 
         results = yaml.safe_dump([result.model_dump(exclude_none=True) for result in response.results])
 
@@ -121,7 +139,7 @@ class SummarizeServer(BaseModel):
             msg = "No summary was generated"
             raise TypeError(msg)
 
-        return SearchResponse(
+        return SummaryResponse(
             summary=summary.text,
-            results=response.results,
+            results=response.results if include_results else None,
         )

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 from typing import Any
 
@@ -10,22 +11,34 @@ from openai import OpenAI
 
 from web_search_summary_mcp.servers.summarize import SummarizeServer
 
-# class BraveServer(BaseModel):
-#     model_config: ClassVar[ConfigDict] = ConfigDict(arbitrary_types_allowed=True)
+logger = logging.getLogger(__name__)
 
-#     brave_client: BraveClient
+MODEL_ENV_VAR = "OPENAI_MODEL"
+API_KEY_ENV_VAR = "OPENAI_API_KEY"
+BASE_URL_ENV_VAR = "OPENAI_BASE_URL"
 
 
 @click.command()
 async def cli():
+    sampling_handler: OpenAISamplingHandler | None = None
     search_server = SummarizeServer()
 
-    sampling_handler: OpenAISamplingHandler = OpenAISamplingHandler(
-        default_model="gpt-5-nano", client=OpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=os.getenv("OPENAI_BASE_URL"))
-    )
+    if any(os.getenv(var) for var in [MODEL_ENV_VAR, API_KEY_ENV_VAR, BASE_URL_ENV_VAR]):
+        sampling_handler = OpenAISamplingHandler(
+            default_model=os.getenv(MODEL_ENV_VAR),  # pyright: ignore[reportArgumentType]
+            client=OpenAI(
+                api_key=os.getenv(API_KEY_ENV_VAR),
+                base_url=os.getenv(BASE_URL_ENV_VAR),
+            ),
+        )
 
-    mcp = FastMCP[Any](name="Local Web Search Mcp", sampling_handler=sampling_handler)
-    mcp.add_tool(Tool.from_function(search_server.summarize, name="summarize"))
+    mcp = FastMCP[Any](name="Web Search and Summarize MCP", sampling_handler=sampling_handler)
+
+    mcp.add_tool(Tool.from_function(search_server.search, name="search"))
+    mcp.add_tool(Tool.from_function(search_server.fetch, name="fetch"))
+
+    if sampling_handler:
+        mcp.add_tool(Tool.from_function(search_server.summarize, name="answer"))
 
     await mcp.run_async()
 

@@ -45,11 +45,12 @@ def fastmcp_server(search_server: SummarizeServer):
 def fastmcp_client(fastmcp_server: FastMCP[None]):
     return Client(transport=fastmcp_server)
 
+
 @pytest.mark.not_on_ci
 async def test_search(search_server: SummarizeServer):
     response = await search_server.search("What is the latest version of Python?")
-    assert response.summary is None
     assert len(response.results) == 5
+
 
 @pytest.mark.not_on_ci
 async def test_summarize_latest_python(fastmcp_client: Client):
@@ -57,6 +58,7 @@ async def test_summarize_latest_python(fastmcp_client: Client):
         response: CallToolResult = await client.call_tool("summarize", arguments={"query": "What is the latest version of Python?"})
         assert response.data.summary
         assert response.data.results
+
 
 @pytest.mark.not_on_ci
 async def test_summarize_python_inline_type_parameters_short(fastmcp_client: Client):
@@ -66,6 +68,7 @@ async def test_summarize_python_inline_type_parameters_short(fastmcp_client: Cli
         )
         assert response.data.summary
         assert response.data.results
+
 
 @pytest.mark.not_on_ci
 async def test_summarize_python_inline_type_parameters_medium(fastmcp_client: Client):
