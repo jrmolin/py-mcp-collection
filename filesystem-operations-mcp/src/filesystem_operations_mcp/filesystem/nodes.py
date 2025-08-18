@@ -8,7 +8,6 @@ from functools import cached_property
 from io import TextIOWrapper
 from os import stat_result
 from pathlib import Path
-from textwrap import dedent
 from typing import Annotated, Any, ClassVar, Literal, get_args
 
 from aiofiles import open as aopen
@@ -87,9 +86,10 @@ AFTER_CONTEXT_PARAM = Annotated[int, Field(description="The number of lines of c
 INCLUDE_FILES_GLOBS = Annotated[
     list[str] | str | None,
     Field(
-        description=dedent("""A list of globs to include in the search. To find a specific file anywhere in the filesystem, you " \
-        can either use `**/README.md` or just `README.md`. To find a specific file in a subdirectory, you can use `subdir/README.md`.
-        """).strip(),
+        description=(
+            "A list of globs to include in the search. To find a specific file anywhere in the filesystem, you "
+            "can either use `**/README.md` or just `README.md`. To find a specific file in a subdirectory, you can use `subdir/README.md`."
+        ),
     ),
 ]
 EXCLUDE_FILES_GLOBS = Annotated[
@@ -147,7 +147,7 @@ class BaseNode(BaseModel):
         """The relative path of the node from the given path or node."""
 
         try:
-            return self.path.relative_to(node.path)
+            return self.path.resolve().relative_to(node.path.resolve())
         except ValueError as ve:
             raise FilesystemServerOutsideRootError(self.path, node.path) from ve
 
@@ -182,6 +182,9 @@ class FileSystemEntry(BaseNode):
         if not path.is_absolute():
             path = (filesystem.path / path).resolve()
 
+        if not path.exists():
+            raise FileNotFoundError(path)
+
         super().__init__(path=path, filesystem=filesystem, **kwargs)
 
     @computed_field
@@ -193,6 +196,15 @@ class FileSystemEntry(BaseNode):
     @property
     def relative_path_str(self) -> str:
         return str(self.relative_path)
+
+    def _validate_path(self, path: Path) -> Path:
+        """Validates the path against the root of the filesystem."""
+        path = (self.path / path).resolve()
+
+        if not path.is_relative_to(self.filesystem.path.resolve()):
+            raise FilesystemServerOutsideRootError(path, self.filesystem.path)
+
+        return path
 
     def passes_filters(
         self,
@@ -235,7 +247,7 @@ class FileLines(RootModel[dict[int, str]]):
         return list(self.root.keys())
 
     def first(self, count: int) -> "FileLines":
-        return FileLines(root={k: v for k, v in self.root.items() if k < count})
+        return FileLines(root=dict(list(self.root.items())[:count]))
 
 
 class FileEntryMatch(BaseModel):
@@ -260,11 +272,6 @@ class FileEntry(FileSystemEntry):
     def stem(self) -> str:
         """The stem of the file."""
         return self.path.stem
-
-    # @property
-    # def path(self) -> str:
-    #     """The path of the file."""
-    #     return str(self.path)
 
     @computed_field
     @property
@@ -446,13 +453,13 @@ class FileEntry(FileSystemEntry):
         await self.save(lines)
 
     async def apply_patches(self, patches: FileMultiplePatchTypes) -> None:
-        """Applies the patches to the file."""
+        """Applies the patches to the file. If an error occurs, the file is not modified."""
         lines = await self.alines()
 
-        # Reverse the patches if they are a list so that they are applied in the correct order.
-        patches_to_apply: list[FilePatchTypes] = list(reversed(patches))
+        # Sort the patches by their starting line number descending
+        patches.sort(key=lambda x: x.start_line_number, reverse=True)
 
-        for patch in patches_to_apply:
+        for patch in patches:
             lines = patch.apply(lines)
 
         await self.save(lines)
@@ -463,13 +470,13 @@ class FileEntry(FileSystemEntry):
             _ = await f.write("\n".join(lines))
 
     @classmethod
-    async def create_file(cls, path: Path, content: str) -> None:
+    async def create_file(cls, path: Path, lines: list[str]) -> None:
         """Creates a file."""
         if path.exists():
             raise FileAlreadyExistsError(path=path)
 
         async with aopen(path, mode="w", encoding="utf-8") as f:
-            _ = await f.write(content)
+            _ = await f.write("\n".join(lines))
 
 
 class FileEntryWithMatches(FileEntry):
@@ -482,14 +489,6 @@ class FileEntryWithMatches(FileEntry):
     @classmethod
     def from_file_entry(cls, file_entry: FileEntry, matches: FileLines) -> "FileEntryWithMatches":
         return cls(path=file_entry.path, filesystem=file_entry.filesystem, matches=matches)
-
-
-# class FileEntryWithMatches(FileEntry):
-#     matches: list[FileEntryMatch] = Field(default_factory=list, description="The matches of the file.")
-
-#     @classmethod
-#     def from_file_entry(cls, file_entry: FileEntry, matches: list[FileEntryMatch]) -> "FileEntryWithMatches":
-#         return cls(path=file_entry.path, filesystem=file_entry.filesystem, matches=matches)
 
 
 class DirectoryEntry(FileSystemEntry):
@@ -631,39 +630,37 @@ class DirectoryEntry(FileSystemEntry):
     async def create_directory(
         self,
         path: Annotated[Path, Field(description="The relative path of the directory to create.")],
-    ) -> None:
+    ) -> bool:
         """Creates a directory
 
         Returns:
-            None if the directory was created successfully, otherwise an error message.
+            True if the directory was created successfully.
         """
-        path = self.path / path
+        path = self._validate_path(path)
 
         if path.exists():
             raise DirectoryAlreadyExistsError(path=path)
 
-        if not path.is_relative_to(self.filesystem.path):
-            raise FilesystemServerOutsideRootError(path, self.filesystem.path)
-
         await amkdir(path)
+
+        return True
 
     async def delete_directory(
         self,
         path: Annotated[Path, Field(description="The relative path of the directory to delete.")],
         recursive: Annotated[bool, Field(description="Also delete the contents of the directory, and do it recursively.")] = False,
-    ) -> None:
+    ) -> bool:
         """Deletes a directory."""
 
-        path = self.path / path
-
-        if not path.is_relative_to(self.filesystem.path):
-            raise FilesystemServerOutsideRootError(path, self.filesystem.path)
+        path = self._validate_path(path)
 
         if recursive:
             await rmtree(path)
-            return
+            return True
 
         await armdir(path)
+
+        return True
 
 
 def is_binary_mime_type(mime_type: str) -> bool:

@@ -5,7 +5,7 @@ from typing import Any, ClassVar, Literal, get_args, override
 
 from pydantic import BaseModel, ConfigDict, computed_field
 from pydantic.fields import Field
-from tree_sitter import Language, Node, Parser, Query, Tree
+from tree_sitter import Language, Node, Parser, Query, QueryCursor, Tree
 from tree_sitter_language_pack import (
     SupportedLanguage,
     get_binding,
@@ -206,12 +206,17 @@ def summarize_code(language_name: str, code: str) -> dict[str, Any] | str | None
     timers["parse"] = time.time()
 
     # Identify the tags
-    tag_query: Query = language.query(tag_queries[language_name])
-    if not hasattr(tag_query, "captures"):
-        logger.debug(f"Tag query for {language_name} does not have captures. Skipping file.")
-        return None
+    tag_query: Query = Query(language, tag_queries[language_name])
 
-    captures: dict[str, list[Node]] = tag_query.captures(tree.root_node)
+    tag_query_cursor: QueryCursor = QueryCursor(tag_query, match_limit=1000)
+
+    captures: dict[str, list[Node]] = tag_query_cursor.captures(tree.root_node)
+
+    # if not hasattr(tag_query, "captures"):
+    #     logger.debug(f"Tag query for {language_name} does not have captures. Skipping file.")
+    #     return None
+
+    # captures: dict[str, list[Node]] = tag_query.captures(tree.root_node)
 
     timers["tag_query_captures"] = time.time()
 
