@@ -247,7 +247,7 @@ class FileLines(RootModel[dict[int, str]]):
         return list(self.root.keys())
 
     def first(self, count: int) -> "FileLines":
-        return FileLines(root={k: v for k, v in self.root.items() if k <= count})
+        return FileLines(root=dict(list(self.root.items())[:count]))
 
 
 class FileEntryMatch(BaseModel):
