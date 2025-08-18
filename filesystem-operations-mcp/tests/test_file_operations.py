@@ -4,9 +4,9 @@ from pathlib import Path
 import pytest
 from aiofiles import open as aopen
 
+from filesystem_operations_mcp.filesystem.errors import FilesystemServerOutsideRootError
 from filesystem_operations_mcp.filesystem.file_system import FileSystem
 from filesystem_operations_mcp.filesystem.nodes import FileEntryTypeEnum
-from filesystem_operations_mcp.filesystem.errors import FilesystemServerOutsideRootError
 
 
 # Helper function to create test files

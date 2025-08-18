@@ -58,7 +58,7 @@ class FileInsertPatch(BaseFilePatch):
     start_line_number: int = Field(default=..., examples=[1], ge=1)
     """The line number to start inserting lines at."""
 
-    before_or_after: Literal["before", "after"] = Field(default="before", examples=["before", "after"])
+    before_or_after: Literal["before", "after"] = Field(default=...)
     """Whether to insert the lines before or after the `start_line_number`.
 
     If `before`, the lines will be inserted before the line at `start_line_number`.
