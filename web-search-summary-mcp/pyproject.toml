@@ -1,0 +1,77 @@
+[project]
+name = "web-search-summary-mcp"
+version = "0.5.3"
+description = "Web Search Summary Mcp project"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiohttp>=3.12.15",
+    "aioresponses>=0.7.8",
+    "asyncclick>=8.1.8",
+    "fastmcp>=2.3.5",
+    "html-to-markdown>=1.9.0",
+    "mcp>=1.9.0",
+    "openai>=1.99.9",
+    "pydantic>=2.11.7",
+]
+
+[tool.poetry]
+packages = [
+    { include = "web_search_summary_mcp", from = "src" }
+]
+[tool.hatch.metadata]
+allow-direct-references=true
+
+[project.scripts]
+web-search-summary-mcp = "web_search_summary_mcp.main:run_mcp"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+addopts = "-vv -s"
+markers = [
+    "not_on_ci: marks tests as not running on CI (deselect with '-m \"not not_on_ci\"')",
+]
+
+[dependency-groups]
+dev = [
+  "pytest",
+  "pytest-mock",
+  "pytest-asyncio",
+  "ruff"
+]
+lint = [
+  "ruff"
+]
+
+[build-system]
+requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+extend="../pyproject.toml"
+
+
+[tool.pyright]
+pythonVersion = "3.13"
+extraPaths = ["src/"]
+include = ["src/"]
+exclude = [
+    "**/archive/**",
+    "**/node_modules/**",
+    "**/__pycache__/**",
+    "**/.venv/**",
+    ".venv",
+    "**/.pytest_cache/**",
+    "**/.ruff_cache/**",
+    "**/uv/python/**",
+]
+reportMissingTypeStubs = false
+reportExplicitAny = false
+
+executionEnvironments = [
+    { root = "src/tests", reportPrivateUsage = false},
+]
+
+[tool.uv.sources]
+fastmcp = { git = "https://github.com/strawgate/fastmcp", rev = "sampling-fallback" }
