@@ -105,9 +105,9 @@ async def cli(
 
         _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.create_file))
         _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.replace_file))
-        _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.append_file))
         _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.delete_file))
 
+        _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.append_file_lines))
         _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.delete_file_lines))
         _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.replace_file_lines))
         _ = mcp.add_tool(tool=FunctionTool.from_function(fn=file_system.replace_file_lines_bulk))

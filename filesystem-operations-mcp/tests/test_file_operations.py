@@ -42,7 +42,6 @@ async def file_system(temp_dir: Path):
 
 # TESTS FOR FILE MODIFICATION OPERATIONS
 
-
 @pytest.mark.asyncio
 async def test_create_file(file_system: FileSystem):
     """Test creating a new file with content."""
@@ -103,7 +102,7 @@ async def test_append_file(file_system: FileSystem):
 
     # Append new content
     append_content = ["Appended line 1", "Appended line 2"]
-    result = await file_system.append_file(Path("append_test.txt"), append_content)
+    result = await file_system.append_file_lines(Path("append_test.txt"), append_content)
 
     assert result is True
 
@@ -177,6 +176,31 @@ async def test_replace_file_lines(file_system: FileSystem):
     async with aopen(file_path) as f:
         actual_content = await f.read()
         expected = "Line 1\nNew Line 2\nNew Line 3\nExtra Line\nLine 4\nLine 5"
+        assert actual_content == expected
+
+
+@pytest.mark.asyncio
+async def test_replace_file_lines_end(file_system: FileSystem):
+    """Test replacing specific lines in a file."""
+    # First create a file with multiple lines
+    content = ["Line 1", "Line 2", "Line 3", "Line 4", "Line 5"]
+    await file_system.create_file(Path("replace_lines_test.txt"), content)
+
+    # Replace lines 2-3 with new content
+    result = await file_system.replace_file_lines(
+        Path("replace_lines_test.txt"),
+        start_line_number=5,
+        current_lines=["Line 5"],
+        new_lines=["New Line 5"],
+    )
+
+    assert result is True
+
+    # Verify lines were replaced
+    file_path = file_system.path / "replace_lines_test.txt"
+    async with aopen(file_path) as f:
+        actual_content = await f.read()
+        expected = "Line 1\nLine 2\nLine 3\nLine 4\nNew Line 5"
         assert actual_content == expected
 
 

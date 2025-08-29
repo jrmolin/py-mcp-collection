@@ -124,8 +124,12 @@ def test_delete_patch(patch: FileDeletePatch, expected_lines: list[str]):
             FileReplacePatch(start_line_number=3, current_lines=["Line 3"], new_lines=["New Line 3", "Extra Line"]),
             ["Line 1", "Line 2", "New Line 3", "Extra Line", "Line 4", "Line 5"],
         ),
+        (
+            FileReplacePatch(start_line_number=5, current_lines=["Line 5"], new_lines=["New Line 5"]),
+            ["Line 1", "Line 2", "Line 3", "Line 4", "New Line 5"],
+        ),
     ],
-    ids=["replace_single_line", "replace_multiple_lines", "replace_with_more_lines"],
+    ids=["replace_single_line", "replace_multiple_lines", "replace_with_more_lines", "replace_at_end_of_file"],
 )
 def test_replace_patch(patch: FileReplacePatch, expected_lines: list[str]):
     result = patch.apply(SAMPLE_LINES)

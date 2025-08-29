@@ -15,6 +15,8 @@ logger = BASE_LOGGER.getChild("file_system")
 FilePaths = Annotated[list[Path], Field(description="A list of file paths relative to the root of the filesystem.")]
 FilePath = Annotated[Path, Field(description="The path of the file relative to the root of the filesystem.")]
 
+DirectoryPath = Annotated[Path, Field(description="The path of the directory relative to the root of the filesystem.")]
+
 FileContent = Annotated[list[str], Field(description="The lines of the file.")]
 
 FileAppendContent = Annotated[
@@ -69,6 +71,8 @@ class ReadFileLinesResponse(BaseModel):
 
 
 class FileSystemStructureResponse(BaseModel):
+    """The response to a request for the structure of the filesystem."""
+
     max_results: int = Field(description="The maximum number of results to return.", exclude=True)
     directories: list[str] = Field(description="The results of the filesystem structure.")
 
@@ -98,22 +102,27 @@ class FileSystem(DirectoryEntry):
         root_node = BaseNode(path=path)
         super().__init__(path=path, filesystem=root_node)
 
-    async def aget_root(self) -> AsyncIterator[FileEntry]:
-        """Gets the items in the root of the filesystem."""
-        async for file in self.afind_files(max_depth=1):
+    async def aget_root(self, depth: Depth = 1) -> AsyncIterator[FileEntry]:
+        """Gets the files in the root of the filesystem."""
+        async for file in self.afind_files(max_depth=depth):
             yield file
 
-    def get_structure(self, depth: Depth = 2, max_results: int = 200) -> FileSystemStructureResponse:
-        """Gets the structure of the filesystem up to the given depth. Structure includes directories only
+    def get_structure(self, path: DirectoryPath | None = None, depth: Depth = 2, max_results: int = 200) -> FileSystemStructureResponse:
+        """Gets the structure of a directory up to the given depth. Structure includes directories only
         and does not include files. Structure is gathered depth-first, up to the given depth. This means that
         any descendants deeper than the given depth will not be included in the results.
 
         Once the max results limit is reached, the response will include a flag indicating that the limit was reached.
+
+        If a path is provided, the structure will be returned for the directory at that path. If no path is provided,
+        the structure will be returned for the root of the filesystem.
         """
 
         accumulated_results: list[str] = []
 
-        for descendent in self.get_descendent_directories(root=self, depth=depth):
+        root = self.get_directory(path=path) if path else self
+
+        for descendent in self.get_descendent_directories(root=root, depth=depth):
             accumulated_results.append(descendent.relative_path_str)
 
             if len(accumulated_results) >= max_results:
@@ -158,7 +167,7 @@ class FileSystem(DirectoryEntry):
 
         return True
 
-    async def append_file(self, path: FilePath, content: FileAppendContent) -> bool:
+    async def append_file_lines(self, path: FilePath, content: FileAppendContent) -> bool:
         """Appends lines to the end of a file.
 
         Returns:
@@ -200,9 +209,9 @@ class FileSystem(DirectoryEntry):
     async def replace_file_lines(
         self,
         path: FilePath,
-        start_line_number: Annotated[int, FileReplacePatch.model_fields["start_line_number"]],
         current_lines: Annotated[list[str], FileReplacePatch.model_fields["current_lines"]],
         new_lines: Annotated[list[str], FileReplacePatch.model_fields["new_lines"]],
+        start_line_number: Annotated[int, FileReplacePatch.model_fields["start_line_number"]],
     ) -> bool:
         """Replaces lines in a file using find/replace style patch. It is recommended to read the file after applying
         patches to ensure the changes were applied correctly and that you have the updated content for the file.

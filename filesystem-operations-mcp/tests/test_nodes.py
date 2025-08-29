@@ -137,7 +137,7 @@ class TestDirectoryEntry:
         assert node.relative_path_str == "subdir/nested.txt"
 
     async def test_get_files(self, root_directory: DirectoryEntry):
-        files = [file async for file in root_directory.aget_files(["subdir/nested.txt", "subdir/script_with_hello.sh"])]
+        files = [file async for file in root_directory.aget_files([Path("subdir/nested.txt"), Path("subdir/script_with_hello.sh")])]
         assert len(files) == 2
         assert {f.name for f in files} == {"nested.txt", "script_with_hello.sh"}
 

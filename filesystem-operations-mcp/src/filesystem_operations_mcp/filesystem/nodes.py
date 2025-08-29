@@ -494,10 +494,24 @@ class FileEntryWithMatches(FileEntry):
 class DirectoryEntry(FileSystemEntry):
     """A directory entry in the virtual filesystem."""
 
-    async def aget_files(self, paths: list[str | Path]) -> AsyncIterator[FileEntry]:
+    async def aget_files(
+        self,
+        paths: Annotated[
+            list[Path],
+            Field(
+                description="The paths of the files to get. If the path provided is a directory, all files in that directory are returned."
+            ),
+        ],
+    ) -> AsyncIterator[FileEntry]:
         """Get a list of specific file entries by path."""
+
         for path in paths:
-            yield self.get_file(path)
+            resolved_path = self._validate_path(path)
+            if resolved_path.is_dir():
+                for file in self.get_directory_files(resolved_path):
+                    yield file
+            else:
+                yield self.get_file(resolved_path)
 
     def get_file(self, path: str | Path) -> FileEntry:
         """Get a specific file entry by path."""
@@ -508,6 +522,13 @@ class DirectoryEntry(FileSystemEntry):
         """Get a specific directory entry by path."""
 
         return DirectoryEntry(path=self.path / path, filesystem=self)
+
+    def get_directory_files(self, path: Path) -> Iterator[FileEntry]:
+        """Get a list of files in a directory."""
+        path = Path(path) if isinstance(path, str) else path
+        for file in path.iterdir():
+            if file.is_file():
+                yield self.get_file(file)
 
     def get_descendent_directories(self, root: "DirectoryEntry", depth: int) -> Generator["DirectoryEntry"]:
         """Get a list of child directory entries by path."""

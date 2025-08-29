@@ -1,4 +1,3 @@
-import time
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, ClassVar, Literal, get_args, override
@@ -180,13 +179,7 @@ def prune_branches(last_interesting_node_view: ViewNode, node: Node, interesting
 
 
 def summarize_code(language_name: str, code: str) -> dict[str, Any] | str | None:
-    timers: dict[str, float] = {
-        "start": time.time(),
-    }
-
     ensure_initialized()
-
-    timers["ensure_initialized"] = time.time()
 
     if language_name not in tag_queries:
         return None
@@ -194,16 +187,10 @@ def summarize_code(language_name: str, code: str) -> dict[str, Any] | str | None
     # Get the language and parser
     language: Language = get_language(language_name=language_name)
 
-    timers["get_language"] = time.time()
-
     parser: Parser = get_language_parser(language=language)
-
-    timers["get_language_parser"] = time.time()
 
     # Parse the code
     tree: Tree = parser.parse(code.encode())
-
-    timers["parse"] = time.time()
 
     # Identify the tags
     tag_query: Query = Query(language, tag_queries[language_name])
@@ -217,8 +204,6 @@ def summarize_code(language_name: str, code: str) -> dict[str, Any] | str | None
     #     return None
 
     # captures: dict[str, list[Node]] = tag_query.captures(tree.root_node)
-
-    timers["tag_query_captures"] = time.time()
 
     interesting_captures = {
         key: captures[key]
@@ -236,35 +221,13 @@ def summarize_code(language_name: str, code: str) -> dict[str, Any] | str | None
 
     doc_nodes = [node for nodes in doc_captures.values() for node in nodes]
 
-    timers["interesting_nodes"] = time.time()
-
     summary_model_view = new_pruned_tree(
         node=tree.root_node,
         interesting_nodes=interesting_nodes,
         doc_nodes=doc_nodes,
     )
 
-    timers["new_pruned_tree"] = time.time()
-
     if summary_model_view is None:  # pyright: ignore[reportUnnecessaryComparison]
         return None
 
-    dumped_model = summary_model_view.model_dump(exclude_none=True, exclude_defaults=True, mode="json")
-
-    timers["dumped_model"] = time.time()
-
-    times: dict[str, float] = {
-        "ensure_initialized": timers["ensure_initialized"] - timers["start"],
-        "get_language": timers["get_language"] - timers["ensure_initialized"],
-        "get_language_parser": timers["get_language_parser"] - timers["get_language"],
-        "parse": timers["parse"] - timers["get_language_parser"],
-        "tag_query_captures": timers["tag_query_captures"] - timers["parse"],
-        "interesting_nodes": timers["interesting_nodes"] - timers["tag_query_captures"],
-        "new_pruned_tree": timers["new_pruned_tree"] - timers["interesting_nodes"],
-        "dumped_model": timers["dumped_model"] - timers["new_pruned_tree"],
-        "total": timers["dumped_model"] - timers["start"],
-    }
-
-    logger.info(f"Summarize code took: {times}")
-
-    return dumped_model
+    return summary_model_view.model_dump(exclude_none=True, exclude_defaults=True, mode="json")
