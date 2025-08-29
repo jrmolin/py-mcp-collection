@@ -4,13 +4,6 @@ from pathlib import Path
 import pytest
 
 from filesystem_operations_mcp.filesystem.file_system import FileSystem
-from filesystem_operations_mcp.filesystem.nodes import (
-    BaseNode,
-    DirectoryEntry,
-    FileEntry,
-    FileEntryTypeEnum,
-    FileEntryWithMatches,
-)
 from tests.conftest import create_test_structure
 
 
@@ -35,6 +28,7 @@ async def test_get_structure(filesystem: FileSystem):
 async def test_get_structure_with_path(filesystem: FileSystem):
     structure = filesystem.get_structure(path=Path("subdir"))
     assert structure.directories == ["."]
+
 
 async def test_get_files(filesystem: FileSystem):
     files = [file async for file in filesystem.aget_files([Path("subdir/nested.txt"), Path("subdir/script_with_hello.sh")])]
