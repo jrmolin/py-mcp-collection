@@ -3,6 +3,7 @@ from textwrap import dedent
 from typing import Any
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
+from pydantic.aliases import AliasChoices
 
 
 def dedent_set(fragments: set[str]) -> set[str]:
@@ -208,7 +209,7 @@ class PullRequest(BaseModel):
 class TimelineItem(BaseModel):
     actor: Actor
     created_at: datetime = Field(validation_alias="createdAt")
-    source: Issue | PullRequest
+    source: Issue | PullRequest = Field(validation_alias=AliasChoices("source", "subject"))
 
     @field_serializer("created_at")
     def serialize_datetime(self, value: datetime | None) -> str | None:

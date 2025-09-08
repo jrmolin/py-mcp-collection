@@ -1,9 +1,11 @@
+from collections.abc import Sequence
 from enum import Enum
 from textwrap import dedent
 from typing import Annotated, Any, Literal, Self
 
 import yaml
 from fastmcp import Context
+from fastmcp.utilities.logging import get_logger
 from githubkit.github import GitHub
 from mcp.types import ContentBlock, SamplingMessage, TextContent
 from pydantic import BaseModel, Field
@@ -11,8 +13,10 @@ from pydantic import BaseModel, Field
 from github_research_mcp.clients.github import get_github_client
 from github_research_mcp.models import Comment, Issue, PullRequest
 from github_research_mcp.models.graphql.queries import GqlGetIssuesWithDetails, GqlSearchIssuesWithDetails
-from github_research_mcp.models.query.base import AllKeywordsQualifier, AnyKeywordsQualifier, OwnerQualifier, RepoQualifier
+from github_research_mcp.models.query.base import AllKeywordsQualifier, AnyKeywordsQualifier, OwnerQualifier, RepoQualifier, StateQualifier
 from github_research_mcp.models.query.issue import IssueSearchQuery
+
+logger = get_logger(__name__)
 
 OWNER = Annotated[str, "The owner of the repository."]
 REPO = Annotated[str, "The name of the repository."]
@@ -59,6 +63,21 @@ DEFAULT_COMMENT_LIMIT = 50
 DEFAULT_RELATED_ITEMS_LIMIT = 20
 DEFAULT_ISSUES_LIMIT = 100
 
+DEFAULT_SEARCH_STATE = "all"
+
+
+def estimate_tokens(text: str) -> int:
+    """Estimate the number of tokens for a given text."""
+    return len(text) // 4
+
+
+def estimate_model_tokens(basemodel: BaseModel | Sequence[BaseModel]) -> int:
+    """Estimate the number of tokens for a given base model."""
+    if isinstance(basemodel, Sequence):
+        return sum(estimate_model_tokens(item) for item in basemodel)
+
+    return estimate_tokens(basemodel.model_dump_json())
+
 
 class IssueWithDetails(BaseModel):
     issue: Issue
@@ -67,10 +86,11 @@ class IssueWithDetails(BaseModel):
 
     @classmethod
     def from_gql_get_issues_with_details(cls, gql_get_issues_with_details: GqlGetIssuesWithDetails) -> Self:
+        closed_by_pull_requests: list[PullRequest] = gql_get_issues_with_details.repository.issue.closed_by_pull_requests.nodes
         return cls(
             issue=gql_get_issues_with_details.repository.issue,
             comments=gql_get_issues_with_details.repository.issue.comments.nodes,
-            related=[node.source for node in gql_get_issues_with_details.repository.issue.timeline_items.nodes],
+            related=[node.source for node in gql_get_issues_with_details.repository.issue.timeline_items.nodes] + closed_by_pull_requests,
         )
 
     @classmethod
@@ -129,7 +149,13 @@ class IssuesServer:
 
         gql_get_issues_with_details = GqlGetIssuesWithDetails.model_validate(graphql_response)
 
-        return IssueWithDetails.from_gql_get_issues_with_details(gql_get_issues_with_details=gql_get_issues_with_details)
+        issue_with_details: IssueWithDetails = IssueWithDetails.from_gql_get_issues_with_details(
+            gql_get_issues_with_details=gql_get_issues_with_details
+        )
+
+        logger.info(f"Research issue response for {owner}/{repo}#{issue_number} is {estimate_model_tokens(issue_with_details)} tokens.")
+
+        return issue_with_details
 
     async def summarize_issue(
         self,
@@ -163,7 +189,8 @@ class IssuesServer:
         2. A description of the reported issue
         3. Additional information/corrections/findings related to the reported issue that occurred in the comments
         4. The resolution (or lack thereof) of the reported issue whether it was solved with a code change, documentation,
-            closed as won't fix, closed as a duplicate, closed as a false positive, or closed as a false negative, etc.
+            closed as won't fix, closed as a duplicate, closed as a false positive, or closed as a false negative, etc. Pay
+            careful attention to the state of any related items before making any conclusions.
 
         That being said, what the user asks for in the `focus` should be prioritized over the default summary.
         """
@@ -211,19 +238,24 @@ class IssuesServer:
             msg = "The sampling call failed to generate a valid text summary of the issue."
             raise TypeError(msg)
 
-        return IssueSummary(
+        issue_summary: IssueSummary = IssueSummary(
             owner=owner,
             repo=repo,
             issue_number=issue_number,
             summary=summary.text,
         )
 
+        logger.info(f"Summary response for {owner}/{repo}#{issue_number} is {estimate_model_tokens(issue_summary)} tokens.")
+
+        return issue_summary
+
     async def research_issues_by_keywords(
         self,
         owner: OWNER,
         repo: REPO,
         keywords: KEYWORDS,
-        require_all_keywords: REQUIRE_ALL_KEYWORDS = True,
+        require_all_keywords: REQUIRE_ALL_KEYWORDS = False,
+        state: STATE = DEFAULT_SEARCH_STATE,
         limit_issues: LIMIT_ISSUES = DEFAULT_ISSUES_LIMIT,
         limit_comments: LIMIT_COMMENTS = DEFAULT_COMMENT_LIMIT,
         limit_related_items: LIMIT_RELATED_ITEMS = DEFAULT_RELATED_ITEMS_LIMIT,
@@ -233,8 +265,11 @@ class IssuesServer:
         search_query: IssueSearchQuery = IssueSearchQuery.from_repo_or_owner(owner=owner, repo=repo)
 
         search_query.add_qualifier(
-            qualifier=AnyKeywordsQualifier(keywords=keywords) if require_all_keywords else AllKeywordsQualifier(keywords=keywords)
+            qualifier=AllKeywordsQualifier(keywords=keywords) if require_all_keywords else AnyKeywordsQualifier(keywords=keywords)
         )
+
+        if state != "all":
+            search_query.add_qualifier(StateQualifier(state=state))
 
         graphql_response: dict[str, Any] = await self._client.async_graphql(
             query=GqlSearchIssuesWithDetails.graphql_query(),
@@ -245,7 +280,13 @@ class IssuesServer:
 
         gql_search_issues_with_details = GqlSearchIssuesWithDetails.model_validate(graphql_response)
 
-        return IssueWithDetails.from_gql_search_issues_with_details(gql_search_issues_with_details=gql_search_issues_with_details)
+        issue_with_details: list[IssueWithDetails] = IssueWithDetails.from_gql_search_issues_with_details(
+            gql_search_issues_with_details=gql_search_issues_with_details
+        )
+
+        logger.info(f"Research issues by keywords response for {owner}/{repo} is {estimate_model_tokens(issue_with_details)} tokens.")
+
+        return issue_with_details
 
     async def summarize_issues_by_keywords(
         self,
@@ -255,7 +296,7 @@ class IssuesServer:
         keywords: KEYWORDS,
         summary_focus: SUMMARY_FOCUS,
         summary_length: SUMMARY_LENGTH = Length.LONG,
-        require_all_keywords: REQUIRE_ALL_KEYWORDS = True,
+        require_all_keywords: REQUIRE_ALL_KEYWORDS = False,
         limit_issues: LIMIT_ISSUES = DEFAULT_ISSUES_LIMIT,
         limit_comments: LIMIT_COMMENTS = DEFAULT_COMMENT_LIMIT,
         limit_related_items: LIMIT_RELATED_ITEMS = DEFAULT_RELATED_ITEMS_LIMIT,
@@ -290,9 +331,13 @@ class IssuesServer:
 
         For related issues, you should include:
         1. Information about the issue including its title, state, age, and other relevant information
-        2. A brief description of the reported issue and why you believe it relates to the user's focus.
-        3. The specific details from the issue that you believe are related to the user's focus. Ideally enough information that
-            the user should not have to look at the issue itself.
+        2. All important details from the issue, related comments, or related Pull Requests that relate to the user's focus.
+            Ideally enough information that the user should not have to look at the issue itself. This is your chance to provide
+            the key context the use is looking for. If it's not extremely obvious that it relates to the user's focus, you should
+            provide a brief explanation of why you believe it relates to the user's focus.
+        3. The resolution (or lack thereof) of the reported issue whether it was solved with a code change, documentation,
+            closed as won't fix, closed as a duplicate, closed as a false positive, or closed as a false negative, etc. Pay
+            careful attention to the state of any related items before making any conclusions.
         """
 
         user_prompt = f"""
@@ -318,4 +363,8 @@ class IssuesServer:
             msg = "The sampling call failed to generate a valid text summary of the issue search results."
             raise TypeError(msg)
 
-        return IssueSearchSummary(owner=owner, repo=repo, keywords=keywords, summary=summary.text)
+        issue_search_summary: IssueSearchSummary = IssueSearchSummary(owner=owner, repo=repo, keywords=keywords, summary=summary.text)
+
+        logger.info(f"Summarize issues by keywords response for {owner}/{repo} is {estimate_model_tokens(issue_search_summary)} tokens.")
+
+        return issue_search_summary

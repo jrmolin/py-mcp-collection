@@ -3,12 +3,13 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from github_research_mcp.models.graphql.fragments import Comment, Issue, Nodes, TimelineItem
+from github_research_mcp.models.graphql.fragments import Comment, Issue, Nodes, PullRequest, TimelineItem
 
 
 class GqlIssueWithDetails(Issue):
     comments: Nodes[Comment]
-    timeline_items: Nodes[TimelineItem] = Field(alias="timelineItems")
+    timeline_items: Nodes[TimelineItem] = Field(validation_alias="timelineItems")
+    closed_by_pull_requests: Nodes[PullRequest] = Field(validation_alias="closedByPullRequestsReferences")
 
     @staticmethod
     def graphql_fragments() -> set[str]:
@@ -51,20 +52,39 @@ class GqlGetIssuesWithDetails(BaseModel):
                                 ...gqlComment
                             }
                         }
-                        timelineItems(itemTypes: [CROSS_REFERENCED_EVENT], first: $limit_events) {
+                        closedByPullRequestsReferences(first: 5) {
+                            nodes {
+                                ...gqlPullRequest
+                            }
+                        }
+                        timelineItems( itemTypes: [CROSS_REFERENCED_EVENT, REFERENCED_EVENT], first: $limit_events) {
                             nodes {
                                 ... on CrossReferencedEvent {
                                     actor {
-                                    ...gqlActor
+                                        ...gqlActor
                                     }
                                     createdAt
                                     source {
-                                    ... on Issue {
-                                        ...gqlIssue
+                                        ... on Issue {
+                                            ...gqlIssue
+                                        }
+                                        ... on PullRequest {
+                                            ...gqlPullRequest
+                                        }
                                     }
-                                    ... on PullRequest {
-                                        ...gqlPullRequest
+                                }
+                                ... on ReferencedEvent {
+                                    actor {
+                                        ...gqlActor
                                     }
+                                    createdAt
+                                    subject {
+                                        ... on Issue {
+                                            ...gqlIssue
+                                    }
+                                        ... on PullRequest {
+                                            ...gqlPullRequest
+                                        }
                                     }
                                 }
                             }
@@ -103,6 +123,11 @@ class GqlSearchIssuesWithDetails(BaseModel):
                             comments(first: $limit_comments) {
                                 nodes {
                                     ...gqlComment
+                                }
+                            }
+                            closedByPullRequestsReferences(first: 5) {
+                                nodes {
+                                    ...gqlPullRequest
                                 }
                             }
                             timelineItems(itemTypes: [CROSS_REFERENCED_EVENT], first: $limit_events) {
