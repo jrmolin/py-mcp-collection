@@ -6,9 +6,13 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'local-references-mcp/**'
   pull_request:
     branches:
       - main
+    paths:
+      - 'local-references-mcp/**'
   workflow_dispatch:
 
 jobs:
