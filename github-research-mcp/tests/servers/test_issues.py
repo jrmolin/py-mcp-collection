@@ -1,10 +1,10 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from dirty_equals import IsStr
 from fastmcp import FastMCP
-from fastmcp.client import Client, FastMCPTransport
-from fastmcp.client.client import CallToolResult
+from fastmcp.client import Client
+from fastmcp.client.transports import FastMCPTransport
 from fastmcp.experimental.sampling.handlers.openai import OpenAISamplingHandler
 from fastmcp.tools import Tool
 from inline_snapshot import snapshot
@@ -12,6 +12,9 @@ from openai import OpenAI
 
 from github_research_mcp.clients.github import get_github_client
 from github_research_mcp.servers.issues import IssuesServer, IssueWithDetails
+
+if TYPE_CHECKING:
+    from fastmcp.client.client import CallToolResult
 
 
 def test_issues_server():
@@ -148,7 +151,7 @@ def fastmcp(openai_client: OpenAI):
 async def test_summarize_issue(issues_server: IssuesServer, fastmcp: FastMCP):
     fastmcp.add_tool(Tool.from_function(issues_server.summarize_issue))
 
-    async with Client(fastmcp) as client:
+    async with Client[FastMCPTransport](fastmcp) as client:
         summary = await client.call_tool(
             "summarize_issue",
             arguments={"owner": "strawgate", "repo": "github-issues-e2e-test", "issue_number": 1, "summary_focus": "the issue"},
@@ -178,6 +181,25 @@ async def test_summarize_search_issues(issues_server: IssuesServer, fastmcp: Fas
             "owner": "strawgate",
             "repo": "github-issues-e2e-test",
             "keywords": ["issue"],
+            "summary": IsStr(),
+        }
+    )
+
+
+async def test_summarize_search_issues_fastmcp(issues_server: IssuesServer, fastmcp: FastMCP):
+    fastmcp.add_tool(tool=Tool.from_function(fn=issues_server.summarize_issues_by_keywords))
+
+    async with Client[FastMCPTransport](transport=fastmcp) as fastmcp_client:
+        summary: CallToolResult = await fastmcp_client.call_tool(
+            "summarize_issues_by_keywords",
+            arguments={"owner": "jlowin", "repo": "fastmcp", "keywords": ["audiocontent"], "summary_focus": "Issues with audio"},
+        )
+
+    assert summary.structured_content == snapshot(
+        {
+            "owner": "jlowin",
+            "repo": "fastmcp",
+            "keywords": ["audiocontent"],
             "summary": IsStr(),
         }
     )

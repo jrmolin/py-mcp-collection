@@ -32,27 +32,28 @@ def get_sampling_handler():
     )
 
 
+disable_sampling = os.getenv("DISABLE_SAMPLING")
+
+mcp = FastMCP[None](
+    name="GitHub Research MCP",
+    sampling_handler=None if disable_sampling else get_sampling_handler(),
+)
+
+issues_server: IssuesServer = IssuesServer()
+
+mcp.add_tool(tool=FunctionTool.from_function(fn=issues_server.research_issue))
+mcp.add_tool(tool=FunctionTool.from_function(fn=issues_server.research_issues_by_keywords))
+
+if not disable_sampling:
+    mcp.add_tool(tool=FunctionTool.from_function(fn=issues_server.summarize_issue))
+    mcp.add_tool(tool=FunctionTool.from_function(fn=issues_server.summarize_issues_by_keywords))
+
+
 @click.command()
-@click.option("--no-sampling", type=bool, default=False, help="Whether to disable tools that require sampling")
 @click.option(
     "--mcp-transport", type=click.Choice(["stdio", "streamable-http"]), default="stdio", help="The transport to run the MCP server on"
 )
-async def cli(no_sampling: bool, mcp_transport: Literal["stdio", "streamable-http"]):
-    sampling: bool = not no_sampling
-
-    mcp: FastMCP[None] = FastMCP[None](
-        name="GitHub Research MCP",
-        sampling_handler=get_sampling_handler() if sampling else None,
-    )
-
-    issues_server = IssuesServer()
-    mcp.add_tool(tool=FunctionTool.from_function(fn=issues_server.research_issue))
-    mcp.add_tool(tool=FunctionTool.from_function(fn=issues_server.research_issues_by_keywords))
-
-    if sampling:
-        mcp.add_tool(tool=FunctionTool.from_function(fn=issues_server.summarize_issue))
-        mcp.add_tool(tool=FunctionTool.from_function(fn=issues_server.summarize_issues_by_keywords))
-
+async def cli(mcp_transport: Literal["stdio", "streamable-http"]):
     await mcp.run_async(transport=mcp_transport)
 
 

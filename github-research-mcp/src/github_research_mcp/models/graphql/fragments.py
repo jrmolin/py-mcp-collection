@@ -9,6 +9,15 @@ def dedent_set(fragments: set[str]) -> set[str]:
     return {dedent(text=fragment) for fragment in fragments}
 
 
+def extract_nodes(value: Any) -> list[Any] | Any:
+    if isinstance(value, dict):
+        nodes = value.get("nodes")
+        if isinstance(nodes, list):
+            return nodes
+
+    return value
+
+
 class Nodes[T](BaseModel):
     nodes: list[T]
 
@@ -91,10 +100,7 @@ class Issue(BaseModel):
     @field_validator("labels", "assignees", mode="before")
     @classmethod
     def flatten_labels_and_assignees(cls, value: Any) -> Any:
-        if isinstance(value, dict) and (nodes := value.get("nodes")):
-            return nodes
-
-        return value
+        return extract_nodes(value)
 
     @field_serializer("created_at", "updated_at", "closed_at")
     def serialize_datetime(self, value: datetime | None) -> str | None:
@@ -156,10 +162,7 @@ class PullRequest(BaseModel):
     @field_validator("labels", "assignees", mode="before")
     @classmethod
     def flatten_labels_and_assignees(cls, value: Any) -> Any:
-        if isinstance(value, dict) and (nodes := value.get("nodes")):
-            return nodes
-
-        return value
+        return extract_nodes(value)
 
     @field_serializer("created_at", "updated_at", "closed_at", "merged_at")
     def serialize_datetime(self, value: datetime | None) -> str | None:

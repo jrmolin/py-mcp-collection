@@ -243,9 +243,9 @@ class IssuesServer:
             ),
         )
 
-        return IssueWithDetails.from_gql_search_issues_with_details(
-            gql_search_issues_with_details=GqlSearchIssuesWithDetails.model_validate(graphql_response)
-        )
+        gql_search_issues_with_details = GqlSearchIssuesWithDetails.model_validate(graphql_response)
+
+        return IssueWithDetails.from_gql_search_issues_with_details(gql_search_issues_with_details=gql_search_issues_with_details)
 
     async def summarize_issues_by_keywords(
         self,
