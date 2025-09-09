@@ -19,6 +19,30 @@ def extract_nodes(value: Any) -> list[Any] | Any:
     return value
 
 
+MAX_BODY_LENGTH = 2000
+MAX_COMMENT_BODY_LENGTH = 1000
+
+TRUNCATION_MARKER = "... [the middle portion has been truncated, retrieve object directly to get the full body]"
+
+
+def trim_body(body: str, max_length: int = MAX_BODY_LENGTH) -> str:
+    """If the body is longer than the max length, we take the first max_length / 2 characters and the last max_length / 2 characters."""
+
+    if len(body) > max_length:
+        first_half = body[: max_length // 2]
+        middle_truncated_marker = TRUNCATION_MARKER + " ... "
+        last_half = body[-max_length // 2 :]
+        end_truncated_marker = TRUNCATION_MARKER
+        return first_half + "\n\n" + middle_truncated_marker + "\n\n" + last_half + "\n\n" + end_truncated_marker
+
+    return body.strip()
+
+
+def trim_comment_body(body: str, max_length: int = MAX_COMMENT_BODY_LENGTH) -> str:
+    """If the body is longer than the max length, we take the first max_length / 2 characters and the last max_length / 2 characters."""
+    return trim_body(body, max_length)
+
+
 class Nodes[T](BaseModel):
     nodes: list[T]
 
@@ -51,6 +75,10 @@ class Comment(BaseModel):
         if value is None:
             return None
         return value.isoformat()
+
+    @field_serializer("body")
+    def serialize_body(self, value: str) -> str:
+        return trim_comment_body(value)
 
     @staticmethod
     def graphql_fragments() -> set[str]:
@@ -97,6 +125,10 @@ class Issue(BaseModel):
     labels: list[Label]
 
     assignees: list[Actor]
+
+    @field_serializer("body")
+    def serialize_body(self, value: str) -> str:
+        return trim_body(value)
 
     @field_validator("labels", "assignees", mode="before")
     @classmethod
@@ -160,6 +192,10 @@ class PullRequest(BaseModel):
 
     assignees: list[Actor]
 
+    @field_serializer("body")
+    def serialize_body(self, value: str) -> str:
+        return trim_body(value)
+
     @field_validator("labels", "assignees", mode="before")
     @classmethod
     def flatten_labels_and_assignees(cls, value: Any) -> Any:
@@ -216,6 +252,16 @@ class TimelineItem(BaseModel):
         if value is None:
             return None
         return value.isoformat()
+
+    @staticmethod
+    def graphql_fragments() -> set[str]:
+        return {*Actor.graphql_fragments(), *Issue.graphql_fragments(), *PullRequest.graphql_fragments()}
+
+class ChangedFile(BaseModel):
+    path: str
+    additions: int
+    deletions: int
+    change_type: str = Field(validation_alias="changeType")
 
     @staticmethod
     def graphql_fragments() -> set[str]:

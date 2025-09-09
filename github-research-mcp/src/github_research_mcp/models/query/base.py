@@ -75,8 +75,19 @@ class AllKeywordsQualifier(BaseQualifier, frozen=True):
         return " AND ".join([f'"{keyword}"' for keyword in sorted_keywords])
 
 
+MAX_KEYWORDS_ANY_QUALIFIER = 6
+
+
 class AnyKeywordsQualifier(BaseQualifier, frozen=True):
-    keywords: set[str] = Field(description="The keywords to search for.")
+    keywords: set[str] = Field(description="The (up-to 6) keywords to search for.", max_length=MAX_KEYWORDS_ANY_QUALIFIER)
+
+    # @field_validator("keywords")
+    # @classmethod
+    # def validate_keywords(cls, v: set[str]) -> set[str]:
+    #     if len(v) >= MAX_KEYWORDS_ANY_QUALIFIER:
+    #         msg = "You may only provide up to 6 keywords."
+    #         raise ValueError(msg)
+    #     return v
 
     def to_query(self, nested: bool = False) -> str:  # noqa: ARG002
         sorted_keywords = sorted(self.keywords)

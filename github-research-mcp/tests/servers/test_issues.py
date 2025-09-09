@@ -1,3 +1,4 @@
+import json
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -20,6 +21,13 @@ if TYPE_CHECKING:
 def test_issues_server():
     issues_server = IssuesServer(client=get_github_client())
     assert issues_server is not None
+
+
+def get_structured_content_length(structured_content: dict[str, Any] | None) -> int:
+    if structured_content is None:
+        return 0
+
+    return len(json.dumps(structured_content))
 
 
 @pytest.fixture
@@ -63,7 +71,7 @@ async def test_research_issue(issues_server: IssuesServer):
                     "body": """\
 it has a description\r
 \r
-it has a related issue #1 \
+it has a related issue #1\
 """,
                     "state": "OPEN",
                     "merged": False,
@@ -83,109 +91,169 @@ it has a related issue #1 \
 
 @pytest.mark.asyncio
 async def test_research_issue_fastmcp(issues_server: IssuesServer):
-    issue: IssueWithDetails = await issues_server.research_issue(owner="jlowin", repo="fastmcp", issue_number=1602)
+    issue: IssueWithDetails = await issues_server.research_issue(owner="jlowin", repo="fastmcp", issue_number=815)
 
     assert issue.model_dump() == snapshot(
         {
             "issue": {
-                "number": 1602,
-                "title": "Introduce inline snapshots",
+                "number": 815,
+                "title": "support expand the fields contained in a pydandic model in the parameters of a tool",
                 "body": """\
-### Enhancement
+### Enhancement Description
 
-We should introduce the inline snapshots plugin to allow thorough capture and testing of more complex data structures like to input and output schemas\
+https://fastapi.tiangolo.com/tutorial/body-multiple-params/?h=embed#embed-a-single-body-parameter
+
+When using fastapi, we can use the embed field to decide whether to embed all fields of the pydandic model object.
+like this:
+
+```python
+from typing import Annotated
+
+from fastapi import Body, FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+class Item(BaseModel):
+    name: str
+    description: str | None = None
+    price: float
+    tax: float | None = None
+
+
+@app.put("/items/{item_id}")
+async def update_item(item_id: int, item: Annotated[Item, Body(embed=True)]):
+    results = {"item_id": item_id, "item": item}
+    return results
+```
+
+if embed is false, then we can use `update_item(name, description, price, tax) ` but not `update_item(item_object)`
+
+I want the following effect:
+```python
+from fasctmcp import Body
+...
+class Item(BaseModel):
+    name: str
+    description: str | None = None
+    price: float
+    tax: float | None = None
+
+@mcp.tool(
+  name="update_item"
+)
+async def update_item(item: Annotated[Item, Body(embed=False)]):
+    results = {"item": item}
+    return results
+```
+then the json schema exclude item but include name, description, price and tax
+
+### Use Case
+
+_No response_
+
+### Proposed Implementation
+
+```Python
+
+```\
 """,
                 "state": "CLOSED",
                 "state_reason": "COMPLETED",
-                "author": {"user_type": "User", "login": "strawgate"},
-                "author_association": "COLLABORATOR",
-                "created_at": "2025-08-24T13:48:06+00:00",
-                "updated_at": "2025-08-25T18:53:39+00:00",
+                "author": {"user_type": "User", "login": "lichenglin020"},
+                "author_association": "NONE",
+                "created_at": "2025-06-12T06:48:46+00:00",
+                "updated_at": "2025-06-12T15:23:10+00:00",
                 "closed_at": None,
-                "labels": [{"name": "enhancement"}, {"name": "tests"}],
+                "labels": [{"name": "enhancement"}],
                 "assignees": [],
             },
             "comments": [
                 {
-                    "body": """\
-/marvin please review https://15r10nk.github.io/inline-snapshot/latest/ and add the inline snapshot dependency and then go through the tests and identify good candidates for inline snapshots and add `== snapshot()` to them -- I'll populate the snapshots for you.
-
-Also comment out code that can be removed once the snapshot is present\
-""",
-                    "author": {"user_type": "User", "login": "strawgate"},
-                    "author_association": "COLLABORATOR",
-                    "created_at": "2025-08-24T14:32:15+00:00",
-                    "updated_at": "2025-08-24T14:32:15+00:00",
-                },
-                {
-                    "body": """\
-**Claude finished @strawgate's task** —— [View job](https://github.com/jlowin/fastmcp/actions/runs/17189970390) • [`claude/issue-1602-20250824-1432`](https://github.com/jlowin/fastmcp/tree/claude/issue-1602-20250824-1432) • [Create PR ➔](https://github.com/jlowin/fastmcp/compare/main...claude/issue-1602-20250824-1432?quick_pull=1&title=feat%3A%20introduce%20inline%20snapshots%20for%20testing%20complex%20data%20structures&body=Introduces%20inline%20snapshot%20testing%20capability%20as%20requested%20in%20issue%20%231602.%0A%0A%23%23%20Changes%0A-%20Add%20inline-snapshot%20dependency%20to%20dev%20requirements%0A-%20Implement%20snapshot%20testing%20in%20key%20areas%3A%0A%20%20-%20Tool%20output%20schema%20tests%20for%20complex%20wrapping%20structures%0A%20%20-%20OpenAPI%20reference%20resolution%20tests%20for%20schema%20processing%0A%20%20-%20JSON%20schema%20compression%20tests%20for%20%24defs%20handling%0A-%20Comment%20out%20redundant%20assertion%20code%20replaced%20by%20snapshots%0A%0AThis%20enables%20thorough%20capture%20and%20testing%20of%20complex%20schemas%20like%20tool%20input/output%20and%20OpenAPI%20specifications.%0A%0AGenerated%20with%20%5BClaude%20Code%5D%28https%3A//claude.ai/code%29)
-
----
-### ✅ Inline snapshots successfully introduced
-
-#### Task List
-- [x] Review inline-snapshot documentation
-- [x] Set up development environment (uv sync)
-- [x] Add inline-snapshot dependency to project
-- [x] Analyze existing tests for good snapshot candidates
-- [x] Implement snapshot assertions in identified tests
-- [x] Comment out redundant code
-- [x] Run validation workflow (pre-commit, pytest)
-- [x] Commit and push changes
-
-#### Implementation Complete ✅
-
-Successfully introduced inline snapshot testing for complex data structures in FastMCP:
-
-**🔧 Changes Made:**
-- ✅ Added `inline-snapshot>=0.15.0` to dev dependencies
-- ✅ Updated **3 key test files** with snapshots for complex schema testing:
-  1. **Tool Schema Tests** - Complex output schema wrapping structures
-  2. **OpenAPI Processing** - Schema reference resolution and transformation
-  3. **JSON Schema Compression** - Complex $defs and reference handling
-- ✅ Commented out redundant assertion code as requested
-- ✅ All tests pass with snapshot validation
-- ✅ Pre-commit hooks validate successfully
-
-**🎯 Key Benefits Achieved:**
-- **Better maintainability** for complex nested data structure tests
-- **Easier updates** using `--inline-snapshot=fix` when schemas evolve
-- **Improved readability** focusing on test behavior vs verbose assertions
-- **Perfect fit** for testing tool input/output schemas and OpenAPI specifications
-
-The inline snapshots are now ready for use. You can populate additional snapshots by running tests with `--inline-snapshot=create`.
-
-
-
----\
-""",
-                    "author": {"user_type": "Bot", "login": "marvin-context-protocol"},
-                    "author_association": "CONTRIBUTOR",
-                    "created_at": "2025-08-24T14:32:32+00:00",
-                    "updated_at": "2025-08-24T14:42:11+00:00",
-                },
-            ],
-            "related": [
-                {
-                    "number": 1602,
-                    "title": "Introduce inline snapshots",
-                    "body": """\
-### Enhancement
-
-We should introduce the inline snapshots plugin to allow thorough capture and testing of more complex data structures like to input and output schemas\
-""",
-                    "state": "CLOSED",
-                    "state_reason": "COMPLETED",
-                    "author": {"user_type": "User", "login": "strawgate"},
-                    "author_association": "COLLABORATOR",
-                    "created_at": "2025-08-24T13:48:06+00:00",
-                    "updated_at": "2025-08-25T18:53:39+00:00",
-                    "closed_at": None,
-                    "labels": [{"name": "enhancement"}, {"name": "tests"}],
-                    "assignees": [],
+                    "body": "Personally I think FastAPI's embed behavior is bad practice because it means adding a second body parameter to your function signature is a breaking change. I think the current implementation is very clear; whatever is in your function signature is exposed to the LLM, and you can use `exclude_args` and `tool.from_tool` to make changes to it deterministically. I don't think the framework should have an opinion on how to transform those args in unpredictable ways, and as a user you can deconstruct and construct the `Item` object yourself from any combination of fields.",
+                    "author": {"user_type": "User", "login": "jlowin"},
+                    "author_association": "OWNER",
+                    "created_at": "2025-06-12T15:23:10+00:00",
+                    "updated_at": "2025-06-12T15:23:10+00:00",
                 }
             ],
+            "related": [{'number':1784 ,'title':'Support unpacking Pydantic models into top-level tool parameters','body':"""\
+### Enhancement
+
+Currently, when using a Pydantic model as a single argument in a tool, the generated tool schema nests the entire model under that argument name. For example:
+
+```python
+class Params(BaseModel):
+    image_url: str
+    resize: bool = False
+    width: int = 800
+    format: Literal["jpeg", "png", "webp"] = "jpeg"
+
+@mcp.tool
+def process_image(params: Params) -> dict:
+    ...
+```
+
+Generates a JSON schema like:
+
+```json
+{
+  "properties": {
+    "params": {
+      "type": "object",
+      "properties": {
+        "image_url": {"type": "string"},
+        "resize": {"type": "boolean"},
+        "width": {"type": "integer"},
+        "format": {"enum": ["jpeg", "png", "webp"]}
+      }
+    }
+  }
+}
+```
+
+This means all model fields are wrapped under `params`, which is not ideal for LLM-facing schemas.
+Instead, I want the ability to **unpack** the model so that its fields are exposed as **top-level tool parameters**, like this:
+
+```json
+{
+  "properties": {
+    "image_url": {"type": "strin
+
+... [the middle portion has been truncated, retrieve object directly to get the full body] ... \n\
+
+ack[Params]) -> dict:
+    ...
+```
+
+Or via annotation:
+
+```python
+@mcp.tool
+def process_image(
+    params: Annotated[Params, mcp.Unpack]
+) -> dict:
+    ...
+```
+
+The `Unpack` marker would signal that `Params` should be flattened into top-level fields in the schema.
+This would be **explicit and opt-in**, avoiding the implicit/ambiguous semantics that some dislike in FastAPI’s `embed` behavior.
+
+---
+
+## Closing note
+
+I know [[issue #815](https://github.com/jlowin/fastmcp/issues/815)](https://github.com/jlowin/fastmcp/issues/815) discussed this and was closed with the argument that “the current implementation is clear.”
+However, in practice for complex tools, unpacking provides:
+
+* A **much better LLM interaction experience**,
+* Cleaner developer ergonomics,
+* And the ability to **reuse parameter models** across tools without forcing extra nesting.
+
+I believe having an **explicit, opt-in mechanism** (not implicit) would address previous concerns while giving users the flexibility they need.
+
+... [the middle portion has been truncated, retrieve object directly to get the full body]\
+""",'state':'CLOSED','state_reason':'COMPLETED','author':{'user_type':'User','login':'Haskely'},'author_association':'NONE','created_at':'2025-09-08T06:59:43+00:00','updated_at':'2025-09-09T04:06:18+00:00','closed_at':None ,'labels':[{'name':'enhancement'},{'name':'server'}],'assignees':[]}],
         }
     )
 
@@ -228,7 +296,7 @@ async def test_search_issues(issues_server: IssuesServer):
                         "body": """\
 it has a description\r
 \r
-it has a related issue #1 \
+it has a related issue #1\
 """,
                         "state": "OPEN",
                         "merged": False,
@@ -252,8 +320,19 @@ async def test_search_issues_fastmcp(issues_server: IssuesServer, fastmcp: FastM
 
     async with Client[FastMCPTransport](transport=fastmcp) as fastmcp_client:
         issues: CallToolResult = await fastmcp_client.call_tool(
-            "research_issues_by_keywords", arguments={"owner": "jlowin", "repo": "fastmcp", "keywords": ["banner"], "limit_issues": 1}
+            "research_issues_by_keywords",
+            arguments={
+                "owner": "jlowin",
+                "repo": "fastmcp",
+                "keywords": ["schema", "output", "response", "payload", "format", "JSON schema"],
+            },
         )
+
+    structured_content_length = get_structured_content_length(issues.structured_content)
+
+    assert structured_content_length > 5000
+
+    assert structured_content_length < 500000
 
     assert issues.structured_content is not None
 
@@ -302,6 +381,7 @@ async def test_summarize_search_issues(issues_server: IssuesServer, fastmcp: Fas
             "repo": "github-issues-e2e-test",
             "keywords": ["issue"],
             "summary": IsStr(),
+            "issues_reviewed": [{"number": 1, "title": "This is an issue"}],
         }
     )
 
@@ -312,7 +392,18 @@ async def test_summarize_search_issues_fastmcp(issues_server: IssuesServer, fast
     async with Client[FastMCPTransport](transport=fastmcp) as fastmcp_client:
         summary: CallToolResult = await fastmcp_client.call_tool(
             "summarize_issues_by_keywords",
-            arguments={"owner": "jlowin", "repo": "fastmcp", "keywords": ["banner"], "summary_focus": "Issues with the server banner"},
+            arguments={
+                "owner": "jlowin",
+                "repo": "fastmcp",
+                "keywords": ["banner", "server", "logs", "startup"],
+                "summary_focus": "Issues with the server banner appearing in the logs on server startup",
+            },
         )
 
     assert summary.structured_content is not None
+
+    structured_content_length = get_structured_content_length(summary.structured_content)
+
+    assert structured_content_length > 100
+
+    assert structured_content_length < 10000

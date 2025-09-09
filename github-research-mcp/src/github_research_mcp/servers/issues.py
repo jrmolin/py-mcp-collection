@@ -1,82 +1,45 @@
-from collections.abc import Sequence
-from enum import Enum
 from textwrap import dedent
 from typing import Annotated, Any, Literal, Self
 
 import yaml
 from fastmcp import Context
 from fastmcp.utilities.logging import get_logger
-from githubkit.github import GitHub
 from mcp.types import ContentBlock, SamplingMessage, TextContent
 from pydantic import BaseModel, Field
 
-from github_research_mcp.clients.github import get_github_client
 from github_research_mcp.models import Comment, Issue, PullRequest
 from github_research_mcp.models.graphql.queries import GqlGetIssuesWithDetails, GqlSearchIssuesWithDetails
-from github_research_mcp.models.query.base import AllKeywordsQualifier, AnyKeywordsQualifier, OwnerQualifier, RepoQualifier, StateQualifier
+from github_research_mcp.models.query.base import AllKeywordsQualifier, AnyKeywordsQualifier, StateQualifier
 from github_research_mcp.models.query.issue import IssueSearchQuery
+from github_research_mcp.sampling.prompts import PREAMBLE
+from github_research_mcp.servers.base import BaseServer
+from github_research_mcp.servers.shared.annotations import (
+    LIMIT_COMMENTS,
+    LIMIT_RELATED_ITEMS,
+    OWNER,
+    REPO,
+    SUMMARY_FOCUS,
+    SUMMARY_LENGTH,
+    Length,
+)
+from github_research_mcp.servers.shared.utility import estimate_model_tokens
 
 logger = get_logger(__name__)
 
-OWNER = Annotated[str, "The owner of the repository."]
-REPO = Annotated[str, "The name of the repository."]
-KEYWORDS = Annotated[set[str], "The keywords of the issue."]
+KEYWORDS = Annotated[set[str], "The keywords to search for in the issue. You may only provide up to 6 keywords."]
 REQUIRE_ALL_KEYWORDS = Annotated[bool, "Whether all keywords must be present for a result to appear in the search results."]
 STATE = Annotated[Literal["open", "closed", "all"], "The state of the issue."]
-LABELS = Annotated[list[str] | None, "The labels of the issue."]
-SORT = Annotated[Literal["created", "updated", "comments"], "The sort of the issue."]
-DIRECTION = Annotated[Literal["asc", "desc"], "The direction of the issue."]
 ISSUE_NUMBER = Annotated[int, "The number of the issue."]
-PULL_REQUEST_NUMBER = Annotated[int, "The number of the pull request."]
-PAGE = Annotated[int, "The page of the search results."]
-PER_PAGE = Annotated[int, "The number of results per page."]
-SUMMARY = Annotated[str, Field(description="The summary of the issue.")]
 
-OWNER_OR_REPO = Annotated[OwnerQualifier | RepoQualifier, "The scope of the search, i.e. limited to a specific owner or repository."]
 
-# Summary Fields
-SUMMARY_LENGTH = Annotated["Length", Field(description="The length of the summary in words.")]
-SUMMARY_FOCUS = Annotated[str, Field(description="The desired focus of the summary to be produced.")]
-SEARCH_SUMMARY_FOCUS = Annotated[
-    str,
-    Field(
-        description=(
-            "The desired focus of the summary of the search results. "
-            "If you are looking for related issues, be sure to include the body, title, etc. "
-            "or at a minimum, significant details from the original issue in the focus."
-        )
-    ),
-]
-
-LIMIT_COMMENTS = Annotated[int, Field(description="The maximum number of comments to include in the summary.")]
-LIMIT_RELATED_ITEMS = Annotated[int, Field(description="The maximum number of related items to include in the summary.")]
 LIMIT_ISSUES = Annotated[int, Field(description="The maximum number of issues to include in the search results.")]
 
 
-class Length(int, Enum):
-    SHORT = 100
-    MEDIUM = 500
-    LONG = 1000
-
-
-DEFAULT_COMMENT_LIMIT = 50
-DEFAULT_RELATED_ITEMS_LIMIT = 20
-DEFAULT_ISSUES_LIMIT = 100
+DEFAULT_COMMENT_LIMIT = 10
+DEFAULT_RELATED_ITEMS_LIMIT = 5
+DEFAULT_ISSUES_LIMIT = 50
 
 DEFAULT_SEARCH_STATE = "all"
-
-
-def estimate_tokens(text: str) -> int:
-    """Estimate the number of tokens for a given text."""
-    return len(text) // 4
-
-
-def estimate_model_tokens(basemodel: BaseModel | Sequence[BaseModel]) -> int:
-    """Estimate the number of tokens for a given base model."""
-    if isinstance(basemodel, Sequence):
-        return sum(estimate_model_tokens(item) for item in basemodel)
-
-    return estimate_tokens(basemodel.model_dump_json())
 
 
 class IssueWithDetails(BaseModel):
@@ -105,6 +68,15 @@ class IssueWithDetails(BaseModel):
         ]
 
 
+class IssueWithTitle(BaseModel):
+    number: int
+    title: str
+
+    @classmethod
+    def from_issue(cls, issue: Issue) -> Self:
+        return cls(number=issue.number, title=issue.title)
+
+
 class IssueSummary(BaseModel):
     owner: str
     repo: str
@@ -117,14 +89,10 @@ class IssueSearchSummary(BaseModel):
     repo: str
     keywords: set[str]
     summary: str
+    issues_reviewed: list[IssueWithTitle]
 
 
-class IssuesServer:
-    _client: GitHub[Any]
-
-    def __init__(self, client: GitHub[Any] | None = None):
-        self._client = client or get_github_client()
-
+class IssuesServer(BaseServer):
     async def research_issue(
         self,
         owner: OWNER,
@@ -136,8 +104,8 @@ class IssuesServer:
         """Get information (body, comments, related issues and pull requests) about a specific issue in the repository."""
         from github_research_mcp.models.graphql.queries import GqlGetIssuesWithDetails
 
-        graphql_response = await self._client.async_graphql(
-            query=GqlGetIssuesWithDetails.graphql_query(),
+        gql_get_issues_with_details: GqlGetIssuesWithDetails = await self._perform_query(
+            query_model=GqlGetIssuesWithDetails,
             variables={
                 "owner": owner,
                 "repo": repo,
@@ -146,8 +114,6 @@ class IssuesServer:
                 "limit_events": limit_related_items,
             },
         )
-
-        gql_get_issues_with_details = GqlGetIssuesWithDetails.model_validate(graphql_response)
 
         issue_with_details: IssueWithDetails = IssueWithDetails.from_gql_get_issues_with_details(
             gql_get_issues_with_details=gql_get_issues_with_details
@@ -174,10 +140,8 @@ class IssuesServer:
             owner=owner, repo=repo, issue_number=issue_number, limit_comments=limit_comments, limit_related_items=limit_related_items
         )
 
-        system_prompt = """
-        {WHO_YOU_ARE}
-
-        {DEEPLY_ROOTED}
+        system_prompt = f"""
+        {PREAMBLE}
 
         # Instructions
 
@@ -313,10 +277,10 @@ class IssuesServer:
             limit_related_items=limit_related_items,
         )
 
-        system_prompt = """
-        {WHO_YOU_ARE}
+        issues_with_title: list[IssueWithTitle] = [IssueWithTitle.from_issue(detailed_issue.issue) for detailed_issue in issues]
 
-        {DEEPLY_ROOTED}
+        system_prompt = f"""
+        {PREAMBLE}
 
         # Instructions
 
@@ -324,30 +288,42 @@ class IssuesServer:
 
         The user will also provide a "focus" for the summary, this is the information, problem, etc. the user is hoping to context about
         in the results.
-
-        By default, your summary should focus on the issues you determine are related to the user's focus. Issues should appear
-        in order of most-related to least-related. At the end of the summary should be a concise list of the issue numbers that you
-        analyzed but found to be unrelated.
-
-        For related issues, you should include:
-        1. Information about the issue including its title, state, age, and other relevant information
-        2. All important details from the issue, related comments, or related Pull Requests that relate to the user's focus.
-            Ideally enough information that the user should not have to look at the issue itself. This is your chance to provide
-            the key context the use is looking for. If it's not extremely obvious that it relates to the user's focus, you should
-            provide a brief explanation of why you believe it relates to the user's focus.
-        3. The resolution (or lack thereof) of the reported issue whether it was solved with a code change, documentation,
-            closed as won't fix, closed as a duplicate, closed as a false positive, or closed as a false negative, etc. Pay
-            careful attention to the state of any related items before making any conclusions.
         """
 
         user_prompt = f"""
+        # Issue Search Results
+        ``````yaml
+        {yaml.dump(issues)}
+        ``````
+
         # Focus
+        The user has asked that you specifically focus your review of the issue search results on the following aspects:
         {summary_focus}
 
-        # Issue Search Results
-        ```yaml
-        {yaml.dump(issues)}
-        ```
+        # Summary Instructions
+
+        By default, your summary should focus on the issues you determine are related to the user's focus. Issues should appear
+        in order of most-related to least-related.
+
+        For related issues, you should include:
+        1. Information about the issue including its title, state, age, and other relevant information
+        2. Every important detail from the issue, related comments, or related Pull Requests that relate to the user's focus.
+            Ideally enough information that the user should not have to look at the issue itself. This is your chance to provide
+            the key context the use is looking for. If it's not extremely obvious that it relates to the user's focus, you should
+            provide a brief explanation of why you believe it relates to the user's focus. If the issue is highly related to the user's
+            focus, you should provide significantly more information about it.
+        3. The resolution (or lack thereof) of the reported issue whether it was solved with a code change, documentation,
+            closed as won't fix, closed as a duplicate, closed as a false positive, or closed as a false negative, etc. Pay
+            careful attention to the state of any related items before making any conclusions.
+
+        You should organize your results into high confidence of relation, medium confidence of relation.
+        You should not mention issues that you have low confidence or no confidence in relation to the topic of the user's focus.
+
+        The user will receive the list of issues you determine are not related to the topic of the user's focus and they can always
+        investigate any of the issues if they determine you were wrong.
+
+        You will double check your results against the user's focus to ensure that the issues you report as related are actually related
+        to the user's focus.
         """
 
         sampling_message: SamplingMessage = SamplingMessage(role="user", content=TextContent(type="text", text=dedent(user_prompt)))
@@ -363,7 +339,9 @@ class IssuesServer:
             msg = "The sampling call failed to generate a valid text summary of the issue search results."
             raise TypeError(msg)
 
-        issue_search_summary: IssueSearchSummary = IssueSearchSummary(owner=owner, repo=repo, keywords=keywords, summary=summary.text)
+        issue_search_summary: IssueSearchSummary = IssueSearchSummary(
+            owner=owner, repo=repo, keywords=keywords, summary=summary.text, issues_reviewed=issues_with_title
+        )
 
         logger.info(f"Summarize issues by keywords response for {owner}/{repo} is {estimate_model_tokens(issue_search_summary)} tokens.")
 

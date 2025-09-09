@@ -1,4 +1,4 @@
-from typing import override
+from typing import Self, override
 
 from github_research_mcp.models.query.base import (
     AllKeywordsQualifier,
@@ -36,3 +36,13 @@ class PullRequestSearchQuery(BaseQuery[SimplePullRequestSearchQualifierTypes, Ad
     def to_query(self) -> str:
         query = super().to_query()
         return f"is:pr {query}"
+
+    @classmethod
+    def from_repo_or_owner(cls, owner: str | None = None, repo: str | None = None) -> Self:
+        if owner is not None:
+            if repo is None:
+                return cls(qualifiers=[OwnerQualifier(owner=owner)])
+
+            return cls(qualifiers=[RepoQualifier(owner=owner, repo=repo)])
+
+        return cls()
