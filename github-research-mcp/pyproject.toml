@@ -5,6 +5,8 @@ description = "Github Search Mcp project"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "aiohttp>=3.12.15",
+    "async-lru>=2.0.5",
     "asyncclick>=8.1.8",
     "dirty-equals>=0.9.0",
     "fastmcp>=2.3.5",
@@ -42,7 +44,7 @@ github-research-mcp = "github_research_mcp.main:run_mcp"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 env_files = [".env"]
-addopts = ["--inline-snapshot=fix,create"]
+addopts = ["--inline-snapshot=disable","-vv"]
 
 [dependency-groups]
 dev = [

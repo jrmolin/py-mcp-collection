@@ -31,9 +31,9 @@ SEARCH_SUMMARY_FOCUS = Annotated[
     Field(
         description=(
             "The desired focus of the summary of the search results. The quality of the summary is going to be "
-            "highly dependent on what you include in the focus. If you are looking for related issues, be sure "
-            "to include the body, title, etc. in the focus. The more context you can provide the better your results "
-            "will be. "
+            "highly dependent on what you include in the focus. If you are looking for related/duplicate issues, it is strongly "
+            "recommended to include the entire original issue body, title, etc. in the focus. The more context you can provide "
+            "the better your results will be."
         )
     ),
 ]

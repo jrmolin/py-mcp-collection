@@ -38,15 +38,6 @@ class AuthorQualifier(BaseQualifier, frozen=True):
         return f'author:"{self.author}"'
 
 
-class IssueOrPullRequestQualifier(BaseQualifier, frozen=True):
-    issue_or_pull_request: Literal["issue", "pr"] = Field(
-        description="The search statement is for an issue or pull request, i.e. 'issue', 'pr'."
-    )
-
-    def to_query(self, nested: bool = False) -> str:  # noqa: ARG002
-        return f"is:{self.issue_or_pull_request}"
-
-
 class IssueTypeQualifier(BaseQualifier, frozen=True):
     type: str = Field(description="The type to search for, i.e. 'bug', 'feature', etc.")
 
@@ -94,6 +85,22 @@ class AnyKeywordsQualifier(BaseQualifier, frozen=True):
         return " OR ".join([f'"{keyword}"' for keyword in sorted_keywords])
 
 
+class AnySymbolsQualifier(BaseQualifier, frozen=True):
+    symbols: set[str] = Field(description="The code symbols to search for, i.e. MyClass, MyFunction, etc.")
+
+    def to_query(self, nested: bool = False) -> str:  # noqa: ARG002
+        sorted_symbols = sorted(self.symbols)
+        return " OR ".join([f'symbol:"{symbol}"' for symbol in sorted_symbols])
+
+
+class AllSymbolsQualifier(BaseQualifier, frozen=True):
+    symbols: set[str] = Field(description="The code symbols to search for, i.e. MyClass, MyFunction, etc.")
+
+    def to_query(self, nested: bool = False) -> str:  # noqa: ARG002
+        sorted_symbols = sorted(self.symbols)
+        return " AND ".join([f'symbol:"{symbol}"' for symbol in sorted_symbols])
+
+
 class KeywordInQualifier(BaseQualifier, frozen=True):
     location: Literal["title", "body", "comments"] = Field(
         description="The location to search for keywords in, i.e. 'title', 'body', 'comments'."
@@ -125,6 +132,32 @@ class RepoQualifier(BaseQualifier, frozen=True):
         return f'repo:"{self.owner}/{self.repo}"'
 
 
+class IssueOrPullRequestQualifier(BaseQualifier, frozen=True):
+    issue_or_pull_request: Literal["issue", "pull_request"] = Field(
+        description="The issue or pull request to search for, i.e. 'issue', 'pull_request'."
+    )
+
+    def to_query(self, nested: bool = False) -> str:  # noqa: ARG002
+        if self.issue_or_pull_request == "pull_request":
+            return "is:pr"
+
+        return "is:issue"
+
+
+class LanguageQualifier(BaseQualifier, frozen=True):
+    language: str = Field(description="The language to search for, i.e. 'python', 'go', 'javascript', etc.")
+
+    def to_query(self, nested: bool = False) -> str:  # noqa: ARG002
+        return f"language:{self.language}"
+
+
+class PathQualifier(BaseQualifier, frozen=True):
+    path: str = Field(description="The path to search for, i.e. 'src/main.py', 'tests/test_main.py', etc.")
+
+    def to_query(self, nested: bool = False) -> str:  # noqa: ARG002
+        return f"path:{self.path}"
+
+
 class StateQualifier(BaseQualifier, frozen=True):
     state: Literal["open", "closed"] = Field(description="The state to search for, i.e. 'open', 'closed'.")
 
@@ -145,6 +178,8 @@ AllQualifierTypes = (
     | OwnerQualifier
     | RepoQualifier
     | StateQualifier
+    | AnySymbolsQualifier
+    | AllSymbolsQualifier
 )
 
 QualifierTypes = TypeVar("QualifierTypes", bound=BaseQualifier, default=AllQualifierTypes)

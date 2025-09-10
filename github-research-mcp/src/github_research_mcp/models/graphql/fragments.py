@@ -1,6 +1,6 @@
 from datetime import datetime
 from textwrap import dedent
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
 from pydantic.aliases import AliasChoices
@@ -114,13 +114,14 @@ class Issue(BaseModel):
     title: str
     body: str
     state: str
-    state_reason: str | None = Field(validation_alias="stateReason")
+    state_reason: str | None = Field(validation_alias=AliasChoices("stateReason", "state_reason"))
+    is_pr: Literal[False] = Field(default=False)
 
     author: Actor
-    author_association: str = Field(validation_alias="authorAssociation")
-    created_at: datetime = Field(validation_alias="createdAt")
-    updated_at: datetime = Field(validation_alias="updatedAt")
-    closed_at: datetime | None = Field(default=None, validation_alias="closedAt")
+    author_association: str = Field(validation_alias=AliasChoices("authorAssociation", "author_association"))
+    created_at: datetime = Field(validation_alias=AliasChoices("createdAt", "created_at"))
+    updated_at: datetime = Field(validation_alias=AliasChoices("updatedAt", "updated_at"))
+    closed_at: datetime | None = Field(default=None, validation_alias=AliasChoices("closedAt", "closed_at"))
 
     labels: list[Label]
 
@@ -180,13 +181,14 @@ class PullRequest(BaseModel):
     title: str
     body: str
     state: str
+    is_pr: Literal[True] = Field(default=True)
     merged: bool
     author: Actor
-    created_at: datetime = Field(validation_alias="createdAt")
-    updated_at: datetime = Field(validation_alias="updatedAt")
-    closed_at: datetime | None = Field(default=None, validation_alias="closedAt")
-    merged_at: datetime | None = Field(default=None, validation_alias="mergedAt")
-    merge_commit: MergeCommit | None = Field(validation_alias="mergeCommit")
+    created_at: datetime = Field(validation_alias=AliasChoices("createdAt", "created_at"))
+    updated_at: datetime = Field(validation_alias=AliasChoices("updatedAt", "updated_at"))
+    closed_at: datetime | None = Field(default=None, validation_alias=AliasChoices("closedAt", "closed_at"))
+    merged_at: datetime | None = Field(default=None, validation_alias=AliasChoices("mergedAt", "merged_at"))
+    merge_commit: MergeCommit | None = Field(validation_alias=AliasChoices("mergeCommit", "merge_commit"))
 
     labels: list[Label]
 
@@ -256,6 +258,7 @@ class TimelineItem(BaseModel):
     @staticmethod
     def graphql_fragments() -> set[str]:
         return {*Actor.graphql_fragments(), *Issue.graphql_fragments(), *PullRequest.graphql_fragments()}
+
 
 class ChangedFile(BaseModel):
     path: str
