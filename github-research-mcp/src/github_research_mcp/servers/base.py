@@ -7,6 +7,7 @@ from mcp.types import ContentBlock, SamplingMessage, TextContent
 from pydantic import BaseModel
 
 from github_research_mcp.models.graphql.queries import BaseGqlQuery
+from github_research_mcp.sampling.extract import extract_single_object_from_text
 from github_research_mcp.servers.shared.utility import estimate_model_tokens
 
 if TYPE_CHECKING:
@@ -22,6 +23,21 @@ class BaseResponseModel(BaseModel):
 
 class BaseServer:
     github_client: GitHub[Any]
+
+    async def _structured_sample[T: BaseModel](
+        self, system_prompt: str, messages: str | list[str], object_type: type[T], max_tokens: int = 2000, temperature: float = 0.0
+    ) -> T:
+        """Sample a structured response from the server."""
+
+        sampling_response: str = await self._sample(
+            system_prompt=system_prompt, messages=messages, max_tokens=max_tokens, temperature=temperature
+        )
+
+        if structured_response := extract_single_object_from_text(sampling_response, object_type):
+            return structured_response
+
+        msg = "The sampling call failed to generate a valid structured response."
+        raise TypeError(msg)
 
     async def _sample(self, system_prompt: str, messages: str | list[str], max_tokens: int = 2000, temperature: float = 0.0) -> str:
         """Sample a response from the server."""

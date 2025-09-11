@@ -1,8 +1,8 @@
-from typing import Annotated, Any, Literal, Self
+from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
 
-import yaml
 from fastmcp.utilities.logging import get_logger
 from githubkit.github import GitHub
+from githubkit.versions.v2022_11_28.models.group_0238 import DiffEntry
 from pydantic import BaseModel, Field
 from pydantic.root_model import RootModel
 
@@ -14,7 +14,7 @@ from github_research_mcp.models.graphql.queries import (
 )
 from github_research_mcp.models.query.base import AllKeywordsQualifier, AnyKeywordsQualifier, StateQualifier
 from github_research_mcp.models.query.issue_or_pull_request import IssueOrPullRequestSearchQuery
-from github_research_mcp.sampling.prompts import PREAMBLE
+from github_research_mcp.sampling.prompts import PREAMBLE, PromptBuilder
 from github_research_mcp.servers.base import BaseResponseModel, BaseServer
 from github_research_mcp.servers.repository import RepositoryServer, RepositorySummary
 from github_research_mcp.servers.shared.annotations import (
@@ -22,9 +22,13 @@ from github_research_mcp.servers.shared.annotations import (
     LIMIT_RELATED_ITEMS,
     OWNER,
     REPO,
-    SEARCH_SUMMARY_FOCUS,
     SUMMARY_FOCUS,
 )
+from github_research_mcp.servers.shared.utility import extract_response
+
+if TYPE_CHECKING:
+    from githubkit.response import Response
+    from githubkit.versions.v2022_11_28.types.group_0238 import DiffEntryType
 
 logger = get_logger(__name__)
 
@@ -47,6 +51,17 @@ LIMIT_ISSUES_OR_PULL_REQUESTS = Annotated[
     int, Field(description="The maximum number of issues or pull requests to include in the search results.")
 ]
 
+SEARCH_SUMMARY_FOCUS = Annotated[
+    str,
+    Field(
+        description=(
+            "The desired focus of the summary of the search results. The quality of the summary is going to be "
+            "highly dependent on what you include in the focus. If you are looking for related/duplicate issues"
+        )
+    ),
+]
+
+RELATED_TO_ISSUE = Annotated["GitHubIssue", Field(description="A specific GitHub issue that the search is related to.")]
 
 DEFAULT_COMMENT_LIMIT = 10
 DEFAULT_RELATED_ITEMS_LIMIT = 5
@@ -55,14 +70,54 @@ DEFAULT_ISSUES_OR_PULL_REQUESTS_LIMIT = 50
 DEFAULT_SEARCH_STATE = "all"
 
 
+class PullRequestFileDiff(BaseModel):
+    path: str = Field(description="The path of the file.")
+    status: Literal["added", "removed", "modified", "renamed", "copied", "changed", "unchanged"] = Field(
+        description="The status of the file."
+    )
+    patch: str | None = Field(default=None, description="The patch of the file.")
+    previous_filename: str | None = Field(default=None, description="The previous filename of the file.")
+    truncated: bool = Field(default=False, description="Whether the patch has been truncated to reduce response size.")
+
+    @classmethod
+    def from_diff_entry(cls, diff_entry: DiffEntry, truncate: int = 100) -> Self:
+        pr_file_diff: Self = cls(
+            path=diff_entry.filename,
+            status=diff_entry.status,
+            patch=diff_entry.patch if diff_entry.patch else None,
+            previous_filename=diff_entry.previous_filename if diff_entry.previous_filename else None,
+        )
+
+        return pr_file_diff.truncate(truncate=truncate)
+
+    @classmethod
+    def from_diff_entries(cls, diff_entries: list[DiffEntry], truncate: int = 100) -> list[Self]:
+        return [cls.from_diff_entry(diff_entry=diff_entry, truncate=truncate) for diff_entry in diff_entries]
+
+    @property
+    def lines(self) -> list[str]:
+        return self.patch.split("\n") if self.patch else []
+
+    def truncate(self, truncate: int) -> Self:
+        lines: list[str] = self.lines
+
+        if len(lines) > truncate:
+            lines = lines[:truncate]
+            return self.model_copy(update={"patch": "\n".join(lines), "truncated": True})
+
+        return self
+
+
 class IssueOrPullRequestWithDetails(BaseResponseModel):
-    issue_or_pr: Issue | PullRequest
-    comments: list[Comment]
-    related: list[Issue | PullRequest]
+    issue_or_pr: Issue | PullRequest = Field(description="The issue or pull request.")
+    diff: list[PullRequestFileDiff] | None = Field(default=None, description="The diff, if it's a pull request.")
+    comments: list[Comment] = Field(description="The comments on the issue or pull request.")
+    related: list[Issue | PullRequest] = Field(description="The related issues or pull requests.")
 
     @classmethod
     def from_gql_get_issue_or_pull_requests_with_details(
-        cls, gql_get_issue_or_pull_requests_with_details: GqlGetIssueOrPullRequestsWithDetails
+        cls,
+        gql_get_issue_or_pull_requests_with_details: GqlGetIssueOrPullRequestsWithDetails,
     ) -> Self:
         gql_issue_or_pull_request = gql_get_issue_or_pull_requests_with_details.repository.issue_or_pull_request
 
@@ -113,18 +168,24 @@ class TitleByIssueOrPullRequestInfo(RootModel[dict[str, str]]):
 
 
 class IssueOrPullRequestSummary(BaseModel):
-    owner: str
-    repo: str
-    issue_or_pr_number: int
-    summary: str
+    owner: str = Field(description="The owner of the repository.")
+    repo: str = Field(description="The name of the repository.")
+    issue_or_pr_number: int = Field(description="The number of the issue or pull request.")
+    summary: str = Field(description="The summary of the issue or pull request.")
 
 
 class IssueSearchSummary(BaseModel):
-    owner: str
-    repo: str
-    keywords: set[str]
-    summary: str
-    items_reviewed: TitleByIssueOrPullRequestInfo
+    owner: str = Field(description="The owner of the repository.")
+    repo: str = Field(description="The name of the repository.")
+    keywords: set[str] = Field(description="The keywords used to search for the issues.")
+    summary: str = Field(description="The summary of the issue search results.")
+    items_reviewed: TitleByIssueOrPullRequestInfo = Field(description="The items reviewed.")
+
+
+class GitHubIssue(BaseModel):
+    owner: str = Field(description="The owner of the repository.")
+    repo: str = Field(description="The name of the repository.")
+    issue_number: int = Field(description="The number of the issue or pull request.")
 
 
 class IssuesOrPullRequestsServer(BaseServer):
@@ -141,6 +202,7 @@ class IssuesOrPullRequestsServer(BaseServer):
         issue_or_pr_number: ISSUE_OR_PR_NUMBER,
         limit_comments: LIMIT_COMMENTS = DEFAULT_COMMENT_LIMIT,
         limit_related_items: LIMIT_RELATED_ITEMS = DEFAULT_RELATED_ITEMS_LIMIT,
+        include_pull_request_diff: bool = True,
     ) -> IssueOrPullRequestWithDetails:
         """Get information (body, comments, related issues and pull requests) about a specific issue or pull request in the repository."""
 
@@ -157,9 +219,20 @@ class IssuesOrPullRequestsServer(BaseServer):
             variables=query_variables,
         )
 
-        return IssueOrPullRequestWithDetails.from_gql_get_issue_or_pull_requests_with_details(
-            gql_get_issue_or_pull_requests_with_details=gql_get_issue_or_pull_requests_with_details
+        issue_or_pull_request_with_details: IssueOrPullRequestWithDetails = (
+            IssueOrPullRequestWithDetails.from_gql_get_issue_or_pull_requests_with_details(
+                gql_get_issue_or_pull_requests_with_details=gql_get_issue_or_pull_requests_with_details,
+            )
         )
+
+        if isinstance(issue_or_pull_request_with_details.issue_or_pr, PullRequest) and include_pull_request_diff:
+            await self._add_pull_request_diff(
+                owner=owner,
+                repo=repo,
+                issue_or_pull_request_with_details=issue_or_pull_request_with_details,
+            )
+
+        return issue_or_pull_request_with_details
 
     async def summarize_issue_or_pull_request(
         self,
@@ -169,6 +242,7 @@ class IssuesOrPullRequestsServer(BaseServer):
         summary_focus: SUMMARY_FOCUS | None = None,
         limit_comments: LIMIT_COMMENTS = DEFAULT_COMMENT_LIMIT,
         limit_related_items: LIMIT_RELATED_ITEMS = DEFAULT_RELATED_ITEMS_LIMIT,
+        include_pull_request_diff: bool = True,
     ) -> IssueOrPullRequestSummary:
         """Produce a "focus"-ed summary of a specific issue incorporating the comments, related items, and the issue itself."""
 
@@ -178,6 +252,7 @@ class IssuesOrPullRequestsServer(BaseServer):
             issue_or_pr_number=issue_or_pr_number,
             limit_comments=limit_comments,
             limit_related_items=limit_related_items,
+            include_pull_request_diff=include_pull_request_diff,
         )
 
         repository_summary: RepositorySummary = await self.repository_server.summarize(
@@ -203,56 +278,26 @@ class IssuesOrPullRequestsServer(BaseServer):
 
         That being said, what the user asks for in the `focus` should be prioritized over the default summary.
         """
+        user_prompt = PromptBuilder()
 
-        max_comments_reached = len(issue_details.comments) >= limit_comments
-        max_related_items_reached = len(issue_details.related) >= limit_related_items
+        user_prompt.add_text_section(title="Repository Background Information", text=repository_summary.root)
+        user_prompt.add_text_section(title="Focus", text=summary_focus if summary_focus else "No specific focus provided")
 
-        comment_warning = (
-            f"There were more than {limit_comments} comments, only the first {limit_comments} are included below:"
-            if max_comments_reached
-            else ""
-        )
-        related_items_warning = (
-            f"There were more than {limit_related_items} related items, only the first {limit_related_items} are included below:"
-            if max_related_items_reached
-            else ""
-        )
+        if len(issue_details.comments) >= limit_comments:
+            comment_warning = f"There were more than {limit_comments} comments, only the first {limit_comments} are included below:"
+            user_prompt.add_text_section(title="Not all comments are included", text=comment_warning)
 
-        user_prompt = f"""
-        # Repository Background Information
-        ```
-        {repository_summary.root}
-        ```
+        if len(issue_details.related) >= limit_related_items:
+            related_items_warning = (
+                f"There were more than {limit_related_items} related items, only the first {limit_related_items} are included below:"
+            )
+            user_prompt.add_text_section(title="Not all related items are included", text=related_items_warning)
 
-        # Focus
-        {summary_focus if summary_focus else "No specific focus provided"}
-
-        # Issue
-        ```yaml
-        {yaml.dump(issue_details.issue_or_pr.model_dump())}
-        ```
-
-        # Comments
-        {comment_warning}
-        ```yaml
-        {yaml.dump(issue_details.comments)}
-        ```
-
-        # Related Items
-        {related_items_warning}
-        ```yaml
-        {yaml.dump(issue_details.related)}
-        ```
-
-        # Length
-        The user has requested you limit the summary to roughly 4000 words but if accurately summarizing the issue requires
-        more words, you should use more words. If accurately summarizing the issue can be done in fewer words, you should use
-        fewer words.
-        """
+        user_prompt.add_yaml_section(title="Issue or Pull Request with Context", obj=issue_details)
 
         summary: str = await self._sample(
             system_prompt=system_prompt,
-            messages=user_prompt,
+            messages=user_prompt.render_text(),
         )
 
         return IssueOrPullRequestSummary(
@@ -273,6 +318,7 @@ class IssuesOrPullRequestsServer(BaseServer):
         limit_issues_or_pull_requests: LIMIT_ISSUES_OR_PULL_REQUESTS = DEFAULT_ISSUES_OR_PULL_REQUESTS_LIMIT,
         limit_comments: LIMIT_COMMENTS = DEFAULT_COMMENT_LIMIT,
         limit_related_items: LIMIT_RELATED_ITEMS = DEFAULT_RELATED_ITEMS_LIMIT,
+        include_pull_request_diffs: bool = True,
     ) -> list[IssueOrPullRequestWithDetails]:
         """Search for issues in a repository by keywords. Only issues containing the keywords will be included in the search results.
 
@@ -299,9 +345,20 @@ class IssuesOrPullRequestsServer(BaseServer):
             ),
         )
 
-        return IssueOrPullRequestWithDetails.from_gql_search_issue_or_pull_requests_with_details(
-            gql_search_issue_or_pull_requests_with_details=gql_search_issue_or_pull_requests_with_details
+        issues_or_pull_requests_with_details: list[IssueOrPullRequestWithDetails] = (
+            IssueOrPullRequestWithDetails.from_gql_search_issue_or_pull_requests_with_details(
+                gql_search_issue_or_pull_requests_with_details=gql_search_issue_or_pull_requests_with_details
+            )
         )
+
+        if include_pull_request_diffs:
+            issues_or_pull_requests_with_details = await self._add_pull_request_diffs(
+                owner=owner,
+                repo=repo,
+                issues_or_pull_requests_with_details=issues_or_pull_requests_with_details,
+            )
+
+        return issues_or_pull_requests_with_details
 
     async def summarize_issues_or_pull_requests(
         self,
@@ -310,13 +367,16 @@ class IssuesOrPullRequestsServer(BaseServer):
         issue_or_pr: Literal["issue", "pull_request"],
         keywords: SUMMARY_KEYWORDS,
         summary_focus: SEARCH_SUMMARY_FOCUS,
+        related_to_issue: RELATED_TO_ISSUE | None = None,
         require_all_keywords: REQUIRE_ALL_KEYWORDS = False,
         limit_issues_or_pull_requests: LIMIT_ISSUES_OR_PULL_REQUESTS = DEFAULT_ISSUES_OR_PULL_REQUESTS_LIMIT,
         limit_comments: LIMIT_COMMENTS = DEFAULT_COMMENT_LIMIT,
         limit_related_items: LIMIT_RELATED_ITEMS = DEFAULT_RELATED_ITEMS_LIMIT,
+        include_pull_request_diffs: bool = True,
     ) -> IssueSearchSummary:
         """First perform a search for issues or pull requests in a repository by keywords. Then, summarize those
-        results according to the `summary_focus`.
+        results according to the `summary_focus`. If your search is related to a specific issue, you should include
+        `related_to_issue` which will gather the information from that issue and inform the summary provided.
 
         For each issue, comments, and related items will also be gathered and included in the response."""
 
@@ -334,6 +394,7 @@ class IssuesOrPullRequestsServer(BaseServer):
             limit_issues_or_pull_requests=limit_issues_or_pull_requests,
             limit_comments=limit_comments,
             limit_related_items=limit_related_items,
+            include_pull_request_diffs=include_pull_request_diffs,
         )
 
         issues_with_title: TitleByIssueOrPullRequestInfo = TitleByIssueOrPullRequestInfo.from_issues_or_pull_requests(
@@ -351,23 +412,35 @@ class IssuesOrPullRequestsServer(BaseServer):
         in the results.
         """
 
-        user_prompt = f"""
-        # Repository Background Information
-        ```
-        {repository_summary.root}
-        ```
+        user_prompt: PromptBuilder = PromptBuilder()
 
-        # Issue Search Results
-        ``````yaml
-        {yaml.dump(items_with_details)}
-        ``````
+        user_prompt.add_text_section(title="Repository Background Information", text=repository_summary.root)
+        user_prompt.add_yaml_section(title="Issue Search Results", obj=items_with_details)
 
-        # Focus
-        The user has asked that you specifically focus your review of the issue search results on the following aspects:
-        {summary_focus}
+        focus_text = [
+            "The user has asked that you specifically focus your review of the issue search results on the following aspects:",
+            summary_focus,
+        ]
+        user_prompt.add_text_section(title="Focus", text=focus_text)
 
-        # Summary Instructions
+        if related_to_issue:
+            related_issue_details: IssueOrPullRequestWithDetails = await self.research_issue_or_pull_request(
+                owner=related_to_issue.owner,
+                repo=related_to_issue.repo,
+                issue_or_pr_number=related_to_issue.issue_number,
+            )
+            user_prompt.add_yaml_section(
+                title="Related to Issue",
+                obj=[
+                    "The user has indicated that the search they are performing is related to the following issue or pull request: ",
+                    related_issue_details,
+                    "As a result, you can skip this issue if you find it in the search results",
+                ],
+            )
 
+        user_prompt.add_text_section(
+            title="Summary Instructions",
+            text="""
         By default, your summary should focus on the issues you determine are related to the user's focus. Issues should appear
         in order of most-related to least-related.
 
@@ -390,11 +463,55 @@ class IssuesOrPullRequestsServer(BaseServer):
 
         You will double check your results against the user's focus to ensure that the issues you report as related are actually related
         to the user's focus.
-        """
+        """,
+        )
 
         summary: str = await self._sample(
             system_prompt=system_prompt,
-            messages=user_prompt,
+            messages=user_prompt.render_text(),
         )
 
         return IssueSearchSummary(owner=owner, repo=repo, keywords=keywords, summary=summary, items_reviewed=issues_with_title)
+
+    async def _get_pull_request_diff(
+        self, owner: OWNER, repo: REPO, pull_request_number: int, truncate: int = 100
+    ) -> list[PullRequestFileDiff]:
+        """Get the diff of a pull request."""
+
+        response: Response[list[DiffEntry], list[DiffEntryType]] = await self.github_client.rest.pulls.async_list_files(
+            owner=owner, repo=repo, pull_number=pull_request_number
+        )
+
+        return PullRequestFileDiff.from_diff_entries(diff_entries=extract_response(response), truncate=truncate)
+
+    async def _add_pull_request_diff(
+        self, owner: OWNER, repo: REPO, issue_or_pull_request_with_details: IssueOrPullRequestWithDetails, truncate: int = 100
+    ) -> IssueOrPullRequestWithDetails:
+        """Add the diff to the issue or pull request."""
+
+        diff = await self._get_pull_request_diff(
+            owner=owner,
+            repo=repo,
+            pull_request_number=issue_or_pull_request_with_details.issue_or_pr.number,
+            truncate=truncate,
+        )
+
+        issue_or_pull_request_with_details.diff = diff
+
+        return issue_or_pull_request_with_details
+
+    async def _add_pull_request_diffs(
+        self, owner: OWNER, repo: REPO, issues_or_pull_requests_with_details: list[IssueOrPullRequestWithDetails], truncate: int = 100
+    ) -> list[IssueOrPullRequestWithDetails]:
+        """Add the diffs to the issues or pull requests."""
+
+        for issue_or_pull_request_with_details in issues_or_pull_requests_with_details:
+            if isinstance(issue_or_pull_request_with_details.issue_or_pr, PullRequest):
+                await self._add_pull_request_diff(
+                    owner=owner,
+                    repo=repo,
+                    issue_or_pull_request_with_details=issue_or_pull_request_with_details,
+                    truncate=truncate,
+                )
+
+        return issues_or_pull_requests_with_details

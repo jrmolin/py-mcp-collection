@@ -2,6 +2,9 @@ import os
 from typing import Any
 
 import pytest
+from fastmcp import FastMCP
+from fastmcp.experimental.sampling.handlers.openai import OpenAISamplingHandler
+from fastmcp.server.middleware.logging import LoggingMiddleware
 from githubkit.github import GitHub
 from openai import OpenAI
 
@@ -20,3 +23,14 @@ def openai_client() -> OpenAI:
 @pytest.fixture
 def github_client() -> GitHub[Any]:
     return get_github_client()
+
+
+@pytest.fixture
+def fastmcp(openai_client: OpenAI):
+    return FastMCP(
+        sampling_handler=OpenAISamplingHandler(
+            default_model=OPENAI_MODEL,  # pyright: ignore[reportArgumentType]
+            client=openai_client,
+        ),
+        middleware=[LoggingMiddleware()],
+    )

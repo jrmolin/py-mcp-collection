@@ -44,7 +44,7 @@ github-research-mcp = "github_research_mcp.main:run_mcp"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 env_files = [".env"]
-addopts = ["--inline-snapshot=disable","-vv"]
+addopts = ["--inline-snapshot=disable","-vv","-s"]
 
 [dependency-groups]
 dev = [

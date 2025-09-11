@@ -48,6 +48,8 @@ class Nodes[T](BaseModel):
 
 
 class Actor(BaseModel):
+    """A user, bot, or app on GitHub."""
+
     user_type: str
     login: str
 
@@ -64,6 +66,8 @@ class Actor(BaseModel):
 
 
 class Comment(BaseModel):
+    """A comment on an issue or pull request."""
+
     body: str
     author: Actor
     author_association: str = Field(validation_alias="authorAssociation")
@@ -97,6 +101,8 @@ class Comment(BaseModel):
 
 
 class Label(BaseModel):
+    """A label on an issue or pull request."""
+
     name: str
 
     @staticmethod
@@ -110,6 +116,8 @@ class Label(BaseModel):
 
 
 class Issue(BaseModel):
+    """An issue on GitHub."""
+
     number: int
     title: str
     body: str
@@ -177,6 +185,8 @@ class MergeCommit(BaseModel):
 
 
 class PullRequest(BaseModel):
+    """A pull request on GitHub."""
+
     number: int
     title: str
     body: str

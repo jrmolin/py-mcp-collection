@@ -1,7 +1,6 @@
 import asyncio
 from typing import TYPE_CHECKING, Annotated, Any, Self
 
-import yaml
 from async_lru import alru_cache
 from fastmcp.utilities.logging import get_logger
 from githubkit.github import GitHub
@@ -26,7 +25,8 @@ from github_research_mcp.models.query.base import (
 )
 from github_research_mcp.models.query.code import CodeSearchQuery
 from github_research_mcp.models.repository.tree import RepositoryFileCountEntry, RepositoryTree
-from github_research_mcp.sampling.prompts import PREAMBLE
+from github_research_mcp.sampling.extract import object_in_text_instructions
+from github_research_mcp.sampling.prompts import PromptBuilder, SystemPromptBuilder
 from github_research_mcp.servers.base import BaseServer
 from github_research_mcp.servers.shared.annotations import OWNER, PAGE, PER_PAGE, REPO
 from github_research_mcp.servers.shared.utility import decode_content, extract_response
@@ -131,6 +131,12 @@ class RepositorySummary(RootModel[str]):
     """A summary of a repository."""
 
 
+class RequestFiles(BaseModel):
+    """A request for files from a repository."""
+
+    files: list[str] = Field(description="The files to get the content of.")
+
+
 class RepositoryServer(BaseServer):
     def __init__(self, github_client: GitHub[Any]):
         self.github_client = github_client
@@ -224,7 +230,7 @@ class RepositoryServer(BaseServer):
 
         return await self._summarize(owner=owner, repo=repo)
 
-    @alru_cache(maxsize=50, ttl=ONE_DAY_IN_SECONDS)
+    @alru_cache(maxsize=100, ttl=ONE_DAY_IN_SECONDS)
     async def _summarize(self, owner: OWNER, repo: REPO) -> RepositorySummary:
         """Provide a high-level summary of the repository covering the readmes and code layout."""
 
@@ -234,23 +240,30 @@ class RepositoryServer(BaseServer):
 
         top_file_extensions: list[RepositoryFileCountEntry] = repository_tree.count_files(top_n=30)
 
-        return await self._summarize_repository(readmes=readmes, top_file_extensions=top_file_extensions, repository_tree=repository_tree)
+        return await self._summarize_repository(
+            owner=owner, repo=repo, readmes=readmes, top_file_extensions=top_file_extensions, repository_tree=repository_tree
+        )
 
     async def _get_file(self, owner: OWNER, repo: REPO, path: str) -> RepositoryFileWithContent:
         """Get the contents of a file from a repository."""
 
-        response: Response[
-            list[ContentDirectoryItems] | ContentFile | ContentSymlink | ContentSubmodule,
-            list[ContentDirectoryItemsType] | ContentFileType | ContentSymlinkType | ContentSubmoduleType,
-        ] = await self.github_client.rest.repos.async_get_content(owner=owner, repo=repo, path=path)
+        try:
+            response: Response[
+                list[ContentDirectoryItems] | ContentFile | ContentSymlink | ContentSubmodule,
+                list[ContentDirectoryItemsType] | ContentFileType | ContentSymlinkType | ContentSubmoduleType,
+            ] = await self.github_client.rest.repos.async_get_content(owner=owner, repo=repo, path=path)
+
+        except Exception:
+            logger.exception(f"Error getting file {path} from {owner}/{repo}")
+            raise
 
         if not isinstance(response.parsed_data, ContentFile):
-            msg = f"Expected a ContentFile, got {type(response.parsed_data)}"
+            msg = f"Read {path} from {owner}/{repo}, expected a ContentFile, got {type(response.parsed_data)}"
             raise TypeError(msg)
 
         return RepositoryFileWithContent.from_content_file(content_file=response.parsed_data)
 
-    @alru_cache(maxsize=5, ttl=ONE_DAY_IN_SECONDS)
+    @alru_cache(maxsize=100, ttl=ONE_DAY_IN_SECONDS)
     async def _get_repository_tree(self, owner: OWNER, repo: REPO) -> RepositoryTree:
         """Get the tree of a repository. This can be quite a large amount of data, so it is best to use this sparingly."""
 
@@ -262,75 +275,116 @@ class RepositoryServer(BaseServer):
 
     async def _summarize_repository(
         self,
+        owner: OWNER,
+        repo: REPO,
         readmes: list[RepositoryFileWithContent],
         top_file_extensions: list[RepositoryFileCountEntry],
         repository_tree: RepositoryTree,
     ) -> RepositorySummary:
         """Summarize the repository using the readmes, file extension counts, and code layout."""
 
-        system_prompt = f"""
-        {PREAMBLE}
+        system_prompt_builder = SystemPromptBuilder()
 
-        Please provide a comprehensive analysis of the repository layout that would be helpful for an AI coding agent.
+        system_prompt_builder.add_text_section(
+            title="System Prompt",
+            text="""
+Your goal is to provide an extremely comprehensive analysis of the repository that would be helpful for an AI coding agent
+to understand and work with the repository.
 
-        Your analysis should include:
+A great analysis includes:
 
-        ## 1. Project Type & Technology Stack
-        - Identify the primary programming languages from file extensions
-        - Detect framework indicators (package.json, requirements.txt, Cargo.toml, etc.)
-        - Note build system files (Makefile, CMakeLists.txt, etc.)
+## 1. Project Type & Technology Stack
+- Identify the primary programming languages from file extensions
+- Detect framework indicators (package.json, requirements.txt, Cargo.toml, etc.)
+- Note build system files (Makefile, CMakeLists.txt, etc.)
 
-        ## 2. Directory Structure Analysis
-        - Explain the purpose of each major directory
-        - Identify common patterns (src/, tests/, docs/, examples/)
-        - Note any unusual or project-specific directory structures
-        - Distinguish between source code, tests, documentation, and assets
+## 2. Directory Structure Analysis
+- Explain the purpose of each major directory
+- Identify common patterns (src/, tests/, docs/, examples/)
+- Note any unusual or project-specific directory structures
+- Distinguish between source code, tests, documentation, and assets
 
-        ## 3. Key Files & Entry Points
-        - Identify main/entry point files (main.py, index.js, src/main.rs, etc.)
-        - Highlight important configuration files (.env.example, config files, docker-compose.yml)
-        - Note dependency management files (package.json, requirements.txt, Pipfile, etc.)
-        - Identify CI/CD files (.github/workflows, .gitlab-ci.yml, etc.)
+## 3. Key Files & Entry Points
+- Identify main/entry point files (main.py, index.js, src/main.rs, etc.)
+- Highlight important configuration files (.env.example, config files, docker-compose.yml)
+- Note dependency management files (package.json, requirements.txt, Pipfile, etc.)
+- Identify CI/CD files (.github/workflows, .gitlab-ci.yml, etc.)
 
-        ## 4. Development Workflow Indicators
-        - Identify test directories and testing frameworks
-        - Note linting/formatting configuration (.eslintrc, .prettierrc, pyproject.toml)
-        - Highlight documentation files (README, CONTRIBUTING, CHANGELOG, etc.)
-        - Identify development tools and scripts
+## 4. Key Patterns & Conventions
+- Identify any key patterns or conventions used in the repository
+- Note any project-specific conventions or patterns
+- Highlight files that are likely to be important for understanding the codebase
+- Do not mention conventions or patterns that are standard for projects of this type
+- Extensively spell out identified coding practices and patterns used in the repository
+    that one must follow in order to match the style of the repository
+- Identify the primary data models or entities.
+- Describe how and where data is stored (e.g., PostgreSQL, MongoDB, in-memory).
+- Point to any schema definitions, migrations, or ORM/ODM models.
 
-        ## 5. Navigation Guidance
-        - Provide guidance on where to look for specific types of files
-        - Note any project-specific conventions or patterns
-        - Highlight files that are likely to be important for understanding the codebase
+## 5. Key Dependencies
+- Identify any key dependencies used in the repository
+- Identify key frameworks used in the repository
+- Identify key libraries used in the repository
+- Do not mention dependencies that are standard for projects of this type
+- List any critical external APIs or services the project communicates with (e.g., Stripe, Twilio, Google Maps API).
+  and explain their purpose within the application.
 
-        Structure your response to be actionable for an AI coding agent working with this repository. You do not have access
-        to the contents of the files so your guidance should not imply that you have read or understand the files. You should
-        indicate that your analysis is based only on the file paths and not the contents of the files.
+## 6. Development Workflow Indicators
+- Identify test directories and testing frameworks
+- Note linting/formatting configuration (.eslintrc, .prettierrc, pyproject.toml)
+- Highlight documentation files (README, CONTRIBUTING, CHANGELOG, etc.)
+- Identify development tools and scripts
 
-        If available, readmes will be provided to you. Please use them to provide additional context about the repository, if
-        a piece of information you're providing is from the readme, you should indicate that.
-        """
+## 7. Navigation Guidance
+- Provide guidance on where to look for specific types of files
+- Note any project-specific conventions or patterns
+- Highlight files that are likely to be important for understanding the codebase
 
-        user_prompt = f"""
-        ## Repository Readmes
-        ```yaml
-        {yaml.dump({"readmes": [readme.model_dump() for readme in readmes]})}
-        ```
+You will structure your response to be actionable for an AI coding agent working with this repository.
 
-        ## Repository File Counts
-        ```yaml
-        {yaml.dump({"file_counts": [file_count.model_dump() for file_count in top_file_extensions]})}
-        ```
+When referencing files simply wrap their paths in backticks, do not make markdown links for them.
+""",
+        )
 
-        ## Repository Layout
-        ```yaml
-        {yaml.dump(repository_tree.model_dump())}
-        ```
-        """
+        user_prompt_builder = PromptBuilder()
+
+        readme_names: list[str] = [readme.path for readme in readmes]
+
+        user_prompt_builder.add_yaml_section(title="Repository Readmes", obj=readmes)
+        user_prompt_builder.add_yaml_section(title="Repository File Counts", obj=top_file_extensions)
+        user_prompt_builder.add_yaml_section(title="Repository Layout", obj=repository_tree)
+
+        more_information_prompt = f"""
+You will produce a much better summary if you read some of the files in the repository first,
+so you should first make a single request to read some (up to 20) of the files.
+
+{object_in_text_instructions(object_type=RequestFiles, require=True)}
+
+The file contents will be provided to you and then you can provide the summary after reviewing the files."""
+
+        request_files: RequestFiles = await self._structured_sample(
+            system_prompt=system_prompt_builder.render_text(),
+            messages=[user_prompt_builder.render_text(), more_information_prompt],
+            object_type=RequestFiles,
+            max_tokens=5000,
+        )
+
+        logger.info(f"Repository Summary has requested files: {request_files.files}")
+
+        requested_files: list[RepositoryFileWithContent] = [
+            await self._get_file(owner=owner, repo=repo, path=path) for path in request_files.files if path not in readme_names
+        ]
+
+        user_prompt_builder.add_yaml_section(
+            title="Sampling of Relevant Files",
+            preamble="The following files were gathered to help you provide a summary of the repository:",
+            obj=requested_files,
+        )
 
         summary: str = await self._sample(
-            system_prompt=system_prompt,
-            messages=user_prompt,
+            system_prompt=system_prompt_builder.render_text(),
+            messages=[user_prompt_builder.render_text()],
+            max_tokens=10000,
         )
 
         return RepositorySummary.model_validate(summary)

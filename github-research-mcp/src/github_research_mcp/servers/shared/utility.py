@@ -18,7 +18,7 @@ def estimate_model_tokens(basemodel: BaseModel | Sequence[BaseModel]) -> int:
     return estimate_tokens(basemodel.model_dump_json())
 
 
-def extract_response[T: BaseModel](response: Response[T]) -> T:
+def extract_response[T: BaseModel | Sequence[BaseModel]](response: Response[T]) -> T:
     """Extract the response from a response."""
 
     return response.parsed_data

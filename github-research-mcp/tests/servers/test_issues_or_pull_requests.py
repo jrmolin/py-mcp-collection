@@ -2,6 +2,11 @@ import json
 from typing import Any
 
 import pytest
+from dirty_equals import IsStr
+from fastmcp.client import Client
+from fastmcp.client.transports import FastMCPTransport
+from fastmcp.server import FastMCP
+from fastmcp.tools import Tool
 from githubkit.github import GitHub
 from inline_snapshot import snapshot
 
@@ -54,6 +59,7 @@ async def test_research_issue(issues_or_pr_server: IssuesOrPullRequestsServer):
                 "labels": [{"name": "bug"}],
                 "assignees": [{"user_type": "User", "login": "strawgate"}],
             },
+            "diff": None,
             "comments": [
                 {
                     "body": "it also has a comment",
@@ -117,6 +123,20 @@ it has a related issue #1\
                 "labels": [{"name": "bug"}],
                 "assignees": [{"user_type": "User", "login": "strawgate"}],
             },
+            "diff": [
+                {
+                    "path": "test.md",
+                    "status": "modified",
+                    "patch": """\
+@@ -1 +1,3 @@
+ this is a test file
++
++this is a test modification\
+""",
+                    "previous_filename": None,
+                    "truncated": False,
+                }
+            ],
             "comments": [
                 {
                     "body": "it also has a comment",
@@ -161,6 +181,20 @@ it has a related issue #1\
                     "labels": [{"name": "bug"}],
                     "assignees": [{"user_type": "User", "login": "strawgate"}],
                 },
+                "diff": [
+                    {
+                        "path": "test.md",
+                        "status": "modified",
+                        "patch": """\
+@@ -1 +1,3 @@
+ this is a test file
++
++this is a test modification\
+""",
+                        "previous_filename": None,
+                        "truncated": False,
+                    }
+                ],
                 "comments": [
                     {
                         "body": "it also has a comment",
@@ -201,6 +235,7 @@ async def test_research_issues(issues_or_pr_server: IssuesOrPullRequestsServer):
                     "labels": [{"name": "bug"}],
                     "assignees": [{"user_type": "User", "login": "strawgate"}],
                 },
+                "diff": None,
                 "comments": [
                     {
                         "body": "it also has a comment",
@@ -234,4 +269,99 @@ it has a related issue #1\
                 ],
             }
         ]
+    )
+
+
+async def test_summarize_issue(issues_or_pr_server: IssuesOrPullRequestsServer, fastmcp: FastMCP):
+    fastmcp.add_tool(tool=Tool.from_function(fn=issues_or_pr_server.summarize_issue_or_pull_request))
+
+    async with Client[FastMCPTransport](transport=fastmcp) as fastmcp_client:
+        context = await fastmcp_client.call_tool(
+            "summarize_issue_or_pull_request", arguments={"owner": "strawgate", "repo": "github-issues-e2e-test", "issue_or_pr_number": 1}
+        )
+
+    assert context.structured_content == snapshot(
+        {
+            "owner": "strawgate",
+            "repo": "github-issues-e2e-test",
+            "issue_or_pr_number": 1,
+            "summary": IsStr(),
+        }
+    )
+
+
+async def test_summarize_pull_request(issues_or_pr_server: IssuesOrPullRequestsServer, fastmcp: FastMCP):
+    fastmcp.add_tool(tool=Tool.from_function(fn=issues_or_pr_server.summarize_issue_or_pull_request))
+
+    async with Client[FastMCPTransport](transport=fastmcp) as fastmcp_client:
+        context = await fastmcp_client.call_tool(
+            "summarize_issue_or_pull_request", arguments={"owner": "strawgate", "repo": "github-issues-e2e-test", "issue_or_pr_number": 2}
+        )
+
+    assert context.structured_content == snapshot(
+        {
+            "owner": "strawgate",
+            "repo": "github-issues-e2e-test",
+            "issue_or_pr_number": 2,
+            "summary": IsStr(),
+        }
+    )
+
+
+async def test_summarize_issues(issues_or_pr_server: IssuesOrPullRequestsServer, fastmcp: FastMCP):
+    fastmcp.add_tool(tool=Tool.from_function(fn=issues_or_pr_server.summarize_issues_or_pull_requests))
+
+    async with Client[FastMCPTransport](transport=fastmcp) as fastmcp_client:
+        context = await fastmcp_client.call_tool(
+            "summarize_issues_or_pull_requests",
+            arguments={
+                "owner": "strawgate",
+                "repo": "github-issues-e2e-test",
+                "issue_or_pr": "issue",
+                "keywords": {"karma"},
+                "summary_focus": "Focus on bugs related to Karma analysis",
+            },
+        )
+
+    assert context.structured_content == snapshot(
+        {
+            "owner": "strawgate",
+            "repo": "github-issues-e2e-test",
+            "keywords": ["karma"],
+            "summary": IsStr(),
+            "items_reviewed": {
+                "issue:5": "[ENLIGHTENMENT] Positive Code Karma is not enough",
+                "issue:4": "[BUG] Currently, bad Karma is not that bad",
+            },
+        }
+    )
+
+
+async def test_summarize_issues_related_to_issue(issues_or_pr_server: IssuesOrPullRequestsServer, fastmcp: FastMCP):
+    fastmcp.add_tool(tool=Tool.from_function(fn=issues_or_pr_server.summarize_issues_or_pull_requests))
+
+    async with Client[FastMCPTransport](transport=fastmcp) as fastmcp_client:
+        context = await fastmcp_client.call_tool(
+            "summarize_issues_or_pull_requests",
+            arguments={
+                "owner": "strawgate",
+                "repo": "github-issues-e2e-test",
+                "issue_or_pr": "issue",
+                "keywords": {"karma"},
+                "summary_focus": "Determine if the related to issue is a duplicate of any issues in the repository",
+                "related_to_issue": {"owner": "strawgate", "repo": "github-issues-e2e-test", "issue_number": 4},
+            },
+        )
+
+    assert context.structured_content == snapshot(
+        {
+            "owner": "strawgate",
+            "repo": "github-issues-e2e-test",
+            "keywords": ["karma"],
+            "summary": IsStr(),
+            "items_reviewed": {
+                "issue:5": "[ENLIGHTENMENT] Positive Code Karma is not enough",
+                "issue:4": "[BUG] Currently, bad Karma is not that bad",
+            },
+        }
     )

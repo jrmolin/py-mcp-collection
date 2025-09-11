@@ -5,11 +5,9 @@ from dirty_equals import IsStr
 from fastmcp import FastMCP
 from fastmcp.client import Client
 from fastmcp.client.transports import FastMCPTransport
-from fastmcp.experimental.sampling.handlers.openai import OpenAISamplingHandler
 from fastmcp.tools import Tool
 from githubkit.github import GitHub
 from inline_snapshot import snapshot
-from openai import OpenAI
 
 from github_research_mcp.clients.github import get_github_client
 from github_research_mcp.models.query.base import AnySymbolsQualifier
@@ -159,16 +157,6 @@ async def test_search_files(repository_server: RepositoryServer):
     assert files == snapshot([])
 
 
-@pytest.fixture
-def fastmcp(openai_client: OpenAI):
-    return FastMCP(
-        sampling_handler=OpenAISamplingHandler(
-            default_model="gemini-2.0-flash",  # pyright: ignore[reportArgumentType]
-            client=openai_client,
-        )
-    )
-
-
 async def test_summarize_repository(fastmcp: FastMCP, repository_server: RepositoryServer):
     fastmcp.add_tool(tool=Tool.from_function(fn=repository_server.summarize))
 
@@ -176,6 +164,30 @@ async def test_summarize_repository(fastmcp: FastMCP, repository_server: Reposit
         context = await fastmcp_client.call_tool(
             "summarize",
             arguments={"owner": "strawgate", "repo": "github-issues-e2e-test"},
+        )
+
+    assert context.structured_content == snapshot({"result": IsStr()})
+
+
+async def test_summarize_repository_fastmcp(fastmcp: FastMCP, repository_server: RepositoryServer):
+    fastmcp.add_tool(tool=Tool.from_function(fn=repository_server.summarize))
+
+    async with Client[FastMCPTransport](transport=fastmcp) as fastmcp_client:
+        context = await fastmcp_client.call_tool(
+            "summarize",
+            arguments={"owner": "jlowin", "repo": "fastmcp"},
+        )
+
+    assert context.structured_content == snapshot({"result": IsStr()})
+
+
+async def test_summarize_repository_beats(fastmcp: FastMCP, repository_server: RepositoryServer):
+    fastmcp.add_tool(tool=Tool.from_function(fn=repository_server.summarize))
+
+    async with Client[FastMCPTransport](transport=fastmcp) as fastmcp_client:
+        context = await fastmcp_client.call_tool(
+            "summarize",
+            arguments={"owner": "strawgate", "repo": "beats"},
         )
 
     assert context.structured_content == snapshot({"result": IsStr()})
