@@ -13,10 +13,19 @@
             "justMyCode": false
         },
         {
-            "name": "Python Debugger: Module",
+            "name": "Research Server",
             "type": "debugpy",
             "request": "launch",
             "module": "github_research_mcp.main",
+            "cwd": "${workspaceFolder}",
+            "envFile": "${workspaceFolder}/.env",
+            "args": ["--mcp-transport", "streamable-http"]
+        },
+        {
+            "name": "Public Server",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "github_research_mcp.public",
             "cwd": "${workspaceFolder}",
             "envFile": "${workspaceFolder}/.env",
             "args": ["--mcp-transport", "streamable-http"]

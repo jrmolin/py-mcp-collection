@@ -50,11 +50,10 @@ INCLUDE_EXCLUDE_IS_REGEX = Annotated[
     bool, Field(description="Whether the include and exclude patterns provided should be evaluated as regex.")
 ]
 INCLUDE_PATTERNS = Annotated[
-    list[str] | None,
+    list[str],
     Field(
         description=(
-            "The patterns to check file paths against. File paths matching any of these patterns will be included in the search. "
-            "If None, all files will be included (unless excluded)."
+            "The patterns to check file paths against. File paths matching any of these patterns will be included in the results. "
         ),
     ),
 ]
@@ -62,7 +61,7 @@ EXCLUDE_PATTERNS = Annotated[
     list[str] | None,
     Field(
         description=(
-            "The patterns to check file paths against. File paths matching any of these patterns will be excluded from the search. "
+            "The patterns to check file paths against. File paths matching any of these patterns will be excluded from the results. "
             "If None, no files will be excluded."
         )
     ),
@@ -83,29 +82,38 @@ DEFAULT_TRUNCATE_CONTENT = 500
 ONE_DAY_IN_SECONDS = 60 * 60 * 24
 
 
+class FileLines(RootModel[dict[int, str]]):
+    """A dictionary of line numbers and content pairs."""
+
+    @classmethod
+    def from_text(cls, text: str) -> Self:
+        text_lines = text.split("\n")
+
+        file_lines = {i + 1: line for i, line in enumerate(text_lines)}
+
+        return cls(root=file_lines)
+
+    def truncate(self, truncate: int) -> Self:
+        return self.model_copy(update={"root": {k: v for k, v in self.root.items() if k <= truncate}})
+
+
 class RepositoryFileWithContent(BaseModel):
     """A file with its path and content."""
 
     path: str = Field(description="The path of the file.")
-    content: str = Field(description="The content of the file.")
+    content: FileLines = Field(description="The content of the file.")
     truncated: bool = Field(default=False, description="Whether the content has been truncated.")
 
     @classmethod
-    def from_content_file(cls, content_file: ContentFile) -> Self:
-        return cls(path=content_file.path, content=decode_content(content_file.content))
+    def from_content_file(cls, content_file: ContentFile, truncate: TRUNCATE_CONTENT = DEFAULT_TRUNCATE_CONTENT) -> Self:
+        decoded_content = decode_content(content_file.content)
 
-    @property
-    def lines(self) -> list[str]:
-        return self.content.split("\n")
+        file_lines = FileLines.from_text(text=decoded_content)
+
+        return cls(path=content_file.path, content=file_lines).truncate(truncate=truncate)
 
     def truncate(self, truncate: int) -> Self:
-        lines: list[str] = self.lines
-
-        if len(lines) > truncate:
-            lines = lines[:truncate]
-            return self.model_copy(update={"content": "\n".join(lines), "truncated": True})
-
-        return self
+        return self.model_copy(update={"content": self.content.truncate(truncate=truncate)})
 
 
 class RepositoryFileWithLineMatches(BaseModel):
@@ -147,12 +155,12 @@ class RepositoryServer(BaseServer):
         """Get the files from a repository. Missing files are ignored."""
 
         results: list[RepositoryFileWithContent | BaseException] = await asyncio.gather(
-            *[self._get_file(owner=owner, repo=repo, path=path) for path in paths], return_exceptions=True
+            *[self._get_file(owner=owner, repo=repo, path=path, truncate=truncate) for path in paths], return_exceptions=True
         )
 
         [logger.error(f"Error getting file {result}") for result in results if isinstance(result, BaseException)]
 
-        return [result.truncate(truncate=truncate) for result in results if not isinstance(result, BaseException)]
+        return [result for result in results if not isinstance(result, BaseException)]
 
     async def get_readmes(
         self, owner: OWNER, repo: REPO, readmes: README_FILES | None = None, truncate: TRUNCATE_CONTENT = DEFAULT_TRUNCATE_CONTENT
@@ -174,7 +182,7 @@ class RepositoryServer(BaseServer):
         self,
         owner: OWNER,
         repo: REPO,
-        include: INCLUDE_PATTERNS = None,
+        include: INCLUDE_PATTERNS,
         exclude: EXCLUDE_PATTERNS = None,
         include_exclude_is_regex: INCLUDE_EXCLUDE_IS_REGEX = False,
     ) -> RepositoryTree:
@@ -244,7 +252,10 @@ class RepositoryServer(BaseServer):
             owner=owner, repo=repo, readmes=readmes, top_file_extensions=top_file_extensions, repository_tree=repository_tree
         )
 
-    async def _get_file(self, owner: OWNER, repo: REPO, path: str) -> RepositoryFileWithContent:
+    @alru_cache(maxsize=100, ttl=ONE_DAY_IN_SECONDS)
+    async def _get_file(
+        self, owner: OWNER, repo: REPO, path: str, truncate: TRUNCATE_CONTENT = DEFAULT_TRUNCATE_CONTENT
+    ) -> RepositoryFileWithContent:
         """Get the contents of a file from a repository."""
 
         try:
@@ -261,7 +272,7 @@ class RepositoryServer(BaseServer):
             msg = f"Read {path} from {owner}/{repo}, expected a ContentFile, got {type(response.parsed_data)}"
             raise TypeError(msg)
 
-        return RepositoryFileWithContent.from_content_file(content_file=response.parsed_data)
+        return RepositoryFileWithContent.from_content_file(content_file=response.parsed_data, truncate=truncate)
 
     @alru_cache(maxsize=100, ttl=ONE_DAY_IN_SECONDS)
     async def _get_repository_tree(self, owner: OWNER, repo: REPO) -> RepositoryTree:
@@ -309,22 +320,24 @@ A great analysis includes:
 - Highlight important configuration files (.env.example, config files, docker-compose.yml)
 - Note dependency management files (package.json, requirements.txt, Pipfile, etc.)
 - Identify CI/CD files (.github/workflows, .gitlab-ci.yml, etc.)
-
-## 4. Key Patterns & Conventions
-- Identify any key patterns or conventions used in the repository
-- Note any project-specific conventions or patterns
-- Highlight files that are likely to be important for understanding the codebase
-- Do not mention conventions or patterns that are standard for projects of this type
-- Extensively spell out identified coding practices and patterns used in the repository
-    that one must follow in order to match the style of the repository
 - Identify the primary data models or entities.
-- Describe how and where data is stored (e.g., PostgreSQL, MongoDB, in-memory).
 - Point to any schema definitions, migrations, or ORM/ODM models.
 
+## 4. Key Patterns & Conventions
+- Identify any key patterns or conventions used in the repository, especially patterns
+  that are unique to the project. Do not mention conventions or patterns that are standard for
+  projects of this type.
+- Extensively spell out identified coding practices and patterns used in the repository
+  that one must follow in order to match the style of the repository. This includes
+  but is not limited to: Observability (logging, metrics, tracing), Error Handling (error codes,
+  error messages, error types), Data Storage (database schemas, ORM models, NoSQL collections),
+  API Design (endpoints, request/response formats, authentication), Security (authentication, authorization,
+  encryption, data protection), Performance (caching, load balancing, optimization), and Testing (unit tests,
+  integration tests, end-to-end tests). If any of these practices are standard for projects of this type,
+  feel free to omit them or simply mention that they are standard.
+
 ## 5. Key Dependencies
-- Identify any key dependencies used in the repository
-- Identify key frameworks used in the repository
-- Identify key libraries used in the repository
+- Identify any key dependencies, frameworks, and libraries used in the repository
 - Do not mention dependencies that are standard for projects of this type
 - List any critical external APIs or services the project communicates with (e.g., Stripe, Twilio, Google Maps API).
   and explain their purpose within the application.
@@ -337,12 +350,14 @@ A great analysis includes:
 
 ## 7. Navigation Guidance
 - Provide guidance on where to look for specific types of files
-- Note any project-specific conventions or patterns
 - Highlight files that are likely to be important for understanding the codebase
 
 You will structure your response to be actionable for an AI coding agent working with this repository.
 
-When referencing files simply wrap their paths in backticks, do not make markdown links for them.
+Notes:
+- When referencing files simply wrap their paths in backticks, do not make markdown links for them.
+- If you are guessing at the purpose of a file that you have not read, mention that you are guessing by saying
+  "likely" or "possibly" in your response.
 """,
         )
 
@@ -350,13 +365,23 @@ When referencing files simply wrap their paths in backticks, do not make markdow
 
         readme_names: list[str] = [readme.path for readme in readmes]
 
-        user_prompt_builder.add_yaml_section(title="Repository Readmes", obj=readmes)
-        user_prompt_builder.add_yaml_section(title="Repository File Counts", obj=top_file_extensions)
-        user_prompt_builder.add_yaml_section(title="Repository Layout", obj=repository_tree)
+        user_prompt_builder.add_yaml_section(
+            title="Repository Readmes",
+            preamble="The following readmes were gathered to help you provide a summary of the repository:",
+            obj=readmes,
+        )
+        user_prompt_builder.add_yaml_section(
+            title="Repository Most Common File Extensions",
+            preamble="The following is the 30 most common file extensions in the repository:",
+            obj=top_file_extensions,
+        )
+        user_prompt_builder.add_yaml_section(
+            title="Repository Layout", preamble="The following is the layout of the repository:", obj=repository_tree
+        )
 
         more_information_prompt = f"""
 You will produce a much better summary if you read some of the files in the repository first,
-so you should first make a single request to read some (up to 20) of the files.
+so you should first make a single request to read the first 400 lines of (up to 30) of the files.
 
 {object_in_text_instructions(object_type=RequestFiles, require=True)}
 
@@ -371,13 +396,17 @@ The file contents will be provided to you and then you can provide the summary a
 
         logger.info(f"Repository Summary has requested files: {request_files.files}")
 
-        requested_files: list[RepositoryFileWithContent] = [
-            await self._get_file(owner=owner, repo=repo, path=path) for path in request_files.files if path not in readme_names
-        ]
+        request_files.files = [file for file in request_files.files if file not in readme_names][:20]
+
+        requested_files: list[RepositoryFileWithContent] = await self.get_files(
+            owner=owner, repo=repo, paths=request_files.files, truncate=400
+        )
 
         user_prompt_builder.add_yaml_section(
             title="Sampling of Relevant Files",
-            preamble="The following files were gathered to help you provide a summary of the repository:",
+            preamble=(
+                "The following files were gathered to help you provide a summary of the repository. Files have been truncated to 400 lines:"
+            ),
             obj=requested_files,
         )
 

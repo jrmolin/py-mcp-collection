@@ -22,7 +22,7 @@ class PublicServer:
             msg = f"Owner {owner} is not in the allowlist"
             raise ValueError(msg)
 
-    async def find_files(self, owner: OWNER, repo: REPO, include: INCLUDE_PATTERNS, exclude: EXCLUDE_PATTERNS) -> RepositoryTree:
+    async def find_files(self, owner: OWNER, repo: REPO, include: INCLUDE_PATTERNS, exclude: EXCLUDE_PATTERNS = None) -> RepositoryTree:
         self._validate_owner(owner=owner)
 
         return await self.repository_server.find_files(owner=owner, repo=repo, include=include, exclude=exclude)

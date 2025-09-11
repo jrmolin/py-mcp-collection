@@ -1,4 +1,9 @@
 import pytest
+from dirty_equals import IsStr
+from fastmcp import FastMCP
+from fastmcp.client import Client
+from fastmcp.client.transports import FastMCPTransport
+from fastmcp.tools import Tool
 from inline_snapshot import snapshot
 
 from github_research_mcp.clients.github import get_github_client
@@ -14,6 +19,18 @@ def public_server():
 
 async def test_public_server(public_server: PublicServer):
     assert public_server is not None
+
+
+async def test_public_server_summarize(public_server: PublicServer, fastmcp: FastMCP):
+    fastmcp.add_tool(tool=Tool.from_function(fn=public_server.summarize))
+
+    async with Client[FastMCPTransport](transport=fastmcp) as fastmcp_client:
+        call_tool_result = await fastmcp_client.call_tool(
+            "summarize",
+            arguments={"owner": "strawgate", "repo": "github-issues-e2e-test"},
+        )
+
+    assert call_tool_result.structured_content == snapshot({"result": IsStr()})
 
 
 async def test_public_server_find_files(public_server: PublicServer):

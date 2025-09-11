@@ -6,32 +6,59 @@ import yaml
 from mcp.types import SamplingMessage, TextContent
 from pydantic import BaseModel, Field
 
-WHO_YOU_ARE = """
-# Who you are
-You are a helpful assistant that summarizes issues on GitHub. You are an astute researcher that is able to analyze GitHub issues, comments,
-pull requests, and other related items.
-"""
 
-DEEPLY_ROOTED = """
-Your summary should be entirely rooted in the provided information, not invented or made up. Every item in the
-summary should include a link/reference to the comment, issue, or related item that the information is based on
-to ensure that the user can gather additional information if they are interested.
-"""
+class PromptSection(BaseModel):
+    title: str = Field(description="The title of the section.")
+    level: int = Field(default=1, description="The level of the section.")
+    section: str = Field(description="The section of the prompt.")
 
-AVOID = """
+    def render_text(self) -> str:
+        return f"{'#' * self.level} {self.title}\n{self.section}"
+
+
+WHO_YOU_ARE = PromptSection(
+    title="Who you are",
+    level=1,
+    section="""
+You are a helpful assistant that assists with researching GitHub repositories. You are an astute researcher that
+is able to analyze GitHub repositories, issues, comments, pull requests, and other related items in order to help
+a user with their GitHub-related tasks.
+""",
+)
+
+DEEPLY_ROOTED = PromptSection(
+    title="Deeply Rooted",
+    level=1,
+    section="""
+Your work should always be entirely rooted in the provided information, not invented or made up. Every piece of information
+you provide in your responses should be referencable back to a specific piece of information you were provided or that you
+gathered. Whenever possible, you will indicate the source of the information in your responses.
+""",
+)
+
+AVOID = PromptSection(
+    title="Avoid Doing",
+    level=1,
+    section="""
 You do not need to use hyperlinks for issues/pull requests that are in the same repository as the issue/pull request you are summarizing,
 you can just provide the issue/pull request number. Just provide pull:# or issue:#. If the issue/pull request is not in the same repository,
 you must provide the full URL to the issue/pull request.
-"""
+""",
+)
 
-RESPONSE_FORMAT = """
+RESPONSE_FORMAT = PromptSection(
+    title="Response Format",
+    level=1,
+    section="""
 Your entire response will be provided directly to the user, so you should avoid extra language about how you will or
 did do certain things. Begin your response with the summary, do not start with a header or with acknowledgement of the
 task.
 
 Your response should be in markdown format.
-"""
+""",
+)
 
+SYSTEM_PROMPT_SECTIONS = [WHO_YOU_ARE, DEEPLY_ROOTED, RESPONSE_FORMAT, AVOID]
 
 PREAMBLE = f"""
 {WHO_YOU_ARE}
@@ -42,15 +69,6 @@ PREAMBLE = f"""
 
 {AVOID}
 """
-
-
-class PromptSection(BaseModel):
-    title: str = Field(description="The title of the section.")
-    level: int = Field(default=1, description="The level of the section.")
-    section: str = Field(description="The section of the prompt.")
-
-    def render_text(self) -> str:
-        return f"{'#' * self.level} {self.title}\n{self.section}"
 
 
 class PromptBuilder(BaseModel):
@@ -90,7 +108,9 @@ class PromptBuilder(BaseModel):
             dumped_objs = [obj.model_dump() if isinstance(obj, BaseModel) else obj for obj in obj]
             yaml_text = yaml.safe_dump_all(dumped_objs, sort_keys=False)
 
-        yaml_block = f"""{preamble}
+        yaml_block: str = preamble or ""
+
+        yaml_block += f"""
 ```yaml
 {yaml_text}
 ```"""
@@ -111,6 +131,4 @@ class PromptBuilder(BaseModel):
 
 
 class SystemPromptBuilder(PromptBuilder):
-    sections: list[PromptSection] = Field(
-        default_factory=lambda: [PromptSection(title="System Prompt", level=1, section=PREAMBLE)], description="The sections of the prompt."
-    )
+    sections: list[PromptSection] = Field(default_factory=lambda: SYSTEM_PROMPT_SECTIONS.copy(), description="The sections of the prompt.")
