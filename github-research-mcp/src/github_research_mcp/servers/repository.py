@@ -1,19 +1,21 @@
 import asyncio
-from typing import TYPE_CHECKING, Annotated, Any, Self
+from collections import defaultdict
+from typing import TYPE_CHECKING, Annotated, Any
 
+import httpx
 from async_lru import alru_cache
 from fastmcp.utilities.logging import get_logger
+from githubkit.exception import GitHubException, RequestFailed
 from githubkit.github import GitHub
 from githubkit.response import Response
-from githubkit.versions.v2022_11_28.models import ContentDirectoryItems, ContentFile, GitTree
+from githubkit.versions.v2022_11_28.models import ContentDirectoryItems, ContentFile, FullRepository, GitTree
 from githubkit.versions.v2022_11_28.models.group_0288 import ContentSymlink
 from githubkit.versions.v2022_11_28.models.group_0289 import ContentSubmodule
-from githubkit.versions.v2022_11_28.models.group_0412 import CodeSearchResultItem, SearchCodeGetResponse200
 from githubkit.versions.v2022_11_28.types.group_0286 import ContentDirectoryItemsType
 from githubkit.versions.v2022_11_28.types.group_0287 import ContentFileType
 from githubkit.versions.v2022_11_28.types.group_0288 import ContentSymlinkType
 from githubkit.versions.v2022_11_28.types.group_0289 import ContentSubmoduleType
-from pydantic import BaseModel, Field, RootModel
+from pydantic import Field
 
 from github_research_mcp.models.query.base import (
     AllKeywordsQualifier,
@@ -26,21 +28,33 @@ from github_research_mcp.models.query.base import (
 from github_research_mcp.models.query.code import CodeSearchQuery
 from github_research_mcp.models.repository.tree import RepositoryFileCountEntry, RepositoryTree
 from github_research_mcp.sampling.extract import object_in_text_instructions
-from github_research_mcp.sampling.prompts import PromptBuilder, SystemPromptBuilder
+from github_research_mcp.sampling.prompts import PromptBuilder, SystemPromptBuilder, UserPromptBuilder
 from github_research_mcp.servers.base import BaseServer
+from github_research_mcp.servers.models.repository import (
+    DEFAULT_AGENTS_MD_TRUNCATE_CONTENT,
+    DEFAULT_TRUNCATE_CONTENT,
+    MiscRepositoryError,
+    Repository,
+    RepositoryFileWithContent,
+    RepositoryFileWithLineMatches,
+    RepositoryNotFoundError,
+    RepositorySummary,
+    RequestFiles,
+)
 from github_research_mcp.servers.shared.annotations import OWNER, PAGE, PER_PAGE, REPO
-from github_research_mcp.servers.shared.utility import decode_content, extract_response
+from github_research_mcp.servers.shared.utility import extract_response
 
 if TYPE_CHECKING:
     from githubkit.response import Response
     from githubkit.versions.v2022_11_28.models import ContentSubmodule, ContentSymlink
     from githubkit.versions.v2022_11_28.models.group_0286 import ContentDirectoryItems
-    from githubkit.versions.v2022_11_28.models.group_0411 import SearchResultTextMatchesItems
+    from githubkit.versions.v2022_11_28.models.group_0412 import SearchCodeGetResponse200
     from githubkit.versions.v2022_11_28.types import (
         ContentDirectoryItemsType,
         ContentFileType,
         ContentSubmoduleType,
         ContentSymlinkType,
+        FullRepositoryType,
         GitTreeType,
     )
 
@@ -77,82 +91,32 @@ TOP_N_EXTENSIONS = Annotated[int, Field(description="The number of top extension
 
 TRUNCATE_CONTENT = Annotated[int, Field(description="The number of lines to truncate the content to.")]
 
-DEFAULT_TRUNCATE_CONTENT = 500
-
 ONE_DAY_IN_SECONDS = 60 * 60 * 24
 
-
-class FileLines(RootModel[dict[int, str]]):
-    """A dictionary of line numbers and content pairs."""
-
-    @classmethod
-    def from_text(cls, text: str) -> Self:
-        text_lines = text.split("\n")
-
-        file_lines = {i + 1: line for i, line in enumerate(text_lines)}
-
-        return cls(root=file_lines)
-
-    def truncate(self, truncate: int) -> Self:
-        return self.model_copy(update={"root": {k: v for k, v in self.root.items() if k <= truncate}})
-
-
-class RepositoryFileWithContent(BaseModel):
-    """A file with its path and content."""
-
-    path: str = Field(description="The path of the file.")
-    content: FileLines = Field(description="The content of the file.")
-    truncated: bool = Field(default=False, description="Whether the content has been truncated.")
-
-    @classmethod
-    def from_content_file(cls, content_file: ContentFile, truncate: TRUNCATE_CONTENT = DEFAULT_TRUNCATE_CONTENT) -> Self:
-        decoded_content = decode_content(content_file.content)
-
-        file_lines = FileLines.from_text(text=decoded_content)
-
-        return cls(path=content_file.path, content=file_lines).truncate(truncate=truncate)
-
-    def truncate(self, truncate: int) -> Self:
-        return self.model_copy(update={"content": self.content.truncate(truncate=truncate)})
-
-
-class RepositoryFileWithLineMatches(BaseModel):
-    """A file with its path and line matches from a search result."""
-
-    path: str = Field(description="The path of the file.")
-    matches: list[str] = Field(description="The fragments of the file that match the search query.")
-
-    @classmethod
-    def from_code_search_result_item(cls, code_search_result_item: CodeSearchResultItem) -> Self:
-        if not code_search_result_item.text_matches:
-            msg = f"Expected a list of SearchResultTextMatchesItems, got {type(code_search_result_item.text_matches)}"
-            raise TypeError(msg)
-
-        text_matches: list[SearchResultTextMatchesItems] = code_search_result_item.text_matches
-
-        fragments: list[str] = [match.fragment for match in text_matches if match.fragment]
-
-        return cls(path=code_search_result_item.path, matches=fragments)
-
-
-class RepositorySummary(RootModel[str]):
-    """A summary of a repository."""
-
-
-class RequestFiles(BaseModel):
-    """A request for files from a repository."""
-
-    files: list[str] = Field(description="The files to get the content of.")
+DEFAULT_READMES = ["README.md", "CONTRIBUTING.md"]
+DEFAULT_AGENTS_MD_FILES = ["AGENTS.md", "CLAUDE.md", "GEMINI.md"]
 
 
 class RepositoryServer(BaseServer):
+    validation_locks: dict[str, asyncio.Lock]
+    summary_locks: dict[str, asyncio.Lock]
+
     def __init__(self, github_client: GitHub[Any]):
         self.github_client = github_client
+        self.validation_locks = defaultdict(asyncio.Lock)
+        self.summary_locks = defaultdict(asyncio.Lock)
+
+    async def get_repository(self, owner: OWNER, repo: REPO) -> Repository:
+        """Get basic information about a GitHub repository."""
+
+        return await self._require_valid_repository(owner=owner, repo=repo)
 
     async def get_files(
         self, owner: OWNER, repo: REPO, paths: GET_FILE_PATHS, truncate: TRUNCATE_CONTENT = DEFAULT_TRUNCATE_CONTENT
     ) -> list[RepositoryFileWithContent]:
-        """Get the files from a repository. Missing files are ignored."""
+        """Get files from a GitHub repository, optionally truncating the content to a specified number of lines."""
+
+        await self._require_valid_repository(owner=owner, repo=repo)
 
         results: list[RepositoryFileWithContent | BaseException] = await asyncio.gather(
             *[self._get_file(owner=owner, repo=repo, path=path, truncate=truncate) for path in paths], return_exceptions=True
@@ -163,18 +127,51 @@ class RepositoryServer(BaseServer):
         return [result for result in results if not isinstance(result, BaseException)]
 
     async def get_readmes(
-        self, owner: OWNER, repo: REPO, readmes: README_FILES | None = None, truncate: TRUNCATE_CONTENT = DEFAULT_TRUNCATE_CONTENT
+        self,
+        owner: OWNER,
+        repo: REPO,
+        readmes: README_FILES | None = None,
+        truncate: TRUNCATE_CONTENT = DEFAULT_TRUNCATE_CONTENT,
+        error_on_missing: bool = True,
     ) -> list[RepositoryFileWithContent]:
-        """Get Readmes from the repository. If none are provided, the README.md, CONTRIBUTING.md, and AGENTS.md will be gathered."""
+        """Get Readmes from a GitHub repository. If none are provided, the README.md and CONTRIBUTING.md will be gathered."""
 
-        context_files: list[str] = readmes or ["README.md", "CONTRIBUTING.md", "AGENTS.md"]
+        await self._require_valid_repository(owner=owner, repo=repo)
 
-        return await self.get_files(owner=owner, repo=repo, paths=context_files, truncate=truncate)
+        repository_tree: RepositoryTree = await self.get_repository_tree(owner=owner, repo=repo, recursive=False)
 
-    async def count_file_extensions(self, owner: OWNER, repo: REPO, top_n: TOP_N_EXTENSIONS = 50) -> list[RepositoryFileCountEntry]:
-        """Count the different file extensions found in the repository to identify the most common file types."""
+        existing_readmes: list[str] = repository_tree.get_files(files=readmes or DEFAULT_READMES, case_insensitive=True)
 
-        repository_tree = await self._get_repository_tree(owner=owner, repo=repo)
+        if not existing_readmes:
+            if error_on_missing:
+                raise MiscRepositoryError(action=f"Get readmes from {owner}/{repo}", extra_info=f"{readmes} not found in {owner}/{repo}")
+
+            return []
+
+        return await self.get_files(
+            owner=owner,
+            repo=repo,
+            paths=existing_readmes,
+            truncate=truncate,
+        )
+
+    async def get_agents_md(self, owner: OWNER, repo: REPO, error_on_missing: bool = True) -> list[RepositoryFileWithContent]:
+        """Get the AGENTS.md, CLAUDE.md, GEMINI.md, etc. files from a GitHub repository."""
+
+        return await self.get_readmes(
+            owner=owner,
+            repo=repo,
+            readmes=DEFAULT_AGENTS_MD_FILES,
+            truncate=DEFAULT_AGENTS_MD_TRUNCATE_CONTENT,
+            error_on_missing=error_on_missing,
+        )
+
+    async def get_file_extensions(self, owner: OWNER, repo: REPO, top_n: TOP_N_EXTENSIONS = 50) -> list[RepositoryFileCountEntry]:
+        """Count the different file extensions found in a GitHub repository to identify the most common file types."""
+
+        await self._require_valid_repository(owner=owner, repo=repo)
+
+        repository_tree: RepositoryTree = await self.get_repository_tree(owner=owner, repo=repo)
 
         return repository_tree.count_files(top_n=top_n)
 
@@ -186,15 +183,13 @@ class RepositoryServer(BaseServer):
         exclude: EXCLUDE_PATTERNS = None,
         include_exclude_is_regex: INCLUDE_EXCLUDE_IS_REGEX = False,
     ) -> RepositoryTree:
-        """Find files in a repository by their names/paths. Exclude patterns take precedence over include patterns.
+        """Find files in a GitHub repository by their names/paths. Exclude patterns take precedence over include patterns.
 
         If Regex is not true, a pattern matches if it is a substring of the file path."""
 
-        tree: Response[GitTree, GitTreeType] = await self.github_client.rest.git.async_get_tree(
-            owner=owner, repo=repo, tree_sha="main", recursive="1"
-        )
+        await self._require_valid_repository(owner=owner, repo=repo)
 
-        repository_tree: RepositoryTree = RepositoryTree.from_git_tree(git_tree=tree.parsed_data)
+        repository_tree: RepositoryTree = await self.get_repository_tree(owner=owner, repo=repo, recursive=False)
 
         return repository_tree.to_filtered_tree(include=include, exclude=exclude, include_exclude_is_regex=include_exclude_is_regex)
 
@@ -208,7 +203,9 @@ class RepositoryServer(BaseServer):
         per_page: PER_PAGE = 30,
         page: PAGE = 1,
     ) -> list[RepositoryFileWithLineMatches]:
-        """Search for files in the repository that contain the provided symbols or keywords."""
+        """Search for files in a GitHub repository that contain the provided symbols or keywords."""
+
+        await self._require_valid_repository(owner=owner, repo=repo)
 
         code_search_query: CodeSearchQuery = CodeSearchQuery.from_repo_or_owner(owner=owner, repo=repo)
 
@@ -234,25 +231,35 @@ class RepositoryServer(BaseServer):
         ]
 
     async def summarize(self, owner: OWNER, repo: REPO) -> RepositorySummary:
-        """Provide a high-level summary of the repository covering the readmes and code layout."""
+        """Provide a high-level summary of a GitHub repository covering the readmes and code layout."""
 
-        return await self._summarize(owner=owner, repo=repo)
+        async with self.summary_locks[f"{owner}/{repo}"]:
+            return await self._summarize(owner=owner, repo=repo)
 
     @alru_cache(maxsize=100, ttl=ONE_DAY_IN_SECONDS)
     async def _summarize(self, owner: OWNER, repo: REPO) -> RepositorySummary:
-        """Provide a high-level summary of the repository covering the readmes and code layout."""
+        """Provide a high-level summary of a GitHub repository covering the readmes and code layout."""
 
-        repository_tree: RepositoryTree = await self._get_repository_tree(owner=owner, repo=repo)
+        logger.info(f"Gathering repository context for {owner}/{repo}")
 
-        readmes: list[RepositoryFileWithContent] = await self.get_readmes(owner=owner, repo=repo)
+        repository: Repository = await self._require_valid_repository(owner=owner, repo=repo)
 
-        top_file_extensions: list[RepositoryFileCountEntry] = repository_tree.count_files(top_n=30)
-
-        return await self._summarize_repository(
-            owner=owner, repo=repo, readmes=readmes, top_file_extensions=top_file_extensions, repository_tree=repository_tree
+        repository_tree, readmes, agents_md = await asyncio.gather(
+            self.get_repository_tree(owner=owner, repo=repo),
+            self.get_readmes(owner=owner, repo=repo, error_on_missing=False),
+            self.get_agents_md(owner=owner, repo=repo, error_on_missing=False),
         )
 
-    @alru_cache(maxsize=100, ttl=ONE_DAY_IN_SECONDS)
+        logger.info(f"Starting summarization of repository {owner}/{repo}")
+
+        return await self._summarize_repository(
+            owner=owner,
+            repo=repo,
+            repository=repository,
+            readmes=readmes + agents_md,
+            repository_tree=repository_tree,
+        )
+
     async def _get_file(
         self, owner: OWNER, repo: REPO, path: str, truncate: TRUNCATE_CONTENT = DEFAULT_TRUNCATE_CONTENT
     ) -> RepositoryFileWithContent:
@@ -264,8 +271,8 @@ class RepositoryServer(BaseServer):
                 list[ContentDirectoryItemsType] | ContentFileType | ContentSymlinkType | ContentSubmoduleType,
             ] = await self.github_client.rest.repos.async_get_content(owner=owner, repo=repo, path=path)
 
-        except Exception:
-            logger.exception(f"Error getting file {path} from {owner}/{repo}")
+        except RequestFailed as request_error:
+            self._log_request_errors(action=f"Get file {path} from {owner}/{repo}", github_exception=request_error)
             raise
 
         if not isinstance(response.parsed_data, ContentFile):
@@ -274,22 +281,49 @@ class RepositoryServer(BaseServer):
 
         return RepositoryFileWithContent.from_content_file(content_file=response.parsed_data, truncate=truncate)
 
-    @alru_cache(maxsize=100, ttl=ONE_DAY_IN_SECONDS)
-    async def _get_repository_tree(self, owner: OWNER, repo: REPO) -> RepositoryTree:
+    async def get_repository_tree(self, owner: OWNER, repo: REPO, recursive: bool = True) -> RepositoryTree:
         """Get the tree of a repository. This can be quite a large amount of data, so it is best to use this sparingly."""
 
         tree: Response[GitTree, GitTreeType] = await self.github_client.rest.git.async_get_tree(
-            owner=owner, repo=repo, tree_sha="main", recursive="1"
+            owner=owner, repo=repo, tree_sha="main", recursive="1" if recursive else None
         )
 
         return RepositoryTree.from_git_tree(git_tree=tree.parsed_data)
+
+    def _log_request_errors(self, action: str, github_exception: GitHubException) -> None:
+        if isinstance(github_exception, RequestFailed) and github_exception.response.status_code == httpx.codes.NOT_FOUND:
+            logger.warning(f"{action}: Not found error for {github_exception.request.url}")
+        else:
+            logger.error(f"{action}: Unknown error: {github_exception}")
+
+    async def _require_valid_repository(self, owner: OWNER, repo: REPO) -> Repository:
+        """Validate a GitHub repository."""
+
+        async with self.validation_locks[f"{owner}/{repo}"]:
+            if repository := await self._get_repository(owner=owner, repo=repo):
+                return repository
+
+        msg = "Note -- Repositories that are private will report as not found."
+
+        raise RepositoryNotFoundError(action=f"Validate repository {owner}/{repo}", extra_info=msg) from None
+
+    async def _get_repository(self, owner: OWNER, repo: REPO) -> Repository | None:
+        """Get a repository."""
+
+        try:
+            response: Response[FullRepository, FullRepositoryType] = await self.github_client.rest.repos.async_get(owner=owner, repo=repo)
+        except GitHubException as github_exception:
+            self._log_request_errors(action=f"Get repository {owner}/{repo}", github_exception=github_exception)
+            return None
+
+        return Repository.from_full_repository(full_repository=response.parsed_data)
 
     async def _summarize_repository(
         self,
         owner: OWNER,
         repo: REPO,
+        repository: Repository,
         readmes: list[RepositoryFileWithContent],
-        top_file_extensions: list[RepositoryFileCountEntry],
         repository_tree: RepositoryTree,
     ) -> RepositorySummary:
         """Summarize the repository using the readmes, file extension counts, and code layout."""
@@ -366,41 +400,55 @@ Notes:
         readme_names: list[str] = [readme.path for readme in readmes]
 
         user_prompt_builder.add_yaml_section(
+            title="Repository Information",
+            preamble="The following is the information about the repository:",
+            obj=repository,
+        )
+
+        user_prompt_builder.add_yaml_section(
             title="Repository Readmes",
             preamble="The following readmes were gathered to help you provide a summary of the repository:",
             obj=readmes,
         )
+
         user_prompt_builder.add_yaml_section(
             title="Repository Most Common File Extensions",
             preamble="The following is the 30 most common file extensions in the repository:",
-            obj=top_file_extensions,
+            obj=repository_tree.count_files(top_n=30),
         )
+
         user_prompt_builder.add_yaml_section(
             title="Repository Layout", preamble="The following is the layout of the repository:", obj=repository_tree
         )
 
-        more_information_prompt = f"""
+        user_prompt_builder.add_text_section(
+            title="Request Files",
+            text=f"""
 You will produce a much better summary if you read some of the files in the repository first,
 so you should first make a single request to read the first 400 lines of (up to 30) of the files.
 
 {object_in_text_instructions(object_type=RequestFiles, require=True)}
 
-The file contents will be provided to you and then you can provide the summary after reviewing the files."""
+The file contents will be provided to you and then you can provide the summary after reviewing the files.""",
+        )
+
+        logger.info(f"Determining which files to gather for summary of {owner}/{repo}")
 
         request_files: RequestFiles = await self._structured_sample(
             system_prompt=system_prompt_builder.render_text(),
-            messages=[user_prompt_builder.render_text(), more_information_prompt],
+            messages=user_prompt_builder.to_sampling_messages(),
             object_type=RequestFiles,
             max_tokens=5000,
         )
 
-        logger.info(f"Repository Summary has requested files: {request_files.files}")
-
-        request_files.files = [file for file in request_files.files if file not in readme_names][:20]
+        request_files = request_files.remove_files(files=readme_names).truncate(truncate=30)
 
         requested_files: list[RepositoryFileWithContent] = await self.get_files(
             owner=owner, repo=repo, paths=request_files.files, truncate=400
         )
+
+        # Remove the request files section
+        user_prompt_builder.pop()
 
         user_prompt_builder.add_yaml_section(
             title="Sampling of Relevant Files",
@@ -410,10 +458,14 @@ The file contents will be provided to you and then you can provide the summary a
             obj=requested_files,
         )
 
+        logger.info(f"Producing summary of {owner}/{repo} via sampling.")
+
         summary: str = await self._sample(
             system_prompt=system_prompt_builder.render_text(),
-            messages=[user_prompt_builder.render_text()],
+            messages=user_prompt_builder.to_sampling_messages(),
             max_tokens=10000,
         )
+
+        logger.info(f"Completed summary of {owner}/{repo}")
 
         return RepositorySummary.model_validate(summary)

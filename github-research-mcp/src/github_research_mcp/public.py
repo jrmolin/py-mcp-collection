@@ -6,6 +6,8 @@ import asyncclick as click
 from fastmcp import FastMCP
 from fastmcp.experimental.sampling.handlers.openai import OpenAISamplingHandler
 from fastmcp.server.middleware.logging import LoggingMiddleware
+from fastmcp.server.middleware.middleware import MiddlewareContext
+from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
 from fastmcp.tools import FunctionTool
 from githubkit.github import GitHub
 from openai import OpenAI
@@ -36,8 +38,11 @@ def get_sampling_handler():
     )
 
 
+minimum_stars_env: str | None = os.getenv("MINIMUM_STARS")
+minimum_stars: int = int(minimum_stars_env) if minimum_stars_env else 10
+
 owner_allowlist_env: str | None = os.getenv("OWNER_ALLOWLIST")
-owner_allowlist: list[str] = owner_allowlist_env.split(",") if owner_allowlist_env else []
+owner_allowlist: list[str] = [owner.strip() for owner in (owner_allowlist_env.split(",") if owner_allowlist_env else [])]
 
 mcp = FastMCP[None](
     name="GitHub Research MCP",
@@ -49,12 +54,19 @@ github_client: GitHub[Any] = get_github_client()
 
 repository_server: RepositoryServer = RepositoryServer(github_client=github_client)
 
-public_server: PublicServer = PublicServer(repository_server=repository_server, owner_allowlist=owner_allowlist)
+public_server: PublicServer = PublicServer(
+    repository_server=repository_server, minimum_stars=minimum_stars, owner_allowlist=owner_allowlist
+)
+
+
+def get_client_id(context: MiddlewareContext) -> str:
+    return context.fastmcp_context.session_id if context.fastmcp_context else "unknown"
+
 
 mcp.add_middleware(middleware=LoggingMiddleware())
+mcp.add_middleware(middleware=RateLimitingMiddleware(get_client_id=get_client_id))
 
 mcp.add_tool(tool=FunctionTool.from_function(fn=public_server.summarize))
-mcp.add_tool(tool=FunctionTool.from_function(fn=public_server.find_files))
 
 
 @click.command()

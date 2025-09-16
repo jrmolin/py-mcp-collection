@@ -126,9 +126,23 @@ class PromptBuilder(BaseModel):
     def render_text(self) -> str:
         return "\n\n".join(section.render_text() for section in self.sections)
 
-    def to_sampling_messages(self) -> Sequence[SamplingMessage]:
-        return [SamplingMessage(role="user", content=TextContent(type="text", text=self.render_text()))]
+    def pop(self) -> PromptSection:
+        return self.sections.pop()
+
+    def reset(self) -> Self:
+        self.sections = []
+        return self
+
+    def to_sampling_messages(self, one_message: bool = False) -> list[SamplingMessage]:
+        if one_message:
+            return [SamplingMessage(role="user", content=TextContent(type="text", text=self.render_text()))]
+
+        return [SamplingMessage(role="user", content=TextContent(type="text", text=section.render_text())) for section in self.sections]
 
 
 class SystemPromptBuilder(PromptBuilder):
     sections: list[PromptSection] = Field(default_factory=lambda: SYSTEM_PROMPT_SECTIONS.copy(), description="The sections of the prompt.")
+
+
+class UserPromptBuilder(PromptBuilder):
+    sections: list[PromptSection] = Field(default_factory=list, description="The sections of the prompt.")

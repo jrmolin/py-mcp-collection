@@ -49,19 +49,19 @@ repository_server: RepositoryServer = RepositoryServer(github_client=github_clie
 
 issues_server: IssuesOrPullRequestsServer = IssuesOrPullRequestsServer(repository_server=repository_server, github_client=github_client)
 
-mcp.add_tool(tool=FunctionTool.from_function(fn=issues_server.research_issue_or_pull_request))
-mcp.add_tool(tool=FunctionTool.from_function(fn=issues_server.research_issues_or_pull_requests))
-
-mcp.add_tool(tool=FunctionTool.from_function(fn=repository_server.get_readmes))
-mcp.add_tool(tool=FunctionTool.from_function(fn=repository_server.get_files))
-mcp.add_tool(tool=FunctionTool.from_function(fn=repository_server.count_file_extensions))
-mcp.add_tool(tool=FunctionTool.from_function(fn=repository_server.find_files))
-mcp.add_tool(tool=FunctionTool.from_function(fn=repository_server.search_files))
+mcp.add_tool(tool=FunctionTool.from_function(fn=issues_server.get_issue_or_pull_request))
+mcp.add_tool(tool=FunctionTool.from_function(fn=issues_server.search_issues_or_pull_requests))
 
 if not disable_sampling:
     mcp.add_tool(tool=FunctionTool.from_function(fn=repository_server.summarize))
-    mcp.add_tool(tool=FunctionTool.from_function(fn=issues_server.summarize_issue_or_pull_request))
-    mcp.add_tool(tool=FunctionTool.from_function(fn=issues_server.summarize_issues_or_pull_requests))
+    mcp.add_tool(tool=FunctionTool.from_function(fn=issues_server.research_issue_or_pull_request))
+
+mcp.add_tool(tool=FunctionTool.from_function(fn=repository_server.get_files))
+mcp.add_tool(tool=FunctionTool.from_function(fn=repository_server.get_readmes))
+mcp.add_tool(tool=FunctionTool.from_function(fn=repository_server.find_files))
+mcp.add_tool(tool=FunctionTool.from_function(fn=repository_server.search_files))
+mcp.add_tool(tool=FunctionTool.from_function(fn=repository_server.get_file_extensions))
+
 
 mcp.add_middleware(middleware=LoggingMiddleware())
 

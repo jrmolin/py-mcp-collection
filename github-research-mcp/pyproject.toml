@@ -11,10 +11,12 @@ dependencies = [
     "dirty-equals>=0.9.0",
     "fastmcp>=2.3.5",
     "githubkit>=0.13.2",
+    "google-genai>=1.37.0",
     "inline-snapshot>=0.28.0",
     "makefun>=1.16.0",
     "mcp>=1.9.0",
     "openai>=1.106.1",
+    "pydantic>=2.11.7",
     "pytest-dotenv>=0.5.2",
 ]
 
@@ -24,18 +26,6 @@ packages = [
 ]
 [tool.hatch.metadata]
 allow-direct-references=true
-
-[tool.ariadne-codegen]
-schema_path = "graphql/schema.graphql"
-queries_path = "graphql/queries.graphql"
-target_package_path = "src/github_research_mcp/clients"
-target_package_name = "graphql"
-plugins = ["ariadne_codegen.contrib.extract_operations.ExtractOperationsPlugin"]
-include_all_inputs = false
-include_all_enums = false
-
-[tool.ariadne-codegen.extract_operations]
-operations_module_name = "operations"
 
 [project.scripts]
 github-research-mcp = "github_research_mcp.main:run_mcp"
@@ -84,5 +74,10 @@ reportMissingTypeStubs = false
 reportExplicitAny = false
 
 executionEnvironments = [
-    { root = "src/tests", reportPrivateUsage = false},
+    { root = "src", reportPrivateUsage = false},
+]
+
+[tool.uv.workspace]
+members = [
+    "elasticsearch-esql-tools-mcp",
 ]

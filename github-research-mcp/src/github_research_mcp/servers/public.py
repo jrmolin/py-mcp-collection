@@ -1,33 +1,49 @@
-from github_research_mcp.models.repository.tree import RepositoryTree
+from typing import TYPE_CHECKING
+
 from github_research_mcp.servers.repository import (
-    EXCLUDE_PATTERNS,
-    INCLUDE_PATTERNS,
     RepositoryServer,
     RepositorySummary,
 )
 from github_research_mcp.servers.shared.annotations import OWNER, REPO
 
+if TYPE_CHECKING:
+    from github_research_mcp.servers.models.repository import Repository
+
 
 class PublicServer:
     repository_server: RepositoryServer
 
+    minimum_stars: int
+
     owner_allowlist: list[str]
 
-    def __init__(self, repository_server: RepositoryServer, owner_allowlist: list[str]):
+    def __init__(self, repository_server: RepositoryServer, minimum_stars: int, owner_allowlist: list[str]):
         self.repository_server = repository_server
+        self.minimum_stars = minimum_stars
         self.owner_allowlist = owner_allowlist
 
-    def _validate_owner(self, owner: OWNER) -> None:
-        if owner not in self.owner_allowlist:
-            msg = f"Owner {owner} is not in the allowlist"
+    async def _check_minimum_stars(self, owner: OWNER, repo: REPO) -> bool:
+        repository: Repository | None = await self.repository_server._get_repository(owner=owner, repo=repo)
+
+        if repository is None:
+            msg = f"Repository {owner}/{repo} does not exist or access is not authorized"
             raise ValueError(msg)
 
-    async def find_files(self, owner: OWNER, repo: REPO, include: INCLUDE_PATTERNS, exclude: EXCLUDE_PATTERNS = None) -> RepositoryTree:
-        self._validate_owner(owner=owner)
+        if repository.stars < self.minimum_stars:
+            msg = f"Repository {owner}/{repo} has less than {self.minimum_stars} stars and is not eligible for summarization"
+            return False
 
-        return await self.repository_server.find_files(owner=owner, repo=repo, include=include, exclude=exclude)
+        return True
+
+    async def _check_owner_allowlist(self, owner: OWNER) -> bool:
+        return owner in self.owner_allowlist
 
     async def summarize(self, owner: OWNER, repo: REPO) -> RepositorySummary:
-        self._validate_owner(owner=owner)
+        if not await self._check_minimum_stars(owner=owner, repo=repo) and not await self._check_owner_allowlist(owner=owner):
+            msg = (
+                f"Repository {owner}/{repo} is not eligible for summarization, "
+                f"it has less than {self.minimum_stars} stars and is not explicitly allowlisted."
+            )
+            raise ValueError(msg)
 
         return await self.repository_server.summarize(owner=owner, repo=repo)

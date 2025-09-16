@@ -12,9 +12,10 @@ from github_research_mcp.models.graphql.queries import (
     GqlIssueWithDetails,
     GqlSearchIssueOrPullRequestsWithDetails,
 )
-from github_research_mcp.models.query.base import AllKeywordsQualifier, AnyKeywordsQualifier, StateQualifier
+from github_research_mcp.models.query.base import AllKeywordsQualifier, AnyKeywordsQualifier
 from github_research_mcp.models.query.issue_or_pull_request import IssueOrPullRequestSearchQuery
-from github_research_mcp.sampling.prompts import PREAMBLE, PromptBuilder
+from github_research_mcp.sampling.extract import object_in_text_instructions
+from github_research_mcp.sampling.prompts import SystemPromptBuilder, UserPromptBuilder
 from github_research_mcp.servers.base import BaseResponseModel, BaseServer
 from github_research_mcp.servers.repository import RepositoryServer, RepositorySummary
 from github_research_mcp.servers.shared.annotations import (
@@ -47,9 +48,13 @@ STATE = Annotated[Literal["open", "closed", "all"], "The state of the issue."]
 
 ISSUE_OR_PR_NUMBER = Annotated[int, "The number of the issue or pull request."]
 
+ISSUE_OR_PULL_REQUEST = Annotated[Literal["issue", "pull_request"], "The type of issue or pull request to search for."]
+
 LIMIT_ISSUES_OR_PULL_REQUESTS = Annotated[
     int, Field(description="The maximum number of issues or pull requests to include in the search results.")
 ]
+
+INCLUDE_PULL_REQUEST_DIFF = Annotated[bool, "Whether to include the diff of the pull request in the search results."]
 
 SEARCH_SUMMARY_FOCUS = Annotated[
     str,
@@ -60,8 +65,6 @@ SEARCH_SUMMARY_FOCUS = Annotated[
         )
     ),
 ]
-
-RELATED_TO_ISSUE = Annotated["GitHubIssue", Field(description="A specific GitHub issue that the search is related to.")]
 
 DEFAULT_COMMENT_LIMIT = 10
 DEFAULT_RELATED_ITEMS_LIMIT = 5
@@ -155,6 +158,15 @@ class IssueOrPullRequestWithDetails(BaseResponseModel):
 
 class TitleByIssueOrPullRequestInfo(RootModel[dict[str, str]]):
     @classmethod
+    def from_issues_or_pull_requests_with_details(cls, issues_or_pull_requests_with_details: list[IssueOrPullRequestWithDetails]) -> Self:
+        # sort by issue or pull request number
+        issues_or_pull_requests_with_details.sort(key=lambda x: x.issue_or_pr.number)
+
+        return cls.from_issues_or_pull_requests(
+            issues_or_pull_requests=[issue_or_pull_request.issue_or_pr for issue_or_pull_request in issues_or_pull_requests_with_details]
+        )
+
+    @classmethod
     def from_issues_or_pull_requests(cls, issues_or_pull_requests: list[Issue | PullRequest]) -> Self:
         issues_or_pull_requests_by_info = {}
 
@@ -174,18 +186,16 @@ class IssueOrPullRequestSummary(BaseModel):
     summary: str = Field(description="The summary of the issue or pull request.")
 
 
-class IssueSearchSummary(BaseModel):
+class IssueOrPullRequestResearchSummary(BaseModel):
     owner: str = Field(description="The owner of the repository.")
     repo: str = Field(description="The name of the repository.")
-    keywords: set[str] = Field(description="The keywords used to search for the issues.")
-    summary: str = Field(description="The summary of the issue search results.")
-    items_reviewed: TitleByIssueOrPullRequestInfo = Field(description="The items reviewed.")
+    issue_or_pr_number: int = Field(description="The number of the issue or pull request.")
+    findings: str = Field(description="The research findings.")
+    items_reviewed: TitleByIssueOrPullRequestInfo = Field(description="The items reviewed while researching the issue.")
 
 
-class GitHubIssue(BaseModel):
-    owner: str = Field(description="The owner of the repository.")
-    repo: str = Field(description="The name of the repository.")
-    issue_number: int = Field(description="The number of the issue or pull request.")
+class RequestKeywords(BaseModel):
+    keywords: list[str] = Field(description="The keywords to use to search for related issues or pull requests.")
 
 
 class IssuesOrPullRequestsServer(BaseServer):
@@ -195,14 +205,14 @@ class IssuesOrPullRequestsServer(BaseServer):
         self.github_client = github_client
         self.repository_server = repository_server
 
-    async def research_issue_or_pull_request(
+    async def get_issue_or_pull_request(
         self,
         owner: OWNER,
         repo: REPO,
         issue_or_pr_number: ISSUE_OR_PR_NUMBER,
         limit_comments: LIMIT_COMMENTS = DEFAULT_COMMENT_LIMIT,
         limit_related_items: LIMIT_RELATED_ITEMS = DEFAULT_RELATED_ITEMS_LIMIT,
-        include_pull_request_diff: bool = True,
+        include_pull_request_diff: INCLUDE_PULL_REQUEST_DIFF = True,
     ) -> IssueOrPullRequestWithDetails:
         """Get information (body, comments, related issues and pull requests) about a specific issue or pull request in the repository."""
 
@@ -234,106 +244,31 @@ class IssuesOrPullRequestsServer(BaseServer):
 
         return issue_or_pull_request_with_details
 
-    async def summarize_issue_or_pull_request(
+    async def search_issues_or_pull_requests(
         self,
         owner: OWNER,
         repo: REPO,
-        issue_or_pr_number: ISSUE_OR_PR_NUMBER,
-        summary_focus: SUMMARY_FOCUS | None = None,
-        limit_comments: LIMIT_COMMENTS = DEFAULT_COMMENT_LIMIT,
-        limit_related_items: LIMIT_RELATED_ITEMS = DEFAULT_RELATED_ITEMS_LIMIT,
-        include_pull_request_diff: bool = True,
-    ) -> IssueOrPullRequestSummary:
-        """Produce a "focus"-ed summary of a specific issue incorporating the comments, related items, and the issue itself."""
-
-        issue_details: IssueOrPullRequestWithDetails = await self.research_issue_or_pull_request(
-            owner=owner,
-            repo=repo,
-            issue_or_pr_number=issue_or_pr_number,
-            limit_comments=limit_comments,
-            limit_related_items=limit_related_items,
-            include_pull_request_diff=include_pull_request_diff,
-        )
-
-        repository_summary: RepositorySummary = await self.repository_server.summarize(
-            owner=owner,
-            repo=repo,
-        )
-
-        system_prompt = f"""
-        {PREAMBLE}
-
-        # Instructions
-
-        You will be given an issue or pull request, its comments, and some basic info about related items.
-        You will be given a "focus" for the summary, this is the topic that the user is most interested in.
-
-        By default, your summary should include:
-        1. Information about the issue or pull request, its state, age, etc.
-        2. A description of the reported issue or pull request
-        3. Additional information/corrections/findings related to the reported issue that occurred in the comments
-        4. The resolution (or lack thereof) of the reported issue whether it was solved with a code change, documentation,
-            closed as won't fix, closed as a duplicate, closed as a false positive, or closed as a false negative, etc. Pay
-            careful attention to the state of any related items before making any conclusions.
-
-        That being said, what the user asks for in the `focus` should be prioritized over the default summary.
-        """
-        user_prompt = PromptBuilder()
-
-        user_prompt.add_text_section(title="Repository Background Information", text=repository_summary.root)
-        user_prompt.add_text_section(title="Focus", text=summary_focus if summary_focus else "No specific focus provided")
-
-        if len(issue_details.comments) >= limit_comments:
-            comment_warning = f"There were more than {limit_comments} comments, only the first {limit_comments} are included below:"
-            user_prompt.add_text_section(title="Not all comments are included", text=comment_warning)
-
-        if len(issue_details.related) >= limit_related_items:
-            related_items_warning = (
-                f"There were more than {limit_related_items} related items, only the first {limit_related_items} are included below:"
-            )
-            user_prompt.add_text_section(title="Not all related items are included", text=related_items_warning)
-
-        user_prompt.add_yaml_section(title="Issue or Pull Request with Context", obj=issue_details)
-
-        summary: str = await self._sample(
-            system_prompt=system_prompt,
-            messages=user_prompt.render_text(),
-        )
-
-        return IssueOrPullRequestSummary(
-            owner=owner,
-            repo=repo,
-            issue_or_pr_number=issue_or_pr_number,
-            summary=summary,
-        )
-
-    async def research_issues_or_pull_requests(
-        self,
-        owner: OWNER,
-        repo: REPO,
-        issue_or_pr: Literal["issue", "pull_request"],
         keywords: SEARCH_KEYWORDS,
+        issue_or_pull_request: ISSUE_OR_PULL_REQUEST = "issue",
         require_all_keywords: REQUIRE_ALL_KEYWORDS = False,
-        state: STATE = DEFAULT_SEARCH_STATE,
         limit_issues_or_pull_requests: LIMIT_ISSUES_OR_PULL_REQUESTS = DEFAULT_ISSUES_OR_PULL_REQUESTS_LIMIT,
         limit_comments: LIMIT_COMMENTS = DEFAULT_COMMENT_LIMIT,
         limit_related_items: LIMIT_RELATED_ITEMS = DEFAULT_RELATED_ITEMS_LIMIT,
-        include_pull_request_diffs: bool = True,
+        include_pull_request_diff: INCLUDE_PULL_REQUEST_DIFF = True,
     ) -> list[IssueOrPullRequestWithDetails]:
-        """Search for issues in a repository by keywords. Only issues containing the keywords will be included in the search results.
+        """Search for issues or pull requests (determined by the `issue_or_pull_request` parameter) in a repository by the
+        keywords provided.
 
-        For each issue, comments, and related items will also be gathered and included in the response."""
+        Only issues or pull requests containing the keywords will be included in the search results."""
 
         search_query: IssueOrPullRequestSearchQuery = IssueOrPullRequestSearchQuery.from_repo_or_owner(
-            owner=owner, repo=repo, issue_or_pull_request=issue_or_pr
+            owner=owner, repo=repo, issue_or_pull_request=issue_or_pull_request
         )
 
-        search_query.add_qualifier(
-            qualifier=AllKeywordsQualifier(keywords=keywords) if require_all_keywords else AnyKeywordsQualifier(keywords=keywords)
-        )
+        search_query.add_qualifier(qualifier=AnyKeywordsQualifier(keywords=set(keywords)))
 
-        if state != "all":
-            search_query.add_qualifier(StateQualifier(state=state))
+        if require_all_keywords:
+            search_query.add_qualifier(qualifier=AllKeywordsQualifier(keywords=set(keywords)))
 
         gql_search_issue_or_pull_requests_with_details: GqlSearchIssueOrPullRequestsWithDetails = await self._perform_graphql_query(
             query_model=GqlSearchIssueOrPullRequestsWithDetails,
@@ -351,7 +286,7 @@ class IssuesOrPullRequestsServer(BaseServer):
             )
         )
 
-        if include_pull_request_diffs:
+        if include_pull_request_diff:
             issues_or_pull_requests_with_details = await self._add_pull_request_diffs(
                 owner=owner,
                 repo=repo,
@@ -360,118 +295,144 @@ class IssuesOrPullRequestsServer(BaseServer):
 
         return issues_or_pull_requests_with_details
 
-    async def summarize_issues_or_pull_requests(
+    async def research_issue_or_pull_request(
         self,
         owner: OWNER,
         repo: REPO,
-        issue_or_pr: Literal["issue", "pull_request"],
-        keywords: SUMMARY_KEYWORDS,
-        summary_focus: SEARCH_SUMMARY_FOCUS,
-        related_to_issue: RELATED_TO_ISSUE | None = None,
-        require_all_keywords: REQUIRE_ALL_KEYWORDS = False,
-        limit_issues_or_pull_requests: LIMIT_ISSUES_OR_PULL_REQUESTS = DEFAULT_ISSUES_OR_PULL_REQUESTS_LIMIT,
+        issue_or_pr_number: ISSUE_OR_PR_NUMBER,
+        summary_focus: SUMMARY_FOCUS | None = None,
         limit_comments: LIMIT_COMMENTS = DEFAULT_COMMENT_LIMIT,
         limit_related_items: LIMIT_RELATED_ITEMS = DEFAULT_RELATED_ITEMS_LIMIT,
-        include_pull_request_diffs: bool = True,
-    ) -> IssueSearchSummary:
-        """First perform a search for issues or pull requests in a repository by keywords. Then, summarize those
-        results according to the `summary_focus`. If your search is related to a specific issue, you should include
-        `related_to_issue` which will gather the information from that issue and inform the summary provided.
+        include_pull_request_diff: bool = True,
+    ) -> IssueOrPullRequestResearchSummary:
+        """Produce a "focus"-ed summary of a specific issue incorporating the comments, related items, and the issue itself."""
 
-        For each issue, comments, and related items will also be gathered and included in the response."""
+        issue_details: IssueOrPullRequestWithDetails = await self.get_issue_or_pull_request(
+            owner=owner,
+            repo=repo,
+            issue_or_pr_number=issue_or_pr_number,
+            limit_comments=limit_comments,
+            limit_related_items=limit_related_items,
+            include_pull_request_diff=include_pull_request_diff,
+        )
 
         repository_summary: RepositorySummary = await self.repository_server.summarize(
             owner=owner,
             repo=repo,
         )
 
-        items_with_details: list[IssueOrPullRequestWithDetails] = await self.research_issues_or_pull_requests(
-            owner=owner,
-            repo=repo,
-            issue_or_pr=issue_or_pr,
-            keywords=keywords,
-            require_all_keywords=require_all_keywords,
-            limit_issues_or_pull_requests=limit_issues_or_pull_requests,
-            limit_comments=limit_comments,
-            limit_related_items=limit_related_items,
-            include_pull_request_diffs=include_pull_request_diffs,
+        system_prompt_builder = SystemPromptBuilder()
+
+        user_prompt_builder = UserPromptBuilder()
+
+        user_prompt_builder.add_text_section(title="Repository Background Information", text=repository_summary.root)
+        user_prompt_builder.add_text_section(title="Focus", text=summary_focus if summary_focus else "No specific focus provided")
+        user_prompt_builder.add_yaml_section(
+            title="Issue or Pull Request with Context",
+            preamble="We are being asked to research the following issue or pull request:",
+            obj=issue_details,
         )
 
-        issues_with_title: TitleByIssueOrPullRequestInfo = TitleByIssueOrPullRequestInfo.from_issues_or_pull_requests(
-            issues_or_pull_requests=[item.issue_or_pr for item in items_with_details]
+        keywords_prompt = f"""
+Based on the issue outlined in the `Issue or Pull Request with Context` above ({issue_details.issue_or_pr.number} in {owner}/{repo}
+we will first search the GitHub repository issues and pull requests that are related to the issue.
+
+We first need to identify a list of 6 keywords to use to search for related issues and pull requests. Only issues and pull
+requests containing at least one of these keywords will be included in the search results so it's important to pick
+the right keywords.
+
+The best keywords will be reflective of the content of the issue/pull request and capture alternative ways of representing
+the issue/pull request that are likely to be present in other issues and pull requests that cover related topics. Each keyword
+you pick should be deeply rooted in some part of the issue/pull request.
+
+You should not search for keywords like `issue`, `pull request`, `comment`, `event`, `bug`, `feature`,
+but should search for words that are likely to be present in other issues and pull requests that cover
+related topics. For example, if the bug is about a deadlock, you could search for keywords like `deadlock`,
+`thread`, `synchronization`, `mutex`, `lock`, `race condition`, etc.
+
+{object_in_text_instructions(object_type=RequestKeywords, require=True)}
+"""
+
+        request_keywords: RequestKeywords = await self._structured_sample(
+            system_prompt=system_prompt_builder.render_text(),
+            messages=[user_prompt_builder.render_text(), keywords_prompt],
+            object_type=RequestKeywords,
+            max_tokens=5000,
         )
 
-        system_prompt = f"""
-        {PREAMBLE}
-
-        # Instructions
-
-        You will be given the user's search criteria, the issues which match the search criteria, and some basic info about them.
-
-        The user will also provide a "focus" for the summary, this is the information, problem, etc. the user is hoping to context about
-        in the results.
-        """
-
-        user_prompt: PromptBuilder = PromptBuilder()
-
-        user_prompt.add_text_section(title="Repository Background Information", text=repository_summary.root)
-        user_prompt.add_yaml_section(title="Issue Search Results", obj=items_with_details)
-
-        focus_text = [
-            "The user has asked that you specifically focus your review of the issue search results on the following aspects:",
-            summary_focus,
-        ]
-        user_prompt.add_text_section(title="Focus", text=focus_text)
-
-        if related_to_issue:
-            related_issue_details: IssueOrPullRequestWithDetails = await self.research_issue_or_pull_request(
-                owner=related_to_issue.owner,
-                repo=related_to_issue.repo,
-                issue_or_pr_number=related_to_issue.issue_number,
+        logger.info(
+            msg=(
+                f"For {issue_details.issue_or_pr.number}, searching for related issues and "
+                f"pull requests with keywords: {request_keywords.keywords}"
             )
-            user_prompt.add_yaml_section(
-                title="Related to Issue",
-                obj=[
-                    "The user has indicated that the search they are performing is related to the following issue or pull request: ",
-                    related_issue_details,
-                    "As a result, you can skip this issue if you find it in the search results",
-                ],
+        )
+
+        search_query: IssueOrPullRequestSearchQuery = IssueOrPullRequestSearchQuery.from_repo_or_owner(
+            owner=owner, repo=repo, issue_or_pull_request="issue"
+        )
+
+        search_query.add_qualifier(qualifier=AnyKeywordsQualifier(keywords=set(request_keywords.keywords)))
+
+        gql_search_issue_or_pull_requests_with_details: GqlSearchIssueOrPullRequestsWithDetails = await self._perform_graphql_query(
+            query_model=GqlSearchIssueOrPullRequestsWithDetails,
+            variables=GqlSearchIssueOrPullRequestsWithDetails.to_graphql_query_variables(
+                query=search_query.to_query(),
+                limit_issues_or_pull_requests=DEFAULT_ISSUES_OR_PULL_REQUESTS_LIMIT,
+                limit_comments=DEFAULT_COMMENT_LIMIT,
+                limit_events=DEFAULT_RELATED_ITEMS_LIMIT,
+            ),
+        )
+
+        issues_or_pull_requests_with_details: list[IssueOrPullRequestWithDetails] = (
+            IssueOrPullRequestWithDetails.from_gql_search_issue_or_pull_requests_with_details(
+                gql_search_issue_or_pull_requests_with_details=gql_search_issue_or_pull_requests_with_details
             )
+        )
 
-        user_prompt.add_text_section(
-            title="Summary Instructions",
-            text="""
-        By default, your summary should focus on the issues you determine are related to the user's focus. Issues should appear
-        in order of most-related to least-related.
+        user_prompt_builder.add_yaml_section(
+            title="Search Results",
+            preamble="""We have identified a list of keywords: {request_keywords.keywords} and have performed a search
+            which returned the following results that, if you feel are related to the issue, you should reference in your research.""",
+            obj=issues_or_pull_requests_with_details,
+        )
 
-        For related issues, you should include:
-        1. Information about the issue including its title, state, age, and other relevant information
-        2. Every important detail from the issue, related comments, or related Pull Requests that relate to the user's focus.
-            This is your chance to provide the key context the user is looking for. If it's not extremely obvious that it relates to the
-            user's focus, you should provide a brief explanation of why you believe it relates to the user's focus.
-            **If the issue is highly related to the user's focus, you should provide significantly more information about it and discussion
-            around it. Ideally enough information that the user should not have to look at the issue itself.**
-        3. The resolution (or lack thereof) of the reported issue whether it was solved with a code change, documentation,
+        user_prompt_builder.add_text_section(
+            title="Instructions",
+            text=f"""
+        Please provide your understanding of issue {issue_details.issue_or_pr.number} in the repository {owner}/{repo} paying special
+        attention to how it might relate to to previous issues and pull requests in the repository (is it a duplicate, is it a similar
+        problem, is it likely solved in a similar way, etc.).
+
+        It is not necessary to reference issues or pull requests that are not related to the issue or pull request being researched.
+
+        By default, your research should cover:
+        1. Information about the issue or pull request, its state, age, etc.
+        2. A description of the reported issue or pull request in the context of the repository and codebase
+        3. Additional information/corrections/findings related to the reported issue that occurred in the comments and/or the search
+            results.
+        4. The resolution (or lack thereof) of the reported issue whether it was solved with a code change, documentation,
             closed as won't fix, closed as a duplicate, closed as a false positive, or closed as a false negative, etc. Pay
             careful attention to the state of any related items before making any conclusions.
 
-        You should organize your results into high confidence of relation, medium confidence of relation.
-        You should not mention issues that you have low confidence or no confidence in relation to the topic of the user's focus.
-
-        The user will receive the list of issues you determine are not related to the topic of the user's focus and they can always
-        investigate any of the issues if they determine you were wrong.
-
-        You will double check your results against the user's focus to ensure that the issues you report as related are actually related
-        to the user's focus.
+        That being said, what the user asks for in the `focus` should be prioritized over the default summary.
         """,
         )
 
-        summary: str = await self._sample(
-            system_prompt=system_prompt,
-            messages=user_prompt.render_text(),
+        research_findings: str = await self._sample(
+            system_prompt=system_prompt_builder.render_text(),
+            messages=user_prompt_builder.render_text(),
+            max_tokens=10000,
         )
 
-        return IssueSearchSummary(owner=owner, repo=repo, keywords=keywords, summary=summary, items_reviewed=issues_with_title)
+        return IssueOrPullRequestResearchSummary(
+            owner=owner,
+            repo=repo,
+            issue_or_pr_number=issue_or_pr_number,
+            findings=research_findings,
+            items_reviewed=TitleByIssueOrPullRequestInfo.from_issues_or_pull_requests_with_details(
+                issues_or_pull_requests_with_details=issues_or_pull_requests_with_details
+            ),
+        )
 
     async def _get_pull_request_diff(
         self, owner: OWNER, repo: REPO, pull_request_number: int, truncate: int = 100
