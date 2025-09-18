@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING
 
+from fastmcp.utilities.logging import get_logger
+
 from github_research_mcp.servers.repository import (
     RepositoryServer,
     RepositorySummary,
@@ -9,6 +11,10 @@ from github_research_mcp.servers.shared.annotations import OWNER, REPO
 if TYPE_CHECKING:
     from github_research_mcp.servers.models.repository import Repository
 
+ONE_DAY_IN_SECONDS = 60 * 60 * 24
+
+logger = get_logger(__name__)
+
 
 class PublicServer:
     repository_server: RepositoryServer
@@ -17,7 +23,12 @@ class PublicServer:
 
     owner_allowlist: list[str]
 
-    def __init__(self, repository_server: RepositoryServer, minimum_stars: int, owner_allowlist: list[str]):
+    def __init__(
+        self,
+        repository_server: RepositoryServer,
+        minimum_stars: int,
+        owner_allowlist: list[str],
+    ):
         self.repository_server = repository_server
         self.minimum_stars = minimum_stars
         self.owner_allowlist = owner_allowlist

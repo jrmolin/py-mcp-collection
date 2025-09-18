@@ -9,6 +9,8 @@ dependencies = [
     "async-lru>=2.0.5",
     "asyncclick>=8.1.8",
     "dirty-equals>=0.9.0",
+    "diskcache>=5.6.3",
+    "elasticsearch>=9.1.1",
     "fastmcp>=2.3.5",
     "githubkit>=0.13.2",
     "google-genai>=1.37.0",
@@ -35,6 +37,9 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 env_files = [".env"]
 addopts = ["--inline-snapshot=disable","-vv","-s"]
+markers = [
+    "skip_on_ci: Skip running the test when running on CI",
+]
 
 [dependency-groups]
 dev = [

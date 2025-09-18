@@ -1,4 +1,3 @@
-from collections.abc import Sequence
 from textwrap import dedent
 from typing import Self
 

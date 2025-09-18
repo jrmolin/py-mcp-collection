@@ -4,17 +4,17 @@ from typing import Any, Literal
 
 import asyncclick as click
 from fastmcp import FastMCP
-from fastmcp.experimental.sampling.handlers.openai import OpenAISamplingHandler
-from fastmcp.server.middleware.logging import LoggingMiddleware
-from fastmcp.server.middleware.middleware import MiddlewareContext
-from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
+from fastmcp.server.middleware.logging import StructuredLoggingMiddleware
 from fastmcp.tools import FunctionTool
 from githubkit.github import GitHub
-from openai import OpenAI
 
+from github_research_mcp.clients.elasticsearch import get_elasticsearch_client
 from github_research_mcp.clients.github import get_github_client
+from github_research_mcp.sampling.handler import get_sampling_handler
 from github_research_mcp.servers.public import PublicServer
 from github_research_mcp.servers.repository import RepositoryServer
+from github_research_mcp.vendored.caching import InMemoryCache, MethodSettings, ResponseCachingMiddleware
+from github_research_mcp.vendored.elasticsearch_cache import ElasticsearchCache
 
 
 class ConfigurationError(Exception):
@@ -23,20 +23,7 @@ class ConfigurationError(Exception):
         super().__init__(self.message)
 
 
-def get_sampling_handler():
-    default_model = os.getenv("OPENAI_MODEL")
-    api_key = os.getenv("OPENAI_API_KEY")
-    base_url = os.getenv("OPENAI_BASE_URL")
-
-    if not default_model:
-        msg = "You must set the OPENAI_MODEL environment variable or disable sampling via --no-sampling"
-        raise ConfigurationError(msg)
-
-    return OpenAISamplingHandler(
-        default_model=default_model,  # pyright: ignore[reportArgumentType]
-        client=OpenAI(api_key=api_key, base_url=base_url),
-    )
-
+ONE_WEEK_IN_SECONDS = 60 * 60 * 24 * 7
 
 minimum_stars_env: str | None = os.getenv("MINIMUM_STARS")
 minimum_stars: int = int(minimum_stars_env) if minimum_stars_env else 10
@@ -58,15 +45,22 @@ public_server: PublicServer = PublicServer(
     repository_server=repository_server, minimum_stars=minimum_stars, owner_allowlist=owner_allowlist
 )
 
-
-def get_client_id(context: MiddlewareContext) -> str:
-    return context.fastmcp_context.session_id if context.fastmcp_context else "unknown"
-
-
-mcp.add_middleware(middleware=LoggingMiddleware())
-mcp.add_middleware(middleware=RateLimitingMiddleware(get_client_id=get_client_id))
-
 mcp.add_tool(tool=FunctionTool.from_function(fn=public_server.summarize))
+
+mcp.add_middleware(middleware=StructuredLoggingMiddleware(include_payloads=True))
+
+cache_method_settings: MethodSettings = MethodSettings(
+    call_tool={
+        "ttl": ONE_WEEK_IN_SECONDS,
+    },
+)
+
+if elasticsearch_client := get_elasticsearch_client():
+    elasticsearch_cache: ElasticsearchCache = ElasticsearchCache(elasticsearch_client=elasticsearch_client)
+
+    mcp.add_middleware(middleware=ResponseCachingMiddleware(cache_backend=elasticsearch_cache, method_settings=cache_method_settings))
+else:
+    mcp.add_middleware(middleware=ResponseCachingMiddleware(cache_backend=InMemoryCache(), method_settings=cache_method_settings))
 
 
 @click.command()

@@ -10,7 +10,6 @@ from google.genai.types import (
     GenerateContentResponse,
     ModelContent,
     Part,
-    ThinkingConfig,
     UserContent,
 )
 from mcp import ClientSession, ServerSession

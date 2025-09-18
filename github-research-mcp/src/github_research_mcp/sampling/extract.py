@@ -30,7 +30,7 @@ text other than the JSON block."""
     )
 
     if require:
-        instructions += "\n\nAny response other than providing the exact json block for {object_type.__name__} will be considered invalid."
+        instructions += f"\n\nAny response other than providing the exact json block for {object_type.__name__} will be considered invalid."
 
     return instructions.strip()
 
@@ -85,7 +85,7 @@ def extract_single_object_from_text[T: BaseModel](text: str, object_type: type[T
     matches: list[str] = extract_json_blocks_from_text(text)
 
     if len(matches) != 1:
-        msg = "Text must contain exactly one Markdown JSON block"
+        msg = f"Text must contain exactly one Markdown JSON block. Received {text}."
         raise ValueError(msg)
 
     object_text: str = matches[0]

@@ -4,13 +4,11 @@ from typing import Any, Literal
 
 import asyncclick as click
 from fastmcp import FastMCP
-from fastmcp.experimental.sampling.handlers.openai import OpenAISamplingHandler
-from fastmcp.server.middleware.logging import LoggingMiddleware
 from fastmcp.tools import FunctionTool
 from githubkit.github import GitHub
-from openai import OpenAI
 
 from github_research_mcp.clients.github import get_github_client
+from github_research_mcp.sampling.google_genai import GoogleGenaiSamplingHandler
 from github_research_mcp.servers.issues_or_pull_requests import IssuesOrPullRequestsServer
 from github_research_mcp.servers.repository import RepositoryServer
 
@@ -22,18 +20,7 @@ class ConfigurationError(Exception):
 
 
 def get_sampling_handler():
-    default_model = os.getenv("OPENAI_MODEL")
-    api_key = os.getenv("OPENAI_API_KEY")
-    base_url = os.getenv("OPENAI_BASE_URL")
-
-    if not default_model:
-        msg = "You must set the OPENAI_MODEL environment variable or disable sampling via --no-sampling"
-        raise ConfigurationError(msg)
-
-    return OpenAISamplingHandler(
-        default_model=default_model,  # pyright: ignore[reportArgumentType]
-        client=OpenAI(api_key=api_key, base_url=base_url),
-    )
+    return GoogleGenaiSamplingHandler(default_model=os.getenv("MODEL") or "gemini-2.5-flash")
 
 
 disable_sampling = os.getenv("DISABLE_SAMPLING")
@@ -57,13 +44,11 @@ if not disable_sampling:
     mcp.add_tool(tool=FunctionTool.from_function(fn=issues_server.research_issue_or_pull_request))
 
 mcp.add_tool(tool=FunctionTool.from_function(fn=repository_server.get_files))
-mcp.add_tool(tool=FunctionTool.from_function(fn=repository_server.get_readmes))
+mcp.add_tool(tool=FunctionTool.from_function(fn=repository_server.get_human_readmes))
+mcp.add_tool(tool=FunctionTool.from_function(fn=repository_server.get_agents_readmes))
 mcp.add_tool(tool=FunctionTool.from_function(fn=repository_server.find_files))
 mcp.add_tool(tool=FunctionTool.from_function(fn=repository_server.search_files))
 mcp.add_tool(tool=FunctionTool.from_function(fn=repository_server.get_file_extensions))
-
-
-mcp.add_middleware(middleware=LoggingMiddleware())
 
 
 @click.command()

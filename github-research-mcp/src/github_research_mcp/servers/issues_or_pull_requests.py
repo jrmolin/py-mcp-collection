@@ -333,7 +333,9 @@ class IssuesOrPullRequestsServer(BaseServer):
             obj=issue_details,
         )
 
-        keywords_prompt = f"""
+        user_prompt_builder.add_text_section(
+            title="Keywords",
+            text=f"""
 Based on the issue outlined in the `Issue or Pull Request with Context` above ({issue_details.issue_or_pr.number} in {owner}/{repo}
 we will first search the GitHub repository issues and pull requests that are related to the issue.
 
@@ -351,11 +353,12 @@ related topics. For example, if the bug is about a deadlock, you could search fo
 `thread`, `synchronization`, `mutex`, `lock`, `race condition`, etc.
 
 {object_in_text_instructions(object_type=RequestKeywords, require=True)}
-"""
+""",
+        )
 
         request_keywords: RequestKeywords = await self._structured_sample(
             system_prompt=system_prompt_builder.render_text(),
-            messages=[user_prompt_builder.render_text(), keywords_prompt],
+            messages=user_prompt_builder.to_sampling_messages(),
             object_type=RequestKeywords,
             max_tokens=5000,
         )
@@ -389,6 +392,8 @@ related topics. For example, if the bug is about a deadlock, you could search fo
             )
         )
 
+        user_prompt_builder.pop()
+
         user_prompt_builder.add_yaml_section(
             title="Search Results",
             preamble="""We have identified a list of keywords: {request_keywords.keywords} and have performed a search
@@ -420,7 +425,7 @@ related topics. For example, if the bug is about a deadlock, you could search fo
 
         research_findings: str = await self._sample(
             system_prompt=system_prompt_builder.render_text(),
-            messages=user_prompt_builder.render_text(),
+            messages=user_prompt_builder.to_sampling_messages(),
             max_tokens=10000,
         )
 

@@ -42,7 +42,8 @@ async def test_public_server_summarize_ineligible(public_server: PublicServer, f
 
     async with Client[FastMCPTransport](transport=fastmcp) as fastmcp_client:
         with pytest.raises(
-            ToolError, match=f"Repository strawgate/github-issues-e2e-test is not eligible for summarization, it has less than {public_server.minimum_stars} stars and is not explicitly allowlisted."
+            ToolError,
+            match=f"Repository strawgate/github-issues-e2e-test is not eligible for summarization, it has less than {public_server.minimum_stars} stars and is not explicitly allowlisted.",
         ):
             await fastmcp_client.call_tool(
                 "summarize",

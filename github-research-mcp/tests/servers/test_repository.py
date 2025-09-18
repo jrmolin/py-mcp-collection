@@ -61,8 +61,8 @@ async def test_get_repo_files(repository_server: RepositoryServer):
     )
 
 
-async def test_get_repo_readmes(repository_server: RepositoryServer):
-    context = await repository_server.get_readmes(owner="strawgate", repo="github-issues-e2e-test", truncate=10)
+async def test_get_human_readmes(repository_server: RepositoryServer):
+    context = await repository_server.get_human_readmes(owner="strawgate", repo="github-issues-e2e-test", truncate=10)
     assert context == snapshot(
         [
             RepositoryFileWithContent(
@@ -98,8 +98,14 @@ async def test_get_repo_readmes(repository_server: RepositoryServer):
                         10: "- Python 3.13 or higher",
                     }
                 ),
-            )]
+            ),
+        ]
     )
+
+
+async def test_get_agents_readmes(repository_server: RepositoryServer):
+    context = await repository_server.get_agents_readmes(owner="strawgate", repo="github-issues-e2e-test")
+    assert context == snapshot()
 
 
 async def test_find_files(repository_server: RepositoryServer):
@@ -163,7 +169,10 @@ async def test_summarize_repository_error(fastmcp: FastMCP, repository_server: R
     fastmcp.add_tool(tool=Tool.from_function(fn=repository_server.summarize))
 
     async with Client[FastMCPTransport](transport=fastmcp) as fastmcp_client:
-        with pytest.raises(ToolError, match=r"Validate repository strawgate/repo-that-does-not-exist: Note -- Repositories that are private will report as not found."):
+        with pytest.raises(
+            ToolError,
+            match=r"Validate repository strawgate/repo-that-does-not-exist: Note -- Repositories that are private will report as not found.",
+        ):
             await fastmcp_client.call_tool(
                 "summarize",
                 arguments={"owner": "strawgate", "repo": "repo-that-does-not-exist"},

@@ -3,7 +3,6 @@ from typing import Any
 
 import pytest
 from fastmcp import FastMCP
-from fastmcp.experimental.sampling.handlers.openai import OpenAISamplingHandler
 from fastmcp.server.middleware.logging import LoggingMiddleware
 from githubkit.github import GitHub
 from openai import OpenAI

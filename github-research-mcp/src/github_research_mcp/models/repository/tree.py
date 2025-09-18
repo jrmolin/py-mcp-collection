@@ -87,7 +87,10 @@ class RepositoryTreeDirectory(BaseModel):
             ],
         )
 
-    def count_files(self) -> list[RepositoryFileCountEntry]:
+    def count_files(self) -> int:
+        return len(self.files)
+
+    def count_file_extensions(self) -> list[RepositoryFileCountEntry]:
         count_by_extension: dict[str, int] = defaultdict(int)
 
         for file in self.files:
@@ -153,10 +156,13 @@ class RepositoryTree(BaseModel):
 
         return RepositoryTree(directories=directories, files=files)
 
-    def count_files(self, top_n: int = 50) -> list[RepositoryFileCountEntry]:
+    def count_files(self) -> int:
+        return len(self.files) + sum(directory.count_files() for directory in self.directories)
+
+    def count_file_extensions(self, top_n: int = 50) -> list[RepositoryFileCountEntry]:
         count_by_extension: dict[str, int] = defaultdict(int)
         for directory in self.directories:
-            for entry in directory.count_files():
+            for entry in directory.count_file_extensions():
                 count_by_extension[entry.extension] += entry.count
 
         for file in self.files:

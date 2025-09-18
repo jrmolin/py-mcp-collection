@@ -28,7 +28,7 @@ from github_research_mcp.models.query.base import (
 from github_research_mcp.models.query.code import CodeSearchQuery
 from github_research_mcp.models.repository.tree import RepositoryFileCountEntry, RepositoryTree
 from github_research_mcp.sampling.extract import object_in_text_instructions
-from github_research_mcp.sampling.prompts import PromptBuilder, SystemPromptBuilder, UserPromptBuilder
+from github_research_mcp.sampling.prompts import PromptBuilder, SystemPromptBuilder
 from github_research_mcp.servers.base import BaseServer
 from github_research_mcp.servers.models.repository import (
     DEFAULT_AGENTS_MD_TRUNCATE_CONTENT,
@@ -96,6 +96,8 @@ ONE_DAY_IN_SECONDS = 60 * 60 * 24
 DEFAULT_READMES = ["README.md", "CONTRIBUTING.md"]
 DEFAULT_AGENTS_MD_FILES = ["AGENTS.md", "CLAUDE.md", "GEMINI.md"]
 
+LARGE_REPOSITORY_THRESHOLD = 1000
+
 
 class RepositoryServer(BaseServer):
     validation_locks: dict[str, asyncio.Lock]
@@ -126,7 +128,7 @@ class RepositoryServer(BaseServer):
 
         return [result for result in results if not isinstance(result, BaseException)]
 
-    async def get_readmes(
+    async def get_human_readmes(
         self,
         owner: OWNER,
         repo: REPO,
@@ -135,12 +137,40 @@ class RepositoryServer(BaseServer):
         error_on_missing: bool = True,
     ) -> list[RepositoryFileWithContent]:
         """Get Readmes from a GitHub repository. If none are provided, the README.md and CONTRIBUTING.md will be gathered."""
+        await self._require_valid_repository(owner=owner, repo=repo)
+
+        return await self._get_readmes(
+            owner=owner,
+            repo=repo,
+            readmes=readmes or DEFAULT_READMES,
+            truncate=truncate,
+            error_on_missing=error_on_missing,
+        )
+
+    async def get_agents_readmes(self, owner: OWNER, repo: REPO, error_on_missing: bool = True) -> list[RepositoryFileWithContent]:
+        """Get the AGENTS.md, CLAUDE.md, GEMINI.md, etc. files from a GitHub repository."""
 
         await self._require_valid_repository(owner=owner, repo=repo)
 
+        return await self._get_readmes(
+            owner=owner,
+            repo=repo,
+            readmes=DEFAULT_AGENTS_MD_FILES,
+            truncate=DEFAULT_AGENTS_MD_TRUNCATE_CONTENT,
+            error_on_missing=error_on_missing,
+        )
+
+    async def _get_readmes(
+        self,
+        owner: OWNER,
+        repo: REPO,
+        readmes: list[str],
+        truncate: TRUNCATE_CONTENT = DEFAULT_TRUNCATE_CONTENT,
+        error_on_missing: bool = True,
+    ) -> list[RepositoryFileWithContent]:
         repository_tree: RepositoryTree = await self.get_repository_tree(owner=owner, repo=repo, recursive=False)
 
-        existing_readmes: list[str] = repository_tree.get_files(files=readmes or DEFAULT_READMES, case_insensitive=True)
+        existing_readmes: list[str] = repository_tree.get_files(files=readmes, case_insensitive=True)
 
         if not existing_readmes:
             if error_on_missing:
@@ -155,17 +185,6 @@ class RepositoryServer(BaseServer):
             truncate=truncate,
         )
 
-    async def get_agents_md(self, owner: OWNER, repo: REPO, error_on_missing: bool = True) -> list[RepositoryFileWithContent]:
-        """Get the AGENTS.md, CLAUDE.md, GEMINI.md, etc. files from a GitHub repository."""
-
-        return await self.get_readmes(
-            owner=owner,
-            repo=repo,
-            readmes=DEFAULT_AGENTS_MD_FILES,
-            truncate=DEFAULT_AGENTS_MD_TRUNCATE_CONTENT,
-            error_on_missing=error_on_missing,
-        )
-
     async def get_file_extensions(self, owner: OWNER, repo: REPO, top_n: TOP_N_EXTENSIONS = 50) -> list[RepositoryFileCountEntry]:
         """Count the different file extensions found in a GitHub repository to identify the most common file types."""
 
@@ -173,7 +192,7 @@ class RepositoryServer(BaseServer):
 
         repository_tree: RepositoryTree = await self.get_repository_tree(owner=owner, repo=repo)
 
-        return repository_tree.count_files(top_n=top_n)
+        return repository_tree.count_file_extensions(top_n=top_n)
 
     async def find_files(
         self,
@@ -244,10 +263,10 @@ class RepositoryServer(BaseServer):
 
         repository: Repository = await self._require_valid_repository(owner=owner, repo=repo)
 
-        repository_tree, readmes, agents_md = await asyncio.gather(
+        repository_tree, human_readmes, agents_readmes = await asyncio.gather(
             self.get_repository_tree(owner=owner, repo=repo),
-            self.get_readmes(owner=owner, repo=repo, error_on_missing=False),
-            self.get_agents_md(owner=owner, repo=repo, error_on_missing=False),
+            self.get_human_readmes(owner=owner, repo=repo, readmes=[*DEFAULT_READMES, *DEFAULT_AGENTS_MD_FILES], error_on_missing=False),
+            self.get_agents_readmes(owner=owner, repo=repo, error_on_missing=False),
         )
 
         logger.info(f"Starting summarization of repository {owner}/{repo}")
@@ -256,7 +275,7 @@ class RepositoryServer(BaseServer):
             owner=owner,
             repo=repo,
             repository=repository,
-            readmes=readmes + agents_md,
+            readmes=[*human_readmes, *agents_readmes],
             repository_tree=repository_tree,
         )
 
@@ -333,65 +352,58 @@ class RepositoryServer(BaseServer):
         system_prompt_builder.add_text_section(
             title="System Prompt",
             text="""
-Your goal is to provide an extremely comprehensive analysis of the repository that would be helpful for an AI coding agent
-to understand and work with the repository.
+Your goal is to provide an extremely comprehensive and information-dense analysis of the repository that is
+immediately actionable for an AI coding agent. Every token counts!
+
+GLOBAL CONSTRAINTS:
+- Use bullet points by default.
+- Prefer concrete evidence: include file paths, symbol names, and, when possible, line ranges as
+  `path:lineStart-lineEnd` (wrapped in backticks).
+- Include only non-standard or project-unique practices; if a topic is standard for this project type,
+  state "standard for this project type" and move on.
+- Omit any section if you cannot cite at least one concrete, project-specific detail.
+- Avoid repetition across sections; reference earlier bullets instead of restating.
 
 A great analysis includes:
 
 ## 1. Project Type & Technology Stack
-- Identify the primary programming languages from file extensions
-- Detect framework indicators (package.json, requirements.txt, Cargo.toml, etc.)
-- Note build system files (Makefile, CMakeLists.txt, etc.)
+- Identify primary languages via extension counts or top-N file counts (cite evidence: paths or counts).
+- Detect framework/build indicators (e.g., `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`) and
+  call out only decisive/unique ones including build system files (`Makefile`, `CMakeLists.txt`, `magefile.go`, etc.) and
+  what they orchestrate.
+- Explain the purpose of each major directory with 1-2 concrete examples (file paths) each.
+- Identify common patterns (`src/`, `tests/`, `docs/`, `examples/`) and any deviations or project-specific layouts.
+- Distinguish between source code, tests, documentation, assets; mention notable subdirectories and approximate
+  file counts if there is something unusual about the directory structure in that directory.
 
-## 2. Directory Structure Analysis
-- Explain the purpose of each major directory
-- Identify common patterns (src/, tests/, docs/, examples/)
-- Note any unusual or project-specific directory structures
-- Distinguish between source code, tests, documentation, and assets
+## 2. Key Files & Entry Points
+- Identify main/entry point files (e.g., `main.py`, `cmd/app/main.go`) and why they matter.
+- Highlight critical configuration files (e.g., `.env.example`, service configs, `docker-compose.yml`) with purpose.
+- Note dependency management files and CI/CD definitions (`.github/workflows`, `.gitlab-ci.yml`) and their roles.
+- Identify primary data models/entities; point to schema definitions, migrations, or ORM/ODM models with paths and
+  key symbols.
+- Identify test directories and frameworks with concrete paths; note any fixtures or golden files.
+- Note linting/formatting/type-check configuration and where it lives; include representative config keys.
+- Highlight important documentation files and developer tooling/scripts with their commands or targets.
+- Call out unique workflows (e.g., generators, codegen, monorepo tooling) with entry points.
 
-## 3. Key Files & Entry Points
-- Identify main/entry point files (main.py, index.js, src/main.rs, etc.)
-- Highlight important configuration files (.env.example, config files, docker-compose.yml)
-- Note dependency management files (package.json, requirements.txt, Pipfile, etc.)
-- Identify CI/CD files (.github/workflows, .gitlab-ci.yml, etc.)
-- Identify the primary data models or entities.
-- Point to any schema definitions, migrations, or ORM/ODM models.
+## 3. Key Patterns, Conventions, and Dependencies
+- Include only non-standard, repository-unique practices. For each item provide: path, symbol (function/class/module),
+  what it does, and why it matters.
+- Consider: Observability (logging/metrics/tracing), Error Handling (error codes, wrapping, categories), Data Storage
+  (schemas, migrations, collections), API Design (endpoints, request/response formats, auth), Security (authZ/authN,
+  crypto, data protection), Performance (caching, batching, concurrency).
+- List critical/non-standard dependencies and external services/APIs central to runtime behavior. For each state: purpose,
+  integration point (file path and symbol), and major version constraint if relevant.
 
-## 4. Key Patterns & Conventions
-- Identify any key patterns or conventions used in the repository, especially patterns
-  that are unique to the project. Do not mention conventions or patterns that are standard for
-  projects of this type.
-- Extensively spell out identified coding practices and patterns used in the repository
-  that one must follow in order to match the style of the repository. This includes
-  but is not limited to: Observability (logging, metrics, tracing), Error Handling (error codes,
-  error messages, error types), Data Storage (database schemas, ORM models, NoSQL collections),
-  API Design (endpoints, request/response formats, authentication), Security (authentication, authorization,
-  encryption, data protection), Performance (caching, load balancing, optimization), and Testing (unit tests,
-  integration tests, end-to-end tests). If any of these practices are standard for projects of this type,
-  feel free to omit them or simply mention that they are standard.
-
-## 5. Key Dependencies
-- Identify any key dependencies, frameworks, and libraries used in the repository
-- Do not mention dependencies that are standard for projects of this type
-- List any critical external APIs or services the project communicates with (e.g., Stripe, Twilio, Google Maps API).
-  and explain their purpose within the application.
-
-## 6. Development Workflow Indicators
-- Identify test directories and testing frameworks
-- Note linting/formatting configuration (.eslintrc, .prettierrc, pyproject.toml)
-- Highlight documentation files (README, CONTRIBUTING, CHANGELOG, etc.)
-- Identify development tools and scripts
-
-## 7. Navigation Guidance
-- Provide guidance on where to look for specific types of files
-- Highlight files that are likely to be important for understanding the codebase
+## 4. Navigation Guidance
 
 You will structure your response to be actionable for an AI coding agent working with this repository.
 
 Notes:
-- When referencing files simply wrap their paths in backticks, do not make markdown links for them.
-- If you are guessing at the purpose of a file that you have not read, mention that you are guessing by saying
-  "likely" or "possibly" in your response.
+- When referencing files, wrap paths in backticks; you may include line ranges inside the backticks, e.g.,
+  `src/module/file.py:L120-185`.
+- If you are guessing at the purpose of a file you have not read, keep it brief and mention "likely" or "possibly".
 """,
         )
 
@@ -414,18 +426,23 @@ Notes:
         user_prompt_builder.add_yaml_section(
             title="Repository Most Common File Extensions",
             preamble="The following is the 30 most common file extensions in the repository:",
-            obj=repository_tree.count_files(top_n=30),
+            obj=repository_tree.count_file_extensions(top_n=30),
         )
 
         user_prompt_builder.add_yaml_section(
             title="Repository Layout", preamble="The following is the layout of the repository:", obj=repository_tree
         )
 
+        large_repository: bool = repository_tree.count_files() > LARGE_REPOSITORY_THRESHOLD
+
         user_prompt_builder.add_text_section(
             title="Request Files",
             text=f"""
-You will produce a much better summary if you read some of the files in the repository first,
-so you should first make a single request to read the first 400 lines of (up to 30) of the files.
+You will produce a much better summary if you read some of the files in the repository first.
+
+You can request up to the first 400 lines of up to 100 files.
+
+{"Since this repository is large you should request to read 100 files from the repository." if large_repository else ""}
 
 {object_in_text_instructions(object_type=RequestFiles, require=True)}
 
@@ -441,7 +458,9 @@ The file contents will be provided to you and then you can provide the summary a
             max_tokens=5000,
         )
 
-        request_files = request_files.remove_files(files=readme_names).truncate(truncate=30)
+        request_files = request_files.remove_files(files=readme_names).truncate(truncate=100)
+
+        logger.info(f"Requesting {len(request_files.files)} files for summary of {owner}/{repo}: {request_files.files}")
 
         requested_files: list[RepositoryFileWithContent] = await self.get_files(
             owner=owner, repo=repo, paths=request_files.files, truncate=400
