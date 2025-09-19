@@ -31,15 +31,14 @@ from github_research_mcp.sampling.extract import object_in_text_instructions
 from github_research_mcp.sampling.prompts import PromptBuilder, SystemPromptBuilder
 from github_research_mcp.servers.base import BaseServer
 from github_research_mcp.servers.models.repository import (
-    DEFAULT_AGENTS_MD_TRUNCATE_CONTENT,
+    DEFAULT_README_TRUNCATE_CONTENT,
     DEFAULT_TRUNCATE_CONTENT,
-    MiscRepositoryError,
     Repository,
     RepositoryFileWithContent,
     RepositoryFileWithLineMatches,
     RepositoryNotFoundError,
     RepositorySummary,
-    RequestFiles,
+    RequestFilesForSummary,
 )
 from github_research_mcp.servers.shared.annotations import OWNER, PAGE, PER_PAGE, REPO
 from github_research_mcp.servers.shared.utility import extract_response
@@ -93,9 +92,6 @@ TRUNCATE_CONTENT = Annotated[int, Field(description="The number of lines to trun
 
 ONE_DAY_IN_SECONDS = 60 * 60 * 24
 
-DEFAULT_READMES = ["README.md", "CONTRIBUTING.md"]
-DEFAULT_AGENTS_MD_FILES = ["AGENTS.md", "CLAUDE.md", "GEMINI.md"]
-
 LARGE_REPOSITORY_THRESHOLD = 1000
 
 
@@ -128,62 +124,44 @@ class RepositoryServer(BaseServer):
 
         return [result for result in results if not isinstance(result, BaseException)]
 
-    async def get_human_readmes(
-        self,
-        owner: OWNER,
-        repo: REPO,
-        readmes: README_FILES | None = None,
-        truncate: TRUNCATE_CONTENT = DEFAULT_TRUNCATE_CONTENT,
-        error_on_missing: bool = True,
+    async def get_readmes(
+        self, owner: OWNER, repo: REPO, truncate: TRUNCATE_CONTENT = DEFAULT_TRUNCATE_CONTENT
     ) -> list[RepositoryFileWithContent]:
-        """Get Readmes from a GitHub repository. If none are provided, the README.md and CONTRIBUTING.md will be gathered."""
-        await self._require_valid_repository(owner=owner, repo=repo)
-
-        return await self._get_readmes(
-            owner=owner,
-            repo=repo,
-            readmes=readmes or DEFAULT_READMES,
-            truncate=truncate,
-            error_on_missing=error_on_missing,
-        )
-
-    async def get_agents_readmes(self, owner: OWNER, repo: REPO, error_on_missing: bool = True) -> list[RepositoryFileWithContent]:
-        """Get the AGENTS.md, CLAUDE.md, GEMINI.md, etc. files from a GitHub repository."""
+        """Get all asciidoc (.adoc, .asciidoc), markdown (.md), and other text files (.txt, .rst) from the root of the
+        GitHub repository."""
 
         await self._require_valid_repository(owner=owner, repo=repo)
 
-        return await self._get_readmes(
-            owner=owner,
-            repo=repo,
-            readmes=DEFAULT_AGENTS_MD_FILES,
-            truncate=DEFAULT_AGENTS_MD_TRUNCATE_CONTENT,
-            error_on_missing=error_on_missing,
+        repository_tree: RepositoryTree = await self.find_files(
+            owner=owner, repo=repo, include=[".md", ".adoc", ".asciidoc", ".txt", ".rst"], recursive=False
         )
 
-    async def _get_readmes(
-        self,
-        owner: OWNER,
-        repo: REPO,
-        readmes: list[str],
-        truncate: TRUNCATE_CONTENT = DEFAULT_TRUNCATE_CONTENT,
-        error_on_missing: bool = True,
-    ) -> list[RepositoryFileWithContent]:
-        repository_tree: RepositoryTree = await self.get_repository_tree(owner=owner, repo=repo, recursive=False)
+        return await self.get_files(owner=owner, repo=repo, paths=repository_tree.files, truncate=truncate)
 
-        existing_readmes: list[str] = repository_tree.get_files(files=readmes, case_insensitive=True)
+    # async def _get_readmes(
+    #     self,
+    #     owner: OWNER,
+    #     repo: REPO,
+    #     readmes: list[str],
+    #     truncate: TRUNCATE_CONTENT = DEFAULT_TRUNCATE_CONTENT,
+    #     error_on_missing: bool = True,
+    # ) -> list[RepositoryFileWithContent]:
+    #     repository_tree: RepositoryTree = await self.get_repository_tree(owner=owner, repo=repo, recursive=False)
 
-        if not existing_readmes:
-            if error_on_missing:
-                raise MiscRepositoryError(action=f"Get readmes from {owner}/{repo}", extra_info=f"{readmes} not found in {owner}/{repo}")
+    #     existing_readmes: list[str] = repository_tree.filter_files(files=readmes, case_insensitive=True)
 
-            return []
+    #     if not existing_readmes:
+    #         if error_on_missing:
+    #             raise MiscRepositoryError(action=f"Get readmes from {owner}/{repo}", extra_info=f"{readmes} not found in {owner}/{repo}")
 
-        return await self.get_files(
-            owner=owner,
-            repo=repo,
-            paths=existing_readmes,
-            truncate=truncate,
-        )
+    #         return []
+
+    #     return await self.get_files(
+    #         owner=owner,
+    #         repo=repo,
+    #         paths=existing_readmes,
+    #         truncate=truncate,
+    #     )
 
     async def get_file_extensions(self, owner: OWNER, repo: REPO, top_n: TOP_N_EXTENSIONS = 50) -> list[RepositoryFileCountEntry]:
         """Count the different file extensions found in a GitHub repository to identify the most common file types."""
@@ -201,6 +179,7 @@ class RepositoryServer(BaseServer):
         include: INCLUDE_PATTERNS,
         exclude: EXCLUDE_PATTERNS = None,
         include_exclude_is_regex: INCLUDE_EXCLUDE_IS_REGEX = False,
+        recursive: bool = True,
     ) -> RepositoryTree:
         """Find files in a GitHub repository by their names/paths. Exclude patterns take precedence over include patterns.
 
@@ -208,7 +187,7 @@ class RepositoryServer(BaseServer):
 
         await self._require_valid_repository(owner=owner, repo=repo)
 
-        repository_tree: RepositoryTree = await self.get_repository_tree(owner=owner, repo=repo, recursive=False)
+        repository_tree: RepositoryTree = await self.get_repository_tree(owner=owner, repo=repo, recursive=recursive)
 
         return repository_tree.to_filtered_tree(include=include, exclude=exclude, include_exclude_is_regex=include_exclude_is_regex)
 
@@ -263,10 +242,9 @@ class RepositoryServer(BaseServer):
 
         repository: Repository = await self._require_valid_repository(owner=owner, repo=repo)
 
-        repository_tree, human_readmes, agents_readmes = await asyncio.gather(
+        repository_tree, readmes = await asyncio.gather(
             self.get_repository_tree(owner=owner, repo=repo),
-            self.get_human_readmes(owner=owner, repo=repo, readmes=[*DEFAULT_READMES, *DEFAULT_AGENTS_MD_FILES], error_on_missing=False),
-            self.get_agents_readmes(owner=owner, repo=repo, error_on_missing=False),
+            self.get_readmes(owner=owner, repo=repo, truncate=DEFAULT_README_TRUNCATE_CONTENT),
         )
 
         logger.info(f"Starting summarization of repository {owner}/{repo}")
@@ -275,7 +253,7 @@ class RepositoryServer(BaseServer):
             owner=owner,
             repo=repo,
             repository=repository,
-            readmes=[*human_readmes, *agents_readmes],
+            readmes=readmes,
             repository_tree=repository_tree,
         )
 
@@ -352,58 +330,74 @@ class RepositoryServer(BaseServer):
         system_prompt_builder.add_text_section(
             title="System Prompt",
             text="""
-Your goal is to provide an extremely comprehensive and information-dense analysis of the repository that is
-immediately actionable for an AI coding agent. Every token counts!
+Your goal is to produce an AGENTS.md++: comprehensive, information-dense, and immediately actionable for coding agents. Be concise per
+bullet, but cover all important areas thoroughly. Optimize for density; ~150-250 lines is a good target if evidence warrants.
 
 GLOBAL CONSTRAINTS:
-- Use bullet points by default.
-- Prefer concrete evidence: include file paths, symbol names, and, when possible, line ranges as
-  `path:lineStart-lineEnd` (wrapped in backticks).
-- Include only non-standard or project-unique practices; if a topic is standard for this project type,
-  state "standard for this project type" and move on.
-- Omit any section if you cannot cite at least one concrete, project-specific detail.
-- Avoid repetition across sections; reference earlier bullets instead of restating.
+- Prefer concrete evidence: cite files and key symbols; include short code/line ranges when decisive.
+- Include non-obvious, project-unique details; if standard for this stack, say "standard for this project type."
+- If a section is incomplete, include what you found and add a bullet "Where to learn more" listing the best
+  files/dirs to consult and relevant search patterns. If no evidence exists, write "Not found" and cite what you searched.
+- Avoid repetition; cross-reference earlier bullets instead of restating.
+- Prefer concrete evidence over generalities. Prefer pointing to a location where more information can be found over
+  attempting to provide a comprehensive analysis of every relevant file to the topic.
+- At most 1-2 citations per bullet. Prefer the single best file + symbol.
+- No long file lists; representative example + pointer.
 
-A great analysis includes:
+OUTPUT FORMAT (use these exact section titles; keep each section compact but complete):
 
-## 1. Project Type & Technology Stack
-- Identify primary languages via extension counts or top-N file counts (cite evidence: paths or counts).
-- Detect framework/build indicators (e.g., `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`) and
-  call out only decisive/unique ones including build system files (`Makefile`, `CMakeLists.txt`, `magefile.go`, etc.) and
-  what they orchestrate.
-- Explain the purpose of each major directory with 1-2 concrete examples (file paths) each.
-- Identify common patterns (`src/`, `tests/`, `docs/`, `examples/`) and any deviations or project-specific layouts.
-- Distinguish between source code, tests, documentation, assets; mention notable subdirectories and approximate
-  file counts if there is something unusual about the directory structure in that directory.
+## Architecture Overview
+- ≤120 words on purpose, major modules, and primary data flow. Cite 2-4 core files/dirs.
 
-## 2. Key Files & Entry Points
-- Identify main/entry point files (e.g., `main.py`, `cmd/app/main.go`) and why they matter.
-- Highlight critical configuration files (e.g., `.env.example`, service configs, `docker-compose.yml`) with purpose.
-- Note dependency management files and CI/CD definitions (`.github/workflows`, `.gitlab-ci.yml`) and their roles.
-- Identify primary data models/entities; point to schema definitions, migrations, or ORM/ODM models with paths and
-  key symbols.
-- Identify test directories and frameworks with concrete paths; note any fixtures or golden files.
-- Note linting/formatting/type-check configuration and where it lives; include representative config keys.
-- Highlight important documentation files and developer tooling/scripts with their commands or targets.
-- Call out unique workflows (e.g., generators, codegen, monorepo tooling) with entry points.
+## Code Style & Conventions
+- Extract explicit rules from linter/formatter/type-check configs; mark inferred rules as "(inferred)".
+- Bullets: quote style, semicolons, indentation, naming (vars/functions), import rules, max line length, file naming,
+  test naming, package layout.
+- Cite exact config paths and keys (e.g., `pyproject.toml:[tool.black]`, `checkstyle.xml:RuleName`, `spotless*`) if known
 
-## 3. Key Patterns, Conventions, and Dependencies
-- Include only non-standard, repository-unique practices. For each item provide: path, symbol (function/class/module),
-  what it does, and why it matters.
-- Consider: Observability (logging/metrics/tracing), Error Handling (error codes, wrapping, categories), Data Storage
-  (schemas, migrations, collections), API Design (endpoints, request/response formats, auth), Security (authZ/authN,
-  crypto, data protection), Performance (caching, batching, concurrency).
-- List critical/non-standard dependencies and external services/APIs central to runtime behavior. For each state: purpose,
-  integration point (file path and symbol), and major version constraint if relevant.
+## Observability & Error Handling
+- Logging libraries/patterns, metrics/tracing (if any), error categorization/utilities. Cite files/symbols.
 
-## 4. Navigation Guidance
+## Dependencies & Services
+- Only critical/non-standard runtime dependencies and external services: version/purpose and integration points (path + symbol).
 
-You will structure your response to be actionable for an AI coding agent working with this repository.
+## Key Directories & Entry Points
+- Major dirs with 1-2 example files each; identify app entry points and why they matter.
+
+## Build & Test
+Build and test commands should not be guessed. They must be exact from the existing documentation in the repository.
+- Add a short "Quick recipes" sublist for common tasks (e.g., run subset of tests, format all files,
+  run a specific module). If the repository uses a makefile, package.json, pyproject.toml, etc., prefer calling
+  those commands over deriving commands from the makefile.
+
+## Unique Workflows
+- Generators/codegen, data pipelines, monorepo tooling, or custom build steps. Cite entry files/commands.
+
+## API Surface Map
+- Summarize primary external interfaces (REST/GraphQL/gRPC/CLI): list top endpoints/commands with paths and handler symbols.
+- If partial, add "Where to learn more": point to routers/controllers
+  (e.g., `**/routes*`, `**/controllers/**`, `server.*`), OpenAPI/Swagger (`**/openapi*`, `**/swagger*`),
+  GraphQL schema/resolvers (`**/*.graphql*`, `**/schema*`, `**/resolver*`), gRPC protos (`**/*.proto`), and
+  CLI help commands.
+
+## Data Model & Storage
+- Identify locations of schemas/migrations/models and provide a, "Where to learn more" for migrations directories,
+  ORM models, schema registries, etc.
+
+## Compatibility & Versioning
+- Required language/toolchain versions; framework/library major versions; semver or compatibility guarantees.
+
+## Governance & Ownership
+- `CODEOWNERS`, maintainers, ownership notes; link to on-call/escalation info if present.
+
+## Onboarding Steps and common gotchas
+A high-level signal, 3-6 bullets pointing to the most valuable follow-up actions/files for
+deeper onboarding. If identified in the documentation, share a short list of 2-5 gotchas
+derived from docs/CI (e.g., required JVM arg, flaky test advice, platform-specific steps). Do not guess.
 
 Notes:
-- When referencing files, wrap paths in backticks; you may include line ranges inside the backticks, e.g.,
-  `src/module/file.py:L120-185`.
-- If you are guessing at the purpose of a file you have not read, keep it brief and mention "likely" or "possibly".
+- Wrap literal commands, filenames, and env vars in backticks.
+- Prefer short bullets; use representative examples with citations.
 """,
         )
 
@@ -429,41 +423,91 @@ Notes:
             obj=repository_tree.count_file_extensions(top_n=30),
         )
 
+        # We do directories here so that the yaml formatter puts a new line/space between each directory to help the LLM not mix up dirs
         user_prompt_builder.add_yaml_section(
-            title="Repository Layout", preamble="The following is the layout of the repository:", obj=repository_tree
+            title="Repository Layout", preamble="The following is the layout of the repository:", obj=repository_tree.directories
         )
 
-        large_repository: bool = repository_tree.count_files() > LARGE_REPOSITORY_THRESHOLD
+        user_prompt_builder.add_yaml_section(
+            title="Repository Root Files", preamble="The following is the layout of the repository:", obj=repository_tree.files
+        )
 
         user_prompt_builder.add_text_section(
             title="Request Files",
             text=f"""
-You will produce a much better summary if you read some of the files in the repository first.
+To generate accurate commands and conventions, request the most informative files first.
+Rules:
+- Max 100 files, first 1000 lines each.
+- Do not request files already provided in "Repository Readmes"
+- Do not request the same file multiple times
+- Prefer text/code files; skip binaries and large generated assets
 
-You can request up to the first 400 lines of up to 100 files.
+The following patterns are examples. Only request files that exist in the provided repository tree.
 
-{"Since this repository is large you should request to read 100 files from the repository." if large_repository else ""}
+Prioritized selection funnel (target distribution; adjust if missing):
+1) Foundational docs (≈10-15)
+- Docs: `docs/{{index,overview,architecture}}.{{md,adoc,mdx}}`
+- ADRs: `**/adr/**.md`, `**/architecture/**.md`
 
-{object_in_text_instructions(object_type=RequestFiles, require=True)}
+2) Build, CI/CD, runtime (≈5-15)
+- Build/manifests: `package.json`, `pnpm-lock.yaml`, `yarn.lock`, `pyproject.toml`, `requirements*.txt`,
+    `setup.{{cfg,py}}`, `build.gradle`, `settings.gradle`, `pom.xml`, `Cargo.toml`, `Makefile`
+- Container/runtime: `Dockerfile*`, `.dockerignore`, `docker-compose*.yml`, `Procfile`
+- CI: `.github/workflows/*.yml` (cap 8 across jobs), `.gitlab-ci.yml`, `.buildkite/**`
 
-The file contents will be provided to you and then you can provide the summary after reviewing the files.""",
+3) Entry points & configuration (≈15-20)
+- Executables/entry: `main.*`, `cmd/**/main.*`, `server.{{js,ts,py,go}}`, `app.{{py,rb,js,ts}}`, framework bootstraps
+- App config: `config/**`, `settings.*`, `application.*`, `src/**/routes*`, controllers
+
+4) Tests (prefer integration/e2e) (≈15-20)
+- `tests/**/{{integration,e2e,javaRestTest,yamlRestTest,internalClusterTest}}/**`
+- Central test helpers/configs: `pytest.ini`, `jest.config.*`, `vitest.config.*`, `test/**/helpers*`
+
+5) Code quality and style (≈10-15)
+- `.eslintrc*`, `.prettierrc*`, `ruff.toml`, `mypy.ini`, `pylintrc`, `checkstyle.xml`, `spotless*`, `.editorconfig`, `tsconfig.json`,
+    `pyproject.toml` sections
+
+6) Other (≈30-40)
+- Other files that you see in the directory tree that you think will reveal helpful information about the repository.
+
+If the repository is large, fill the full 100-file budget across the categories.
+
+Language-specific overlays (choose relevant ones to meet the 100-file budget):
+- Java/Gradle: `build.gradle`, `settings.gradle`, `gradle.properties`, `buildSrc/**`, `build-conventions/**`, `**/checkstyle.xml`,
+  `**/spotless*`, module `*/src/{{main, test}}/java/**` entry points.
+- Python: `pyproject.toml`, `setup.cfg`, `requirements*.txt`, `tox.ini`, `pytest.ini`, `mypy.ini`, `ruff.toml`, `src/**/__init__.py`
+  and main entry points.
+- Node/TypeScript: `package.json`, lockfiles, `.eslintrc*`, `.prettierrc*`, `tsconfig.json`, `src/**/index.{{ts, js}}`, API
+  route/controller files.
+- Go: `go.mod`, `go.sum`, `cmd/**`, `internal/**`, `pkg/**`, `Makefile`, `magefile.go`.
+- Rust: `Cargo.toml`, `build.rs`, `src/main.rs`, `src/lib.rs`.
+- .NET: `*.sln`, `*.csproj`, `Directory.Build.*`, `src/**/Program.cs`.
+
+Only include overlays for stacks detected by manifests/config (e.g., presence of build.gradle, pyproject.toml). Omit non-relevant overlays
+entirely.
+
+{object_in_text_instructions(object_type=RequestFilesForSummary, require=True)}
+
+The file contents will be provided to you and then you can provide the summary after reviewing the files.
+
+Please request files now.""",
         )
 
         logger.info(f"Determining which files to gather for summary of {owner}/{repo}")
 
-        request_files: RequestFiles = await self._structured_sample(
+        request_files: RequestFilesForSummary = await self._structured_sample(
             system_prompt=system_prompt_builder.render_text(),
             messages=user_prompt_builder.to_sampling_messages(),
-            object_type=RequestFiles,
-            max_tokens=5000,
+            object_type=RequestFilesForSummary,
+            max_tokens=10000,
         )
 
-        request_files = request_files.remove_files(files=readme_names).truncate(truncate=100)
+        request_file_paths = request_files.trim(remove_files=readme_names, truncate=100)
 
-        logger.info(f"Requesting {len(request_files.files)} files for summary of {owner}/{repo}: {request_files.files}")
+        logger.info(f"Requesting {len(request_file_paths)} files for summary of {owner}/{repo}: {request_file_paths}")
 
         requested_files: list[RepositoryFileWithContent] = await self.get_files(
-            owner=owner, repo=repo, paths=request_files.files, truncate=400
+            owner=owner, repo=repo, paths=request_file_paths, truncate=400
         )
 
         # Remove the request files section
@@ -482,7 +526,7 @@ The file contents will be provided to you and then you can provide the summary a
         summary: str = await self._sample(
             system_prompt=system_prompt_builder.render_text(),
             messages=user_prompt_builder.to_sampling_messages(),
-            max_tokens=10000,
+            max_tokens=55000,
         )
 
         logger.info(f"Completed summary of {owner}/{repo}")

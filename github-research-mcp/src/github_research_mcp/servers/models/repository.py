@@ -19,8 +19,8 @@ from github_research_mcp.servers.shared.utility import decode_content
 if TYPE_CHECKING:
     from githubkit.versions.v2022_11_28.models.group_0411 import SearchResultTextMatchesItems as GitHubKitSearchResultTextMatchesItems
 
-DEFAULT_TRUNCATE_CONTENT = 500
-DEFAULT_AGENTS_MD_TRUNCATE_CONTENT = 2000
+DEFAULT_TRUNCATE_CONTENT = 1000
+DEFAULT_README_TRUNCATE_CONTENT = 2000
 
 
 class BaseRepositoryError(Exception):
@@ -172,3 +172,28 @@ class RequestFiles(BaseModel):
 
     def truncate(self, truncate: int) -> Self:
         return self.model_copy(update={"files": self.files[:truncate]})
+
+
+class RequestFilesForSummary(BaseModel):
+    """A request for files from a repository."""
+
+    foundational_docs: list[str] = Field(description="Paths to foundational docs to get the content of.")
+    build_ci_cd_runtime: list[str] = Field(description="Paths to build, CI/CD, and runtime files to get the content of.")
+    entry_points_configuration: list[str] = Field(description="Paths to entry points and configuration files to get the content of.")
+    tests_examples: list[str] = Field(description="Paths to tests and examples files to get the content of.")
+    code_quality_style: list[str] = Field(description="Paths to code quality and style files to get the content of.")
+    other: list[str] = Field(description="Paths to other files to get the content of.")
+
+    @property
+    def files(self) -> list[str]:
+        return [
+            *self.foundational_docs,
+            *self.build_ci_cd_runtime,
+            *self.entry_points_configuration,
+            *self.tests_examples,
+            *self.code_quality_style,
+            *self.other,
+        ]
+
+    def trim(self, remove_files: list[str], truncate: int) -> list[str]:
+        return [file for file in self.files if file not in remove_files][:truncate]

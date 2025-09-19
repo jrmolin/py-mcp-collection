@@ -61,24 +61,24 @@ async def test_get_repo_files(repository_server: RepositoryServer):
     )
 
 
-async def test_get_human_readmes(repository_server: RepositoryServer):
-    context = await repository_server.get_human_readmes(owner="strawgate", repo="github-issues-e2e-test", truncate=10)
+async def test_get_readmes(repository_server: RepositoryServer):
+    context = await repository_server.get_readmes(owner="strawgate", repo="github-issues-e2e-test", truncate=10)
     assert context == snapshot(
         [
             RepositoryFileWithContent(
-                path="README.md",
+                path="AGENTS.md",
                 content=FileLines(
                     root={
-                        1: "# G.I.T.H.U.B. - The Existential Code Companion",
+                        1: "# G.I.T.H.U.B. AI Agents Documentation",
                         2: "",
-                        3: "**Generally Introspective Text Handler for Unrealized Brilliance**",
+                        3: '*"In the digital realm, we are not alone. Our code is watched over by digital spirits of wisdom and contemplation."*',
                         4: "",
-                        5: "An AI-powered code editor extension that doesn't just check for syntax errors, but also prompts you with philosophical questions about your code's purpose and your life choices as a developer.",
+                        5: "This document describes the existential AI agents and automated systems that guide your coding journey in G.I.T.H.U.B.",
                         6: "",
-                        7: "## What is G.I.T.H.U.B.?",
+                        7: "## Agent Overview",
                         8: "",
-                        9: "G.I.T.H.U.B. is more than just another code linter. It's your existential coding companion that asks the deep questions:",
-                        10: "",
+                        9: "### The Philosopher Agent",
+                        10: "- **Purpose**: Existential code analysis and philosophical guidance",
                     }
                 ),
             ),
@@ -99,13 +99,42 @@ async def test_get_human_readmes(repository_server: RepositoryServer):
                     }
                 ),
             ),
+            RepositoryFileWithContent(
+                path="CONTRIBUTORS.md",
+                content=FileLines(
+                    root={
+                        1: "# Contributors",
+                        2: "",
+                        3: "This project exists thanks to all the people who contribute.",
+                        4: "",
+                        5: "## Core Team",
+                        6: "",
+                        7: "- **Test User** - *Project Lead* - [@testuser](https://github.com/testuser)",
+                        8: "- **Jane Developer** - *Core Developer* - [@janedev](https://github.com/janedev)",
+                        9: "- **Bob Maintainer** - *Maintainer* - [@bobmaintainer](https://github.com/bobmaintainer)",
+                        10: "",
+                    }
+                ),
+            ),
+            RepositoryFileWithContent(
+                path="README.md",
+                content=FileLines(
+                    root={
+                        1: "# G.I.T.H.U.B. - The Existential Code Companion",
+                        2: "",
+                        3: "**Generally Introspective Text Handler for Unrealized Brilliance**",
+                        4: "",
+                        5: "An AI-powered code editor extension that doesn't just check for syntax errors, but also prompts you with philosophical questions about your code's purpose and your life choices as a developer.",
+                        6: "",
+                        7: "## What is G.I.T.H.U.B.?",
+                        8: "",
+                        9: "G.I.T.H.U.B. is more than just another code linter. It's your existential coding companion that asks the deep questions:",
+                        10: "",
+                    }
+                ),
+            ),
         ]
     )
-
-
-async def test_get_agents_readmes(repository_server: RepositoryServer):
-    context = await repository_server.get_agents_readmes(owner="strawgate", repo="github-issues-e2e-test")
-    assert context == snapshot()
 
 
 async def test_find_files(repository_server: RepositoryServer):
@@ -191,15 +220,14 @@ async def test_summarize_repository_fastmcp(fastmcp: FastMCP, repository_server:
     assert context.structured_content == snapshot({"result": IsStr()})
 
 
-async def test_summarize_repository_beats(fastmcp: FastMCP, repository_server: RepositoryServer):
+async def test_summarize_repository_elasticsearch(fastmcp: FastMCP, repository_server: RepositoryServer):
     fastmcp.add_tool(tool=Tool.from_function(fn=repository_server.summarize))
 
     async with Client[FastMCPTransport](transport=fastmcp) as fastmcp_client:
         context = await fastmcp_client.call_tool(
             "summarize",
-            arguments={"owner": "strawgate", "repo": "beats"},
+            arguments={"owner": "elastic", "repo": "elasticsearch"},
         )
-
     assert context.structured_content == snapshot({"result": IsStr()})
 
 

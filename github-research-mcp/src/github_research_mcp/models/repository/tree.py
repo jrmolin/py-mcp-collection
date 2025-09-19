@@ -131,7 +131,7 @@ class RepositoryTree(BaseModel):
 
         return cls(directories=[directory for directory in directories.values() if directory.files], files=files)
 
-    def get_files(self, files: list[str], case_insensitive: bool = True) -> list[str]:
+    def filter_files(self, files: list[str], case_insensitive: bool = True) -> list[str]:
         if case_insensitive:
             return [file for file in files if file.lower() in [file.lower() for file in self.files]]
 

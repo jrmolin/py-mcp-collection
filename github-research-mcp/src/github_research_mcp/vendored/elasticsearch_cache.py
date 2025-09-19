@@ -32,6 +32,8 @@ DEFAULT_MAPPING = {
         "value": {
             "type": "keyword",
             "index": False,
+            "doc_values": False,
+            "ignore_above": 256,
         },
     },
 }

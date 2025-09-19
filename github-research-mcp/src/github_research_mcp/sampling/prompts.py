@@ -105,7 +105,8 @@ class PromptBuilder(BaseModel):
             yaml_text = yaml.safe_dump(obj, sort_keys=False)
         elif isinstance(obj, list):
             dumped_objs = [obj.model_dump() if isinstance(obj, BaseModel) else obj for obj in obj]
-            yaml_text = yaml.safe_dump_all(dumped_objs, sort_keys=False)
+            yamled_objs = [yaml.safe_dump(obj, sort_keys=False) for obj in dumped_objs]
+            yaml_text = "\n".join(yamled_objs)
 
         yaml_block: str = preamble or ""
 
