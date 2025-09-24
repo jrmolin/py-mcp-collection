@@ -1,0 +1,72 @@
+[project]
+name = "elasticsearch_esql_tools_mcp"
+version = "0.6.0"
+description = "Elasticsearch's ESQL Tools MCP project"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiohttp>=3.12.2",
+    "asyncclick>=8.1.8",
+    "elasticsearch>9.0.0",
+    "fastmcp<2.11.0",
+    "inline-snapshot>=0.28.0",
+    "makefun>=1.16.0",
+    "mcp>=1.9.0",
+    "pydantic>=2.11.7",
+    "pytest-asyncio>=1.0.0",
+    "python-dotenv>=1.1.0",
+    "pyyaml>=6.0.2",
+]
+
+[tool.poetry]
+packages = [
+    { include = "elasticsearch_esql_tools_mcp", from = "src" }
+]
+[tool.hatch.metadata]
+allow-direct-references=true
+
+[project.scripts]
+elasticsearch-esql-tools-mcp = "elasticsearch_esql_tools_mcp.main:run_mcp"
+
+
+[dependency-groups]
+dev = [
+  "pytest",
+  "pytest-asyncio>=1.1.0",
+  "pytest-mock",
+  "ruff",
+]
+lint = [
+  "ruff"
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[build-system]
+requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+extend="../pyproject.toml"
+
+[tool.pyright]
+pythonVersion = "3.13"
+extraPaths = ["src/"]
+include = ["src/"]
+exclude = [
+    "**/archive/**",
+    "**/node_modules/**",
+    "**/__pycache__/**",
+    "**/.venv/**",
+    ".venv",
+    "**/.pytest_cache/**",
+    "**/.ruff_cache/**",
+    "**/uv/python/**",
+]
+reportMissingTypeStubs = false
+reportExplicitAny = false
+
+executionEnvironments = [
+    { root = "src/tests", reportPrivateUsage = false},
+]

@@ -1,0 +1,22 @@
+tools:
+- name: search_by_title
+  description: Search for documents by matching part of their title
+  esql: FROM * | WHERE MATCH(issue.body, ?title ) | KEEP issue.title, issue.body | LIMIT 100
+  arguments:
+  - name: title
+    description: Title to search for
+    type: string
+    required: true
+    default: 
+- name: get_benchmark_runs
+  description: Get benchmark runs
+  esql: |
+    FROM bb-runs* | 
+    WHERE KQL("""( ( environment_id : cron-*  and (flavour : "hostmetrics-vanilla" or flavor: "hostmetrics-vanilla" ) and benchmark_name : hostmetrics-scl_100-dur_270m* ) AND ( ( "output.target_commit": * ) OR ( "output.target_version": * ) OR ( "suite_name": ?suite ) OR ( "environment_id": * ) ) )""") |
+    LIMIT 10
+  arguments:
+  - name: suite
+    description: Suite to search for
+    type: string
+    required: true
+    default: "*"
